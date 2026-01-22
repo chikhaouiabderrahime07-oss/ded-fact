@@ -372,23 +372,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ... your existing code ...
     
 });
-// Dans votre DOMContentLoaded, appelez loadSampleData() uniquement si
-// clients, invoices et settings sont absents :
-document.addEventListener('DOMContentLoaded', () => {
-  loadDataFromLocalStorage();
 
-  // Charger les données d’exemple UNIQUEMENT si :
-  // – aucun client ET aucune facture
-  // – ET si les settings n’existent pas encore
-  const hasSavedSettings = localStorage.getItem('settings') !== null;
-  if (!clients.length && !invoices.length && !hasSavedSettings) {
-    loadSampleData();
-  }
-
-  initializeApp();
-  setupEventListeners();
-  showView('dashboard');
-});
 // Initialiser le tri des rapports au chargement
 document.addEventListener('DOMContentLoaded', () => {
     const reportTable = document.getElementById('tableReport');
