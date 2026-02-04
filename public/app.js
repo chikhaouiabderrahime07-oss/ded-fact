@@ -127,131 +127,133 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-/* ============================================================
-   ONLINE / SERVER MODE
-   (Connects to your database via API_URL)
-   ============================================================ */
 
-// 1. Real Server Login
-async function attemptLogin(keyInput = null) {
-    const key = keyInput || document.getElementById('accessKeyInput').value;
-    if (!key) return;
+// --- SMART LOGIN SYSTEM ---
+
+// 1. Function to handle the login process
+async function attemptLogin(keyToUse = null) {
+    // If no key provided, get it from the input box
+    const key = keyToUse || document.getElementById('accessKeyInput').value.trim();
+    const btn = document.querySelector('#loginGate button');
+    const err = document.getElementById('loginError');
+
+    if(!key) return;
+
+    // UI Feedback
+    if(btn) {
+        btn.textContent = "Vérification en cours...";
+        btn.disabled = true;
+    }
 
     try {
-        console.log("Connecting to server...");
-        // Sends key to server to verify
-        const response = await fetch(API_URL + '?action=get_data&key=' + key);
-        
-        if (response.ok) {
-            const data = await response.json();
-            if (data && !data.error) {
-                // ✅ SUCCESS
-                console.log("Login successful!");
-                CURRENT_ACCESS_KEY = key;
-                localStorage.setItem('facturation_access_key', key); 
-                
-                // Unlock Gate
-                document.getElementById('loginGate').style.display = 'none';
-                
-                // Load the data
-                processServerData(data);
-            } else {
-                // ❌ Server said "Key Invalid"
-                handleLoginFailure('Clé incorrecte. Veuillez réessayer.');
-            }
+        // Ask the server: "Is this key valid?"
+        const response = await fetch(API_URL + '/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: key })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // ✅ SUCCESS
+            CURRENT_ACCESS_KEY = key;
+            
+            // 1. Save to LocalStorage so we remember it next time
+            localStorage.setItem('facturation_access_key', key);
+            
+            // 2. Hide the Lock Screen
+            document.getElementById('loginGate').style.display = 'none';
+            
+            // 3. Load the Data
+            loadDataFromServer();
         } else {
-            // ❌ HTTP Error (e.g., 404 or 500)
-            handleLoginFailure('Erreur de connexion au serveur.');
+            // ❌ FAILURE (Key revoked or wrong)
+            handleLoginFailure(err, btn);
         }
     } catch (e) {
-        // ❌ Network Error (e.g., internet down)
-        console.error("Login error:", e);
-        handleLoginFailure('Erreur réseau ou API inaccessible.');
+        console.error(e);
+        alert("Impossible de joindre le serveur. Vérifiez votre connexion.");
+        if(btn) {
+            btn.textContent = "CONNEXION";
+            btn.disabled = false;
+        }
     }
 }
 
-// 2. ✅ RESTORED: Handle Login Failure Function
-function handleLoginFailure(message) {
-    const errorMsg = document.getElementById('loginError');
-    const input = document.getElementById('accessKeyInput');
+// 2. Helper to handle failure
+function handleLoginFailure(errElement, btnElement) {
+    // Remove the bad key from memory
+    localStorage.removeItem('facturation_access_key');
+    CURRENT_ACCESS_KEY = null;
 
-    if (errorMsg) {
-        errorMsg.textContent = message || "Accès refusé.";
-        errorMsg.style.display = 'block';
+    // Show error message
+    if(errElement) {
+        errElement.style.display = 'block';
+        errElement.textContent = "Clé invalide ou accès révoqué.";
     }
     
-    // Add "shake" animation class if your CSS supports it (Bootstrap 'is-invalid' turns it red)
-    if (input) {
-        input.classList.add('is-invalid');
-        input.value = ''; // Clear the wrong password
-        input.focus();
-        
-        // Remove red border after 0.5s
-        setTimeout(() => {
-            input.classList.remove('is-invalid');
-        }, 500);
+    // Reset Button
+    if(btnElement) {
+        btnElement.textContent = "CONNEXION";
+        btnElement.disabled = false;
     }
+    
+    // Ensure Gate is visible
+    document.getElementById('loginGate').style.display = 'flex';
 }
 
-// 3. Load Data from Server
 async function loadDataFromServer() {
-    if(!CURRENT_ACCESS_KEY) return;
-    try {
-        const response = await fetch(API_URL + '?action=get_data&key=' + CURRENT_ACCESS_KEY);
-        const data = await response.json();
-        processServerData(data);
-    } catch (e) {
-        console.error("Error loading data:", e);
-    }
-}
+    if (!CURRENT_ACCESS_KEY) return;
 
-// 4. Process Data Helper
-function processServerData(data) {
-    if (data) {
+    try {
+        const response = await fetch(API_URL + `/api/data/${CURRENT_ACCESS_KEY}`);
+        
+        // 🚨 SECURITY CHECK: If server says "Forbidden" (403), kick the user out
+        if (response.status === 403 || response.status === 401) {
+            alert("Votre accès a été révoqué.");
+            localStorage.removeItem('facturation_access_key');
+            location.reload(); // Reloads page to show lock screen
+            return;
+        }
+
+        const data = await response.json();
+        
+        // ... (Rest of your normal loading code: clients = data.clients, etc.) ...
         clients = data.clients || [];
         invoices = data.invoices || [];
-        if(data.settings) settings = { ...settings, ...data.settings };
+        settings = { ...settings, ...(data.settings || {}) };
         invoiceCounter = data.invoiceCounter || 1;
         clientWilayaPairPrices = data.clientWilayaPairPrices || {};
+
+        initializeApp();
+        showView('dashboard');
         
-        // Refresh UI
-        renderClients();
-        renderInvoices();
-        updateDashboard();
-        loadSettings();
-        
-        // Restore Logos if they exist
+        // Load logos
         if(settings.logoLeft) document.getElementById('logoLeftDisplay').innerHTML = `<img src="${settings.logoLeft}" style="max-height:80px;">`;
         if(settings.logoRight) document.getElementById('logoRightDisplay').innerHTML = `<img src="${settings.logoRight}" style="max-height:80px;">`;
+
+    } catch (error) {
+        console.error("Error loading data:", error);
     }
 }
-
-// 5. Save Data to Server
 async function saveDataToLocalStorage() {
-    // Keeps the function name compatible with the rest of your app
-    if(!CURRENT_ACCESS_KEY) return;
-    console.log("Saving to Server DB...");
-    
+    // We keep the name "saveDataToLocalStorage" so we don't break existing calls
+    // But now it sends data to MongoDB
+    if (!CURRENT_ACCESS_KEY) return;
+
     const payload = {
+        key: CURRENT_ACCESS_KEY,
         clients, invoices, settings, invoiceCounter, clientWilayaPairPrices
     };
 
-    try {
-        await fetch(API_URL + '?action=save_data&key=' + CURRENT_ACCESS_KEY, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-    } catch (e) {
-        console.error("Save error:", e);
-        alert("⚠️ Erreur : Impossible de sauvegarder sur le serveur !");
-    }
+    // Send to server in background
+    fetch(API_URL + '/api/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    }).catch(err => console.error("Save failed", err));
 }
-
-// 6. Restore Server Load function override
-window.loadDataFromServer = loadDataFromServer;
-
-
 
 
 function initializeApp() {
@@ -377,10 +379,7 @@ settings = {
     // Sauvegarder dans le LocalStorage
     saveDataToLocalStorage();
 }
-document.addEventListener('DOMContentLoaded', () => {
-    // ... your existing code ...
-    
-});
+
 
 // Initialiser le tri des rapports au chargement
 document.addEventListener('DOMContentLoaded', () => {
