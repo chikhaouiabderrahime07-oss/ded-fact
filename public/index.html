@@ -556,10 +556,14 @@ th.sortable.sorted-desc .sort-icon::after {
         </select>
     </div>
 
+<div class="col-md-2">
+        <input class="form-control form-control-sm" list="destOptions" id="filterDestination" placeholder="Chercher dest...">
+        <datalist id="destOptions"></datalist>
+    </div>
+
     <div class="col-md-2">
         <select class="form-select form-select-sm" id="filterYear">
-            <option value="">Toutes années</option>
-        </select>
+            </select>
     </div>
 
     <div class="col-md-3">
@@ -576,12 +580,6 @@ th.sortable.sorted-desc .sort-icon::after {
             <option value="overdue">En retard</option>
             <option value="pending">En attente</option>
         </select>
-    </div>
-
-    <div class="col-md-2">
-        <button class="btn btn--secondary btn--sm w-100" id="btnClearFilters">
-            <i class="fa fa-eraser me-2"></i>Reset
-        </button>
     </div>
 </div>
                 </div>

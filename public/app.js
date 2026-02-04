@@ -55,77 +55,6 @@ const API_URL = '';
 // --- SMART LOGIN SYSTEM ---
 
 // 1. Function to handle the login process
-async function attemptLogin(keyToUse = null) {
-    // If no key provided, get it from the input box
-    const key = keyToUse || document.getElementById('accessKeyInput').value.trim();
-    const btn = document.querySelector('#loginGate button');
-    const err = document.getElementById('loginError');
-
-    if(!key) return;
-
-    // UI Feedback
-    if(btn) {
-        btn.textContent = "Vérification en cours...";
-        btn.disabled = true;
-    }
-
-    try {
-        // Ask the server: "Is this key valid?"
-        const response = await fetch(API_URL + '/api/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key: key })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            // ✅ SUCCESS
-            CURRENT_ACCESS_KEY = key;
-            
-            // 1. Save to LocalStorage so we remember it next time
-            localStorage.setItem('facturation_access_key', key);
-            
-            // 2. Hide the Lock Screen
-            document.getElementById('loginGate').style.display = 'none';
-            
-            // 3. Load the Data
-            loadDataFromServer();
-        } else {
-            // ❌ FAILURE (Key revoked or wrong)
-            handleLoginFailure(err, btn);
-        }
-    } catch (e) {
-        console.error(e);
-        alert("Impossible de joindre le serveur. Vérifiez votre connexion.");
-        if(btn) {
-            btn.textContent = "CONNEXION";
-            btn.disabled = false;
-        }
-    }
-}
-
-// 2. Helper to handle failure
-function handleLoginFailure(errElement, btnElement) {
-    // Remove the bad key from memory
-    localStorage.removeItem('facturation_access_key');
-    CURRENT_ACCESS_KEY = null;
-
-    // Show error message
-    if(errElement) {
-        errElement.style.display = 'block';
-        errElement.textContent = "Clé invalide ou accès révoqué.";
-    }
-    
-    // Reset Button
-    if(btnElement) {
-        btnElement.textContent = "CONNEXION";
-        btnElement.disabled = false;
-    }
-    
-    // Ensure Gate is visible
-    document.getElementById('loginGate').style.display = 'flex';
-}
 
 // 3. Auto-Check on Startup
 document.addEventListener('DOMContentLoaded', () => {
@@ -153,57 +82,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 // --- NEW DATA FUNCTIONS (Replaces LocalStorage) ---
 
-async function loadDataFromServer() {
-    if (!CURRENT_ACCESS_KEY) return;
-
-    try {
-        const response = await fetch(API_URL + `/api/data/${CURRENT_ACCESS_KEY}`);
-        
-        // 🚨 SECURITY CHECK: If server says "Forbidden" (403), kick the user out
-        if (response.status === 403 || response.status === 401) {
-            alert("Votre accès a été révoqué.");
-            localStorage.removeItem('facturation_access_key');
-            location.reload(); // Reloads page to show lock screen
-            return;
-        }
-
-        const data = await response.json();
-        
-        // ... (Rest of your normal loading code: clients = data.clients, etc.) ...
-        clients = data.clients || [];
-        invoices = data.invoices || [];
-        settings = { ...settings, ...(data.settings || {}) };
-        invoiceCounter = data.invoiceCounter || 1;
-        clientWilayaPairPrices = data.clientWilayaPairPrices || {};
-
-        initializeApp();
-        showView('dashboard');
-        
-        // Load logos
-        if(settings.logoLeft) document.getElementById('logoLeftDisplay').innerHTML = `<img src="${settings.logoLeft}" style="max-height:80px;">`;
-        if(settings.logoRight) document.getElementById('logoRightDisplay').innerHTML = `<img src="${settings.logoRight}" style="max-height:80px;">`;
-
-    } catch (error) {
-        console.error("Error loading data:", error);
-    }
-}
-async function saveDataToLocalStorage() {
-    // We keep the name "saveDataToLocalStorage" so we don't break existing calls
-    // But now it sends data to MongoDB
-    if (!CURRENT_ACCESS_KEY) return;
-
-    const payload = {
-        key: CURRENT_ACCESS_KEY,
-        clients, invoices, settings, invoiceCounter, clientWilayaPairPrices
-    };
-
-    // Send to server in background
-    fetch(API_URL + '/api/data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    }).catch(err => console.error("Save failed", err));
-}
 // Wilayas data (58 Algerian wilayas)
 const wilayas = [
     "Adrar", "Chlef", "Laghouat", "Oum El Bouaghi", "Batna", "Béjaïa", "Biskra", "Béchar", "Blida", "Bouira",
@@ -249,26 +127,157 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+/* ============================================================
+   ONLINE / SERVER MODE
+   (Connects to your database via API_URL)
+   ============================================================ */
 
+// 1. Real Server Login
+async function attemptLogin(keyInput = null) {
+    const key = keyInput || document.getElementById('accessKeyInput').value;
+    if (!key) return;
 
+    try {
+        console.log("Connecting to server...");
+        // Sends key to server to verify
+        const response = await fetch(API_URL + '?action=get_data&key=' + key);
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data && !data.error) {
+                // ✅ SUCCESS
+                console.log("Login successful!");
+                CURRENT_ACCESS_KEY = key;
+                localStorage.setItem('facturation_access_key', key); 
+                
+                // Unlock Gate
+                document.getElementById('loginGate').style.display = 'none';
+                
+                // Load the data
+                processServerData(data);
+            } else {
+                // ❌ Server said "Key Invalid"
+                handleLoginFailure('Clé incorrecte. Veuillez réessayer.');
+            }
+        } else {
+            // ❌ HTTP Error (e.g., 404 or 500)
+            handleLoginFailure('Erreur de connexion au serveur.');
+        }
+    } catch (e) {
+        // ❌ Network Error (e.g., internet down)
+        console.error("Login error:", e);
+        handleLoginFailure('Erreur réseau ou API inaccessible.');
+    }
+}
 
+// 2. ✅ RESTORED: Handle Login Failure Function
+function handleLoginFailure(message) {
+    const errorMsg = document.getElementById('loginError');
+    const input = document.getElementById('accessKeyInput');
+
+    if (errorMsg) {
+        errorMsg.textContent = message || "Accès refusé.";
+        errorMsg.style.display = 'block';
+    }
+    
+    // Add "shake" animation class if your CSS supports it (Bootstrap 'is-invalid' turns it red)
+    if (input) {
+        input.classList.add('is-invalid');
+        input.value = ''; // Clear the wrong password
+        input.focus();
+        
+        // Remove red border after 0.5s
+        setTimeout(() => {
+            input.classList.remove('is-invalid');
+        }, 500);
+    }
+}
+
+// 3. Load Data from Server
+async function loadDataFromServer() {
+    if(!CURRENT_ACCESS_KEY) return;
+    try {
+        const response = await fetch(API_URL + '?action=get_data&key=' + CURRENT_ACCESS_KEY);
+        const data = await response.json();
+        processServerData(data);
+    } catch (e) {
+        console.error("Error loading data:", e);
+    }
+}
+
+// 4. Process Data Helper
+function processServerData(data) {
+    if (data) {
+        clients = data.clients || [];
+        invoices = data.invoices || [];
+        if(data.settings) settings = { ...settings, ...data.settings };
+        invoiceCounter = data.invoiceCounter || 1;
+        clientWilayaPairPrices = data.clientWilayaPairPrices || {};
+        
+        // Refresh UI
+        renderClients();
+        renderInvoices();
+        updateDashboard();
+        loadSettings();
+        
+        // Restore Logos if they exist
+        if(settings.logoLeft) document.getElementById('logoLeftDisplay').innerHTML = `<img src="${settings.logoLeft}" style="max-height:80px;">`;
+        if(settings.logoRight) document.getElementById('logoRightDisplay').innerHTML = `<img src="${settings.logoRight}" style="max-height:80px;">`;
+    }
+}
+
+// 5. Save Data to Server
+async function saveDataToLocalStorage() {
+    // Keeps the function name compatible with the rest of your app
+    if(!CURRENT_ACCESS_KEY) return;
+    console.log("Saving to Server DB...");
+    
+    const payload = {
+        clients, invoices, settings, invoiceCounter, clientWilayaPairPrices
+    };
+
+    try {
+        await fetch(API_URL + '?action=save_data&key=' + CURRENT_ACCESS_KEY, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+    } catch (e) {
+        console.error("Save error:", e);
+        alert("⚠️ Erreur : Impossible de sauvegarder sur le serveur !");
+    }
+}
+
+// 6. Restore Server Load function override
+window.loadDataFromServer = loadDataFromServer;
 
 
 
 
 function initializeApp() {
-	
-    populateWilayaSelects();
-	// NEW: Set default year filter to current year on startup ONLY
-    const yearFilter = document.getElementById('filterYear');
-    if(yearFilter) yearFilter.value = new Date().getFullYear();
-	
-    updateDashboard();
-    renderClients();
-    renderInvoices();
-    loadSettings();
-    setupWilayaPriceManagement();
-    setupLogoHandlers(); // ✅ Add this line
+    try {
+        populateWilayaSelects();
+        
+        // ✅ 1. Populate filters FIRST so the options exist
+        populateFilterDropdowns(); 
+
+        // ✅ 2. FORCE DEFAULT YEAR TO 2026 (Current Year)
+        const yearFilter = document.getElementById('filterYear');
+        if(yearFilter) {
+            yearFilter.value = new Date().getFullYear().toString();
+        }
+        
+        // 3. Render Views
+        updateDashboard();
+        renderClients();
+        renderInvoices();
+        loadSettings();
+        setupWilayaPriceManagement();
+        setupLogoHandlers();
+
+    } catch (error) {
+        console.error('Error initializing app:', error);
+    }
 }
 
 
@@ -538,112 +547,88 @@ function setupEventListeners() {
             });
         });
 
+        // ✅ FIX: LISTEN TO INPUT FOR DESTINATION SEARCH
+        const filterDest = document.getElementById('filterDestination');
+        if (filterDest) filterDest.addEventListener('input', filterInvoices);
+
         // Client management
         const btnAddClient = document.getElementById('btnAddClient');
-        if (btnAddClient) {
-            btnAddClient.addEventListener('click', (e) => {
-                e.preventDefault();
-                openClientModal();
-            });
-        }
+        if (btnAddClient) btnAddClient.addEventListener('click', (e) => { e.preventDefault(); openClientModal(); });
         
         const formClient = document.getElementById('formClient');
-        if (formClient) {
-            formClient.addEventListener('submit', handleClientSubmit);
-        }
+        if (formClient) formClient.addEventListener('submit', handleClientSubmit);
         
         // Invoice management
         const btnNewInvoice = document.getElementById('btnNewInvoice');
-        if (btnNewInvoice) {
-            btnNewInvoice.addEventListener('click', (e) => {
-                e.preventDefault();
-                openInvoiceWizard();
-            });
-        }
+        if (btnNewInvoice) btnNewInvoice.addEventListener('click', (e) => { e.preventDefault(); openInvoiceWizard(); });
         
         const btnMarkPaid = document.getElementById('btnMarkPaid');
-        if (btnMarkPaid) {
-            btnMarkPaid.addEventListener('click', markSelectedInvoicesPaid);
-        }
+        if (btnMarkPaid) btnMarkPaid.addEventListener('click', markSelectedInvoicesPaid);
         
         const btnExportPDF = document.getElementById('btnExportPDF');
-        if (btnExportPDF) {
-            btnExportPDF.addEventListener('click', exportSelectedInvoicePDF);
-        }
+        if (btnExportPDF) btnExportPDF.addEventListener('click', exportSelectedInvoicePDF);
         
-        // Invoice wizard
+        // Wizard navigation
         const btnPrevStep = document.getElementById('btnPrevStep');
-        if (btnPrevStep) {
-            btnPrevStep.addEventListener('click', previousStep);
-        }
+        if (btnPrevStep) btnPrevStep.addEventListener('click', previousStep);
         
         const btnNextStep = document.getElementById('btnNextStep');
-        if (btnNextStep) {
-            btnNextStep.addEventListener('click', nextStep);
-        }
+        if (btnNextStep) btnNextStep.addEventListener('click', nextStep);
         
         const btnSaveInvoice = document.getElementById('btnSaveInvoice');
-        if (btnSaveInvoice) {
-            btnSaveInvoice.addEventListener('click', saveInvoice);
-        }
+        if (btnSaveInvoice) btnSaveInvoice.addEventListener('click', saveInvoice);
         
         const btnCloseInvoiceWizard = document.getElementById('btnCloseInvoiceWizard');
-        if (btnCloseInvoiceWizard) {
-            btnCloseInvoiceWizard.addEventListener('click', closeInvoiceWizard);
-        }
+        if (btnCloseInvoiceWizard) btnCloseInvoiceWizard.addEventListener('click', closeInvoiceWizard);
         
         // Filters
         const filterClient = document.getElementById('filterClient');
+        const filterYear = document.getElementById('filterYear');
         const filterMonth = document.getElementById('filterMonth');
         const filterStatus = document.getElementById('filterStatus');
         const btnClearFilters = document.getElementById('btnClearFilters');
         
-if (filterClient) filterClient.addEventListener('change', filterInvoices);
-        // NEW: Add year listener
-        const filterYear = document.getElementById('filterYear');
+        if (filterClient) filterClient.addEventListener('change', filterInvoices);
         if (filterYear) filterYear.addEventListener('change', filterInvoices);
-        
         if (filterMonth) filterMonth.addEventListener('change', filterInvoices);
         if (filterStatus) filterStatus.addEventListener('change', filterInvoices);
-		// Global Search Listener
-        const globalSearchInput = document.getElementById('globalSearchInput');
-        if (globalSearchInput) {
-            globalSearchInput.addEventListener('input', () => {
-                renderInvoices(); // Re-render table on every keystroke
-            });
-        }
         if (btnClearFilters) btnClearFilters.addEventListener('click', clearFilters);
+
+        // Global Search
+        const globalSearchInput = document.getElementById('globalSearchInput');
+        if (globalSearchInput) globalSearchInput.addEventListener('input', () => { renderInvoices(); });
         
         // Reports
         const btnLoadReport = document.getElementById('btnLoadReport');
-        const btnExportReportCSV = document.getElementById('btnExportReportCSV');
-        const btnExportReportPDF = document.getElementById('btnExportReportPDF');
-        
         if (btnLoadReport) btnLoadReport.addEventListener('click', loadReport);
+        
+        const btnExportReportCSV = document.getElementById('btnExportReportCSV');
         if (btnExportReportCSV) btnExportReportCSV.addEventListener('click', exportReportCSV);
+        
+        const btnExportReportPDF = document.getElementById('btnExportReportPDF');
         if (btnExportReportPDF) btnExportReportPDF.addEventListener('click', exportReportPDF);
         
         // Settings
         const formSettings = document.getElementById('formSettings');
-        const setLogo = document.getElementById('setLogo');
-        const btnDownloadData = document.getElementById('btnDownloadData');
-        const inputImportJSON = document.getElementById('inputImportJSON');
-        
         if (formSettings) formSettings.addEventListener('submit', saveSettings);
+        
+        const setLogo = document.getElementById('setLogo');
         if (setLogo) setLogo.addEventListener('change', handleLogoUpload);
+        
+        const btnDownloadData = document.getElementById('btnDownloadData');
         if (btnDownloadData) btnDownloadData.addEventListener('click', downloadData);
+        
+        const inputImportJSON = document.getElementById('inputImportJSON');
         if (inputImportJSON) inputImportJSON.addEventListener('change', importData);
         
         // Select all invoices
         const chkAllInvoices = document.getElementById('chkAllInvoices');
-        if (chkAllInvoices) {
-            chkAllInvoices.addEventListener('change', toggleAllInvoices);
-        }
+        if (chkAllInvoices) chkAllInvoices.addEventListener('change', toggleAllInvoices);
+
     } catch (error) {
         console.error('Error setting up event listeners:', error);
     }
 }
-
 function showView(viewName) {
     try {
         document.querySelectorAll('.app-view').forEach(view => view.classList.add('d-none'));
@@ -2641,10 +2626,10 @@ function renderPaymentMethodChart(invoicesList) {
 
 function renderInvoices() {
   try {
-    populateFilterDropdowns();
+    populateFilterDropdowns(); // Refresh dropdowns (and ensure Year defaults to current)
     let filteredInvoices = getFilteredInvoices();
 
-    // --- 1. TRI INTELLIGENT (Année puis Numéro) ---
+    // SORTING LOGIC
     const keyMap = {
       number: inv => { 
           const parts = inv.number.split('/');
@@ -2673,7 +2658,7 @@ function renderInvoices() {
       const client = clients.find(c => c.id === inv.clientId) || {};
       const isPaid = inv.paid || inv.paymentStatus === 'encaissee';
       
-      // --- 2. STATUTS (Badge uniquement) ---
+      // STATUS BADGE
       let badgeHtml = '';
       const today = new Date();
       const dueDate = new Date(new Date(inv.date).getTime() + ((inv.delaiPaiement||30) * 86400000));
@@ -2689,31 +2674,40 @@ function renderInvoices() {
           badgeHtml = '<span class="badge bg-info text-dark rounded-pill">EN ATTENTE</span>';
       }
 
-      // --- 3. INFO DATE & RÉFÉRENCE ---
+      // DATE
       let dateDisplay = `<div class="fw-bold">${formatDate(inv.date)}</div>`;
-if (isPaid && inv.paymentDetails && inv.paymentDetails.ref) {
-          dateDisplay += `
-            <div class="tx-ref-highlight">
-                <i class="fa fa-hashtag me-1"></i>${inv.paymentDetails.ref}
-            </div>`;
+      if (isPaid && inv.paymentDetails && inv.paymentDetails.ref) {
+          dateDisplay += `<div class="tx-ref-highlight"><i class="fa fa-hashtag me-1"></i>${inv.paymentDetails.ref}</div>`;
       }
 
-      // --- 4. ACTIONS (Bouton Encaisser SUPPRIMÉ) ---
-      let actionButtons = '';
+      // ✅ FIX: SHOW ALL DESTINATIONS FROM ALL LINES
+      let uniqueDests = new Set();
+
+      // 1. Check Invoice Main Destination
+      if (inv.selectedDestination) uniqueDests.add(inv.selectedDestination);
+      if (inv.wilayaDestination) uniqueDests.add(inv.wilayaDestination);
+
+      // 2. Check Every Article
+      if (inv.articles && inv.articles.length > 0) {
+          inv.articles.forEach(art => {
+              if (art.selectedDestination) uniqueDests.add(art.selectedDestination);
+              if (art.wilayaDestination) uniqueDests.add(art.wilayaDestination);
+          });
+      }
+
+      // 3. Join them (e.g. "Biskra, Batna")
+      // Filter removes empty strings, join adds the comma
+      let displayDest = Array.from(uniqueDests).filter(d => d && d.trim() !== '').join(', ');
       
-      if (isPaid) {
-          // Si PAYÉE : On garde juste Modifier/Annuler le paiement
-          actionButtons = `
-            <button class="btn btn-sm btn-outline-warning ms-1" onclick="openPaymentModal(${inv.id}); event.stopPropagation();" title="Modifier le paiement">
-                <i class="fa fa-pencil-alt"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-danger ms-1" onclick="revertPayment(${inv.id}); event.stopPropagation();" title="Annuler le paiement">
-                <i class="fa fa-undo"></i>
-            </button>`;
-      }
-      // Si IMPAYÉE : actionButtons reste VIDE. Pas de bouton $.
+      if (!displayDest) displayDest = '—';
 
-      // Boutons communs (Modifier Facture / Supprimer Facture)
+      // BUTTONS
+      let actionButtons = '';
+      if (isPaid) {
+          actionButtons = `
+            <button class="btn btn-sm btn-outline-warning ms-1" onclick="openPaymentModal(${inv.id}); event.stopPropagation();" title="Modifier le paiement"><i class="fa fa-pencil-alt"></i></button>
+            <button class="btn btn-sm btn-outline-danger ms-1" onclick="revertPayment(${inv.id}); event.stopPropagation();" title="Annuler le paiement"><i class="fa fa-undo"></i></button>`;
+      }
       const commonButtons = `
         <button class="btn btn-sm btn-outline-primary" onclick="editInvoice(${inv.id}); event.stopPropagation();" title="Modifier Facture"><i class="fa fa-edit"></i></button>
         ${actionButtons}
@@ -2726,27 +2720,29 @@ if (isPaid && inv.paymentDetails && inv.paymentDetails.ref) {
         <td class="fw-bold text-primary">${inv.number}</td>
         <td>${dateDisplay}</td>
         <td class="fw-semibold">${client.nom || 'Inconnu'}</td>
-        <td><small class="text-muted">${inv.selectedDestination || '—'}</small></td>
+        
+        <td>
+            <small class="text-muted text-truncate d-block" style="max-width: 200px;" title="${displayDest}">
+                ${displayDest}
+            </small>
+        </td>
+        
         <td class="text-end fw-bold">${formatCurrency(inv.totals.netAPayer)}</td>
         <td class="text-center">${badgeHtml}</td>
         <td class="text-end" style="min-width: 120px;">
-          <div class="btn-group">
-            ${commonButtons}
-          </div>
+          <div class="btn-group">${commonButtons}</div>
         </td>
       `;
 
-row.style.cursor = 'pointer';
+      row.style.cursor = 'pointer';
       row.title = "Double-cliquez pour voir les détails";
       
-      // Select row on single click
       row.addEventListener('click', e => {
          if (e.target.closest('button') || e.target.closest('input')) return;
          document.querySelectorAll('#tableInvoices tr').forEach(r => r.classList.remove('selected-invoice-row'));
          row.classList.add('selected-invoice-row');
       });
 
-      // Open Modal on double click
       row.addEventListener('dblclick', e => {
         if (e.target.closest('button') || e.target.closest('input')) return;
         openViewInvoiceModal(inv);
@@ -2759,7 +2755,6 @@ row.style.cursor = 'pointer';
 
   } catch (error) { console.error('Error rendering invoices:', error); }
 }
-
 /* -----------------------------------------------------------
    FULL SCREEN MODAL PREVIEW LOGIC
 ----------------------------------------------------------- */
@@ -2798,21 +2793,40 @@ function getFilteredInvoices() {
     try {
         let filtered = [...invoices];
         
-        // 1. Existing specific filters
+        // Get Elements
         const filterClient = document.getElementById('filterClient');
-        const filterYear = document.getElementById('filterYear'); // NEW
+        const filterDest = document.getElementById('filterDestination'); // ✅ Added
+        const filterYear = document.getElementById('filterYear');
         const filterMonth = document.getElementById('filterMonth');
         const filterStatus = document.getElementById('filterStatus');
         
+        // Get Values
         const clientFilter = filterClient ? filterClient.value : '';
-        const yearFilter = filterYear ? filterYear.value : ''; // NEW
+        const destFilter = filterDest ? filterDest.value.toLowerCase() : ''; // ✅ Added
+        const yearFilter = filterYear ? filterYear.value : '';
         const monthFilter = filterMonth ? filterMonth.value : '';
         const statusFilter = filterStatus ? filterStatus.value : '';
         
-        // Filter by Client
+        // 1. Filter by Client
         if (clientFilter) filtered = filtered.filter(inv => inv.clientId === parseInt(clientFilter));
-        
-        // NEW: Filter by Year
+
+        // ✅ 2. Filter by Destination (Deep Search)
+        if (destFilter) {
+            filtered = filtered.filter(inv => {
+                // Check main invoice
+                const mainDest = (inv.selectedDestination || inv.wilayaDestination || '').toLowerCase();
+                
+                // Check all articles
+                const artDest = (inv.articles || []).some(a => 
+                    (a.selectedDestination || '').toLowerCase().includes(destFilter) ||
+                    (a.wilayaDestination || '').toLowerCase().includes(destFilter)
+                );
+                
+                return mainDest.includes(destFilter) || artDest;
+            });
+        }
+
+        // 3. Filter by Year
         if (yearFilter) {
             filtered = filtered.filter(inv => {
                 const d = new Date(inv.date || inv.createdAt);
@@ -2820,30 +2834,22 @@ function getFilteredInvoices() {
             });
         }
 
-        // Filter by Month (YYYY-MM)
-        if (monthFilter) {
-            filtered = filtered.filter(inv => inv.date.startsWith(monthFilter));
-        }
+        // 4. Filter by Month
+        if (monthFilter) filtered = filtered.filter(inv => inv.date.startsWith(monthFilter));
 
-        // Filter by Status
+        // 5. Filter by Status
         if (statusFilter) filtered = filtered.filter(inv => getInvoiceStatus(inv).class === statusFilter);
 
-        // 2. GLOBAL SEARCH
+        // 6. Global Search
         const globalSearchInput = document.getElementById('globalSearchInput');
         if (globalSearchInput && globalSearchInput.value.trim() !== '') {
             const term = globalSearchInput.value.toLowerCase();
-            
             filtered = filtered.filter(inv => {
                 const client = clients.find(c => c.id === inv.clientId);
                 const clientName = client ? client.nom.toLowerCase() : '';
-                const amount = (inv.totals?.netAPayer || 0).toString();
                 const number = (inv.number || '').toLowerCase();
-                const dest = (inv.selectedDestination || inv.wilayaDestination || '').toLowerCase();
-                
-                return clientName.includes(term) || 
-                       number.includes(term) || 
-                       amount.includes(term) || 
-                       dest.includes(term);
+                const dest = (inv.selectedDestination || '').toLowerCase();
+                return clientName.includes(term) || number.includes(term) || dest.includes(term);
             });
         }
         
@@ -2853,7 +2859,6 @@ function getFilteredInvoices() {
         return [];
     }
 }
-
 function getInvoiceStatus(invoice) {
     try {
         // ✅ NEW: Handle new payment statuses
@@ -3221,6 +3226,7 @@ function generateInvoiceHTMLForPDF(invoice, options = {}) {
     const headerRibInfo = settings.rib ? `<div style="margin-top:2px; font-weight:bold;">Compte bancaire : ${settings.rib}</div>` : '';
 
     let companyHeaderHTML = '';
+    // Only show header if option is true
     if (showCompanyHeader) {
       companyHeaderHTML = `
         <div class="invoice-header-compact">
@@ -3239,6 +3245,9 @@ function generateInvoiceHTMLForPDF(invoice, options = {}) {
           <div class="header-logo logo-right">${settings.logoRight ? `<img src="${settings.logoRight}" alt="Logo">` : ''}</div>
         </div>
       `;
+    } else {
+        // Create an invisible spacer to keep layout consistent if needed, or just empty
+        companyHeaderHTML = `<div style="height: 20px;"></div>`; 
     }
 
     let invoiceMetaHTML = '';
@@ -3276,11 +3285,11 @@ function generateInvoiceHTMLForPDF(invoice, options = {}) {
       </tr>
     `).join('');
 
-    // TOTALS
+    // TOTALS (Only if showTotals is true, usually last page)
     let totalsHTML = '';
     let underTable = '';
     
-    if (showTotals && currentPage === totalPages) {
+    if (showTotals) {
       const totalHT = (invoice.articles || []).reduce((s, a) => s + (a.montantHT || 0), 0);
       const remiseAmount = invoice.remise?.enabled ? (invoice.totals?.remise || 0) : 0;
       const htRemise = invoice.remise?.enabled ? (invoice.totals?.htRemise || (totalHT - remiseAmount)) : totalHT;
@@ -3332,8 +3341,10 @@ function generateInvoiceHTMLForPDF(invoice, options = {}) {
         </div>`;
     }
 
-    // SIGNATURES with Space Underneath for Stamp
-    const signaturesHTML = (showSignatures && currentPage === totalPages) ? `
+    // SIGNATURES 
+    // Logic: If it's the last page, show signatures. 
+    // CSS Change: "margin-top: auto" pushes it to the bottom, BUT inside the flex container, ensuring no overlap.
+    const signaturesHTML = (showSignatures) ? `
         <div class="signatures-section">
           <div class="signature-row">
             <div class="sig-box">
@@ -3356,19 +3367,28 @@ function generateInvoiceHTMLForPDF(invoice, options = {}) {
         @page { margin: 0; }
         body { margin: 0; padding: 0; }
 
+        /* FLEXBOX LAYOUT TO PREVENT OVERLAP */
         .invoice-preview { 
             font-family: 'Roboto', sans-serif; 
             color: ${dark}; 
             background: #FFF; 
-            padding: 20px 60px; 
+            padding: 20px 40px; 
             width: 794px;  /* Exact A4 Width */
             height: 1123px; /* Exact A4 Height */
             margin: 0 auto; 
             font-size: ${ps.fontSize}; 
             line-height: 1.3; 
-            position: relative; 
             box-sizing: border-box; 
             overflow: hidden;
+            display: flex;
+            flex-direction: column; /* Stacks elements vertically */
+        }
+
+        /* Content grows to fill space, but doesn't force footer off if small */
+        .invoice-body-content {
+            flex: 1; 
+            display: flex;
+            flex-direction: column;
         }
 
         .invoice-header-compact { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid ${accent}; padding-bottom: 15px; }
@@ -3393,7 +3413,6 @@ function generateInvoiceHTMLForPDF(invoice, options = {}) {
         .client-ids-grid div { font-size: 0.8rem; color: #444; }
         .client-ids-grid strong { color: #000; }
 
-        /* TABLE FONT REDUCED (approx 12px) */
         table.invoice-table { border-collapse: collapse; width: 100%; font-size: 0.75rem; margin-bottom: 10px; table-layout: fixed; }
         table.invoice-table th, table.invoice-table td { border: 1px solid #000; padding: 5px 8px; text-align: center; vertical-align: middle; }
         table.invoice-table th { background: ${accent}; color: #FFF; font-weight: bold; text-transform: uppercase; font-size: 0.75rem; }
@@ -3415,97 +3434,56 @@ function generateInvoiceHTMLForPDF(invoice, options = {}) {
 
         .under-table-block { margin-top: 15px; }
         .amount-words { margin-bottom: 10px; padding: 8px; background: #fffdf0; border: 1px solid #e6dbb9; border-radius: 4px; font-size: 1.1em; }
+        .conditions { font-size: 12px; line-height: 1.4; }
+        .references-wrapper { margin-top: 20px; border-top: 1px solid #aaa; padding-top: 5px; }
+        .references-section { font-size: 0.6rem; font-family: 'Roboto', sans-serif; color: #333; text-align: left; }
         
-        .conditions { 
-            font-size: 12px; 
-            line-height: 1.4;
-        }
-
-        .references-wrapper {
-            margin-top: 20px;
-            border-top: 1px solid #aaa;
-            padding-top: 5px;
-        }
-        
-        /* ⭐️ REDUCED REFERENCES SIZE (approx 9-10px) */
-        .references-section { 
-            font-size: 0.6rem; 
-            font-family: 'Roboto', sans-serif; 
-            color: #333; 
-            text-align: left; 
-        }
-        .references-section div { margin-bottom: 2px; }
-        .references-section strong { color: ${accent}; margin-right: 4px; display: inline; }
-        
-        /* FOOTER POSITIONING */
+        /* FOOTER WRAPPER: Pushed to bottom via Flexbox, relative positioning prevents overlap */
         .footer-wrapper {
-            position: absolute;
-            bottom: 10px; 
-            left: 0;
-            right: 0;
+            margin-top: auto; /* This pushes it to the bottom of the flex container */
             width: 100%;
+            padding-top: 20px;
         }
 
-        /* SIGNATURES ON TOP */
-        .signatures-section { margin-bottom: 40px; }
+        .signatures-section { margin-bottom: 20px; }
         .signature-row { display: flex; justify-content: space-between; padding: 0 40px; }
-        
-        .sig-box {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 200px;
-        }
-        .sig-label { 
-            font-weight: bold; 
-            margin-bottom: 15px; 
-            text-transform: uppercase; 
-            text-decoration: underline;
-        }
-        .sig-space {
-            height: 100px; /* Space for Stamp */
-            width: 100%;
-        }
+        .sig-box { display: flex; flex-direction: column; align-items: center; width: 200px; }
+        .sig-label { font-weight: bold; margin-bottom: 15px; text-transform: uppercase; text-decoration: underline; }
+        .sig-space { height: 80px; width: 100%; }
 
-        .page-number-only { 
-            text-align: center; 
-            font-size: 0.8rem; 
-            color: #666; 
-            border-top: 1px solid #eee; 
-            padding-top: 5px; 
-        }
+        .page-number-only { text-align: center; font-size: 0.8rem; color: #666; border-top: 1px solid #eee; padding-top: 5px; }
 
-        @media print { 
-            .invoice-preview { height: 1123px; } 
-        }
+        @media print { .invoice-preview { height: 1123px; } }
       </style>
 
       <div class="invoice-preview">
-            ${companyHeaderHTML}
-            ${invoiceMetaHTML}
-            <table class="invoice-table">
-              <colgroup>
-                  <col style="width: 5%;">
-                  <col style="width: 45%;">
-                  <col style="width: 10%;">
-                  <col style="width: 20%;">
-                  <col style="width: 20%;">
-              </colgroup>
-              <thead>
-                <tr>
-                  <th>N°</th>
-                  <th>DÉSIGNATION</th>
-                  <th>QTE</th>
-                  <th>PRIX U. HT</th>
-                  <th>MONTANT HT</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${rows}
-                ${totalsHTML}
-              </tbody>
-            </table>
-            ${underTable}
+            <div class="invoice-body-content">
+                ${companyHeaderHTML}
+                ${invoiceMetaHTML}
+                <table class="invoice-table">
+                  <colgroup>
+                      <col style="width: 5%;">
+                      <col style="width: 45%;">
+                      <col style="width: 10%;">
+                      <col style="width: 20%;">
+                      <col style="width: 20%;">
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>N°</th>
+                      <th>DÉSIGNATION</th>
+                      <th>QTE</th>
+                      <th>PRIX U. HT</th>
+                      <th>MONTANT HT</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${rows}
+                    ${totalsHTML}
+                  </tbody>
+                </table>
+                ${underTable}
+            </div>
         
         <div class="footer-wrapper">
              ${signaturesHTML}
@@ -3518,85 +3496,114 @@ function generateInvoiceHTMLForPDF(invoice, options = {}) {
     return '<div class="p-3 text-dark">Error generating invoice</div>';
   }
 }
-
 /**
  * Smart PDF export - Duplicates ONLY company header (logos + info), NOT invoice meta
  */
+/**
+ * REWRITTEN: Smart PDF Export with dynamic row counting
+ */
 async function exportSmartInvoicePDF(invoice, options = {}) {
-  try {
-    const {
-      pageSize = 'normal',
-      maxRowsPerPage = 10,
-      showSignatures = true,
-      splitMethod = 'smart',
-      duplicateHeaderAllPages = false  // Duplicate ONLY company header
-    } = options;
+    try {
+        const {
+            pageSize = 'normal',
+            showSignatures = true,
+            duplicateHeaderAllPages = false,
+            scaleFactor = 2 // Default quality
+        } = options;
 
-    const count = invoice.articles?.length || 0;
-    if (count === 0) {
-      alert('Aucun article à exporter');
-      return;
+        const allArticles = invoice.articles || [];
+        const count = allArticles.length;
+
+        if (count === 0) {
+            alert('Aucun article à exporter');
+            return;
+        }
+
+        // --- CONFIGURATION OF ROW LIMITS (You can change these numbers) ---
+        // How many lines fit on Page 1 (Needs space for Client Info + Totals + Signature)
+        const LIMIT_PAGE_1 = 5; 
+        
+        // How many lines fit on Next Pages WITH Header (Needs space for Logo)
+        const LIMIT_PAGE_NEXT_WITH_HEADER = 10; 
+        
+        // How many lines fit on Next Pages WITHOUT Header (Full space)
+        const LIMIT_PAGE_NEXT_NO_HEADER = 16; 
+        // ------------------------------------------------------------------
+
+        // 1. Calculate Pages Logic
+        const pages = [];
+        let currentArticleIndex = 0;
+        let pageIndex = 1;
+
+        while (currentArticleIndex < count) {
+            let limitForThisPage = 0;
+
+            if (pageIndex === 1) {
+                // Page 1 is always tight
+                limitForThisPage = LIMIT_PAGE_1;
+            } else {
+                // Page 2+ depends on checkbox
+                if (duplicateHeaderAllPages) {
+                    limitForThisPage = LIMIT_PAGE_NEXT_WITH_HEADER;
+                } else {
+                    limitForThisPage = LIMIT_PAGE_NEXT_NO_HEADER;
+                }
+            }
+
+            // Slice the articles for this page
+            const articlesChunk = allArticles.slice(currentArticleIndex, currentArticleIndex + limitForThisPage);
+            
+            // Check if this is the very last page
+            const isLastPage = (currentArticleIndex + articlesChunk.length) >= count;
+
+            pages.push({
+                articles: articlesChunk,
+                showCompanyHeader: (pageIndex === 1) || duplicateHeaderAllPages,
+                showInvoiceMeta: (pageIndex === 1), // Only Page 1 gets Client Info
+                showTotals: isLastPage,
+                currentPage: pageIndex,
+                // We don't know total pages yet, will fix later
+            });
+
+            // Advance index
+            currentArticleIndex += limitForThisPage;
+            pageIndex++;
+        }
+
+        // Update total pages count for all pages
+        const finalTotalPages = pages.length;
+        pages.forEach(p => p.totalPages = finalTotalPages);
+
+        // 2. Generate PDF
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4', true);
+
+        for (let i = 0; i < pages.length; i++) {
+            const pg = pages[i];
+            const pageOptions = {
+                ...options,
+                pageSize,
+                articlesToShow: pg.articles,
+                currentPage: pg.currentPage,
+                totalPages: pg.totalPages,
+                showCompanyHeader: pg.showCompanyHeader,
+                showInvoiceMeta: pg.showInvoiceMeta,
+                showTotals: pg.showTotals,
+                showSignatures: showSignatures && pg.showTotals
+            };
+
+            // Render the page
+            await generatePDFPageSmart(pdf, invoice, pageOptions, i === 0);
+        }
+
+        const headerSuffix = duplicateHeaderAllPages ? '_with_headers' : '';
+        pdf.save(`Facture_${invoice.number.replace(/\//g, '_')}${headerSuffix}.pdf`);
+
+    } catch (error) {
+        console.error('PDF generation error:', error);
+        alert('Erreur lors de la génération du PDF');
     }
-
-    // Build logical pages deterministically
-    const pages = [];
-    if (count <= maxRowsPerPage) {
-      pages.push({ 
-        articles: invoice.articles, 
-        showCompanyHeader: true,           // Company header (logos + info)
-        showInvoiceMeta: true,             // Invoice number, date, DOIT
-        showTotals: true, 
-        currentPage: 1, 
-        totalPages: 1 
-      });
-    } else {
-      const totalPages = Math.ceil(count / maxRowsPerPage);
-      for (let p = 1; p <= totalPages; p++) {
-        const start = (p - 1) * maxRowsPerPage;
-        const end = start + maxRowsPerPage;
-        pages.push({
-          articles: invoice.articles.slice(start, end),
-          // Company header on first page OR all pages if duplicateHeaderAllPages
-          showCompanyHeader: (p === 1) || duplicateHeaderAllPages,
-          // Invoice meta ONLY on first page (never duplicate)
-          showInvoiceMeta: (p === 1),
-          showTotals: p === totalPages,
-          currentPage: p,
-          totalPages
-        });
-      }
-    }
-
-    // Create PDF and render pages IN ORDER
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF('p', 'mm', 'a4', true);
-
-    for (let i = 0; i < pages.length; i++) {
-      const pg = pages[i];
-      const pageOptions = {
-        ...options,
-        pageSize,
-        articlesToShow: pg.articles,
-        currentPage: pg.currentPage,
-        totalPages: pg.totalPages,
-        showCompanyHeader: pg.showCompanyHeader,     // ✅ Pass company header flag
-        showInvoiceMeta: pg.showInvoiceMeta,         // ✅ Pass invoice meta flag
-        showTotals: pg.showTotals,
-        showSignatures: showSignatures && pg.showTotals
-      };
-      await generatePDFPageSmart(pdf, invoice, pageOptions, i === 0);
-    }
-
-    // Save after sequential render
-    const headerSuffix = duplicateHeaderAllPages ? '_with_headers' : '';
-    pdf.save(`Facture_${invoice.number.replace(/\//g, '_')}_${pageSize}${headerSuffix}.pdf`);
-    alert(`PDF généré avec succès! ${pages.length} page(s) - Format: ${pageSize}`);
-  } catch (error) {
-    console.error('PDF generation error:', error);
-    alert('Erreur lors de la génération du PDF');
-  }
 }
-
 // ✅ IMPROVED: Handles High Quality Scaling
 // ✅ UPDATED: MAX QUALITY (Scale 5) & Fixed A4 Dimensions
 function generatePDFPageSmart(pdf, invoice, options, isFirstPage) {
@@ -3699,69 +3706,99 @@ function populateFilterDropdowns() {
     try {
         // 1. CLIENTS
         const clientFilter = document.getElementById('filterClient');
+        let selectedClientId = null;
+        
         if (clientFilter) {
             const currentVal = clientFilter.value;
-            clientFilter.innerHTML = '<option value="">Tous les clients</option>';
-            clients.forEach(client => {
-                clientFilter.innerHTML += `<option value="${client.id}">${client.nom}</option>`;
-            });
-            clientFilter.value = currentVal;
+            selectedClientId = currentVal ? parseInt(currentVal) : null;
+            
+            if (clientFilter.options.length <= 1) {
+                 clientFilter.innerHTML = '<option value="">Tous les clients</option>';
+                 clients.forEach(client => {
+                     clientFilter.innerHTML += `<option value="${client.id}">${client.nom}</option>`;
+                 });
+                 clientFilter.value = currentVal;
+            }
         }
 
-        // 2. YEARS (FIXED)
-        const yearFilter = document.getElementById('filterYear');
-        if (yearFilter) {
-            // Capture the current selection BEFORE clearing the list
-            const currentVal = yearFilter.value; 
+        // ✅ 2. DESTINATIONS (Smart Search)
+        const destInput = document.getElementById('filterDestination');
+        const destList = document.getElementById('destOptions');
+
+        if (destInput && destList) {
+            const destinations = new Set();
             
-            yearFilter.innerHTML = '<option value="">Toutes années</option>';
-            
-            // Get unique years from invoices
-            const years = new Set();
-            const thisYear = new Date().getFullYear();
-            years.add(thisYear);
-            
-            invoices.forEach(inv => {
-                if (inv.date) {
-                    years.add(new Date(inv.date).getFullYear());
+            // Filter by Client if selected
+            const invoicesToScan = selectedClientId 
+                ? invoices.filter(inv => inv.clientId === selectedClientId) 
+                : invoices;
+
+            invoicesToScan.forEach(inv => {
+                if (inv.selectedDestination) destinations.add(inv.selectedDestination);
+                if (inv.wilayaDestination) destinations.add(inv.wilayaDestination);
+                if (inv.articles) {
+                    inv.articles.forEach(art => {
+                        if (art.selectedDestination) destinations.add(art.selectedDestination);
+                        if (art.wilayaDestination) destinations.add(art.wilayaDestination);
+                    });
                 }
             });
 
-            // Sort descending (2026, 2025, 2024...)
-            const sortedYears = Array.from(years).sort((a, b) => b - a);
+            // Add Client Profile Destinations
+            if (selectedClientId) {
+                const clientProfile = clients.find(c => c.id === selectedClientId);
+                if (clientProfile && clientProfile.destinations) {
+                    clientProfile.destinations.forEach(d => destinations.add(d));
+                }
+            }
 
-            sortedYears.forEach(year => {
+            // Build List
+            destList.innerHTML = '';
+            Array.from(destinations).sort().forEach(d => {
+                if(d && d.trim()) {
+                    const opt = document.createElement('option');
+                    opt.value = d;
+                    destList.appendChild(opt);
+                }
+            });
+        }
+
+        // ✅ 3. YEARS (Fixed: Allows "All Years")
+        const yearFilter = document.getElementById('filterYear');
+        if (yearFilter) {
+            const currentVal = yearFilter.value; // Save selection
+            
+            yearFilter.innerHTML = '<option value="">Toutes années</option>';
+            
+            const years = new Set();
+            years.add(new Date().getFullYear()); 
+            
+            invoices.forEach(inv => {
+                if (inv.date) years.add(new Date(inv.date).getFullYear());
+            });
+
+            Array.from(years).sort((a, b) => b - a).forEach(year => {
                 yearFilter.innerHTML += `<option value="${year}">${year}</option>`;
             });
 
-            // FIX: Simply restore the previous value. 
-            // If it was "" (All Years), it stays "" (All Years).
-            // We removed the "else" block that was forcing the current year.
+            // Restore selection (This keeps "2026" if set by initializeApp, or "" if you chose All)
             yearFilter.value = currentVal;
         }
 
-        // 3. MONTHS
+        // 4. MONTHS
         const monthFilter = document.getElementById('filterMonth');
         if (monthFilter) {
             const currentVal = monthFilter.value;
             monthFilter.innerHTML = '<option value="">Tous les mois</option>';
-            
             const uniqueMonths = new Set();
             invoices.forEach(inv => {
-                if(inv.date) {
-                    uniqueMonths.add(inv.date.substring(0, 7)); // YYYY-MM
-                }
+                if(inv.date) uniqueMonths.add(inv.date.substring(0, 7));
             });
-            
-            const sortedMonths = Array.from(uniqueMonths).sort().reverse();
-            
-            sortedMonths.forEach(monthStr => {
+            Array.from(uniqueMonths).sort().reverse().forEach(monthStr => {
                 const [y, m] = monthStr.split('-');
                 const date = new Date(parseInt(y), parseInt(m) - 1);
                 const label = date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-                const labelCap = label.charAt(0).toUpperCase() + label.slice(1);
-                
-                monthFilter.innerHTML += `<option value="${monthStr}">${labelCap}</option>`;
+                monthFilter.innerHTML += `<option value="${monthStr}">${label.charAt(0).toUpperCase() + label.slice(1)}</option>`;
             });
             monthFilter.value = currentVal;
         }
@@ -3770,7 +3807,6 @@ function populateFilterDropdowns() {
         console.error('Error populating filters:', error);
     }
 }
-
 function filterInvoices() {
     try {
         renderInvoices(); // This will now use filtered invoices
