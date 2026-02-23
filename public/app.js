@@ -209,17 +209,15 @@ async function loadDataFromServer() {
     try {
         const response = await fetch(API_URL + `/api/data/${CURRENT_ACCESS_KEY}`);
         
-        // 🚨 SECURITY CHECK: If server says "Forbidden" (403), kick the user out
         if (response.status === 403 || response.status === 401) {
             alert("Votre accès a été révoqué.");
             localStorage.removeItem('facturation_access_key');
-            location.reload(); // Reloads page to show lock screen
+            location.reload(); 
             return;
         }
 
         const data = await response.json();
         
-        // ... (Rest of your normal loading code: clients = data.clients, etc.) ...
         clients = data.clients || [];
         invoices = data.invoices || [];
         settings = { ...settings, ...(data.settings || {}) };
@@ -229,9 +227,12 @@ async function loadDataFromServer() {
         initializeApp();
         showView('dashboard');
         
-        // Load logos
-        if(settings.logoLeft) document.getElementById('logoLeftDisplay').innerHTML = `<img src="${settings.logoLeft}" style="max-height:80px;">`;
-        if(settings.logoRight) document.getElementById('logoRightDisplay').innerHTML = `<img src="${settings.logoRight}" style="max-height:80px;">`;
+        if(settings.logoLeft && document.getElementById('logoLeftDisplay')) {
+            document.getElementById('logoLeftDisplay').innerHTML = `<img src="${settings.logoLeft}" style="max-height:80px;">`;
+        }
+        if(settings.logoRight && document.getElementById('logoRightDisplay')) {
+            document.getElementById('logoRightDisplay').innerHTML = `<img src="${settings.logoRight}" style="max-height:80px;">`;
+        }
 
     } catch (error) {
         console.error("Error loading data:", error);
@@ -1936,7 +1937,8 @@ function generateInvoiceHTML(invoice) {
                         <div class="client-ids-grid">
 ${client.rc ? `<div><strong>RC:</strong> ${client.rc}</div>` : ''}
                            ${client.activite ? `<div><strong>Activité:</strong> ${client.activite}</div>` : ''}
-                           ${client.nif ? `<div><strong>NIF:</strong> ${client.nif}</div>` : ''}                           ${client.nis ? `<div><strong>NIS:</strong> ${client.nis}</div>` : ''}
+                           ${client.nif ? `<div><strong>NIF:</strong> ${client.nif}</div>` : ''}
+                           ${client.nis ? `<div><strong>NIS:</strong> ${client.nis}</div>` : ''}
                            ${client.artimp ? `<div><strong>Art:</strong> ${client.artimp}</div>` : ''}
                         </div>
                     </div>
