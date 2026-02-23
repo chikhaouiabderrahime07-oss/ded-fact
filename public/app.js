@@ -699,6 +699,7 @@ function openClientModal(clientId = null) {
                 document.getElementById('clientNIS').value = client.nis;
                 document.getElementById('clientArtImp').value = client.artimp || '';
                 document.getElementById('clientRC').value = client.rc;
+                if(document.getElementById('clientActivite')) document.getElementById('clientActivite').value = client.activite || '';
                 document.getElementById('clientAdresse').value = client.adresse;
                 document.getElementById('clientWilaya').value = client.wilaya;
                 document.getElementById('clientPhone').value = client.phone || '';
@@ -1415,9 +1416,7 @@ function renderArticles() {
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <h6 class="mb-0">Article ${article.no}</h6>
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn--sm btn--primary" onclick="autoFillArticlePrice(${index})">
-                            <i class="fa fa-coins me-1"></i>Prix auto
-                        </button>
+
                         <button type="button" class="btn btn--sm btn--outline" onclick="removeArticle(${index})" ${currentInvoice.articles.length <= 1 ? 'disabled' : ''} style="color: var(--color-error);">
                             <i class="fa fa-trash"></i>
                         </button>
@@ -1440,15 +1439,32 @@ function renderArticles() {
                         </select>
                     </div>
                     <div class="col-md-4">
+<div class="col-md-4">
                         <label class="form-label">Destination client</label>
                         <select class="form-control" data-field="selectedDestination" data-index="${index}">
                             <option value="">Aucune destination</option>
                             ${destinationOptions}
                         </select>
                     </div>
+                    
+                    <div class="col-md-4 mt-2">
+                        <label class="form-label text-primary">Tarification *</label>
+                        <select class="form-control type-tarification-select" data-field="pricingType" data-index="${index}" required>
+                            <option value="">Sélectionner un type</option>
+                            ${(settings.pricingTypes || 'Transport').split(',').map(t => `<option value="${t.trim()}" ${t.trim() === article.pricingType ? 'selected' : ''}>${t.trim()}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="col-md-8 mt-2 d-flex align-items-end">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" data-field="showTypeInDesignation" data-index="${index}" id="showType_${index}" ${article.showTypeInDesignation ? 'checked' : ''}>
+                            <label class="form-check-label text-muted" for="showType_${index}">
+                                Afficher le type dans la désignation (ex: Prestation... (Transfert))
+                            </label>
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="row g-2">
+                <div class="row g-2 mt-2">
                     <div class="col-12">
                         <label class="form-label">Désignation *</label>
                         <textarea class="form-control" rows="3" data-field="designation" data-index="${index}" required>${article.designation || ''}</textarea>
@@ -1470,28 +1486,42 @@ function renderArticles() {
             container.appendChild(div);
         });
         
-        // ✅ CRITICAL FIX: Add change event listeners ONLY to dropdowns
+// ✅ Listeners pour les listes déroulantes (ET AUTO-REMPLISSAGE DU PRIX)
         container.querySelectorAll('select[data-field]').forEach(select => {
             select.addEventListener('change', function() {
                 const index = parseInt(this.dataset.index);
                 const field = this.dataset.field;
-                const value = this.value;
                 
                 if (currentInvoice.articles && currentInvoice.articles[index]) {
-                    currentInvoice.articles[index][field] = value;
+                    currentInvoice.articles[index][field] = this.value;
                     
-                    // Update designation when wilaya or destination changes
-                    if (field === 'wilayaDepart' || field === 'wilayaDestination' || field === 'selectedDestination') {
+                    // MàJ désignation
+                    if (['wilayaDepart', 'wilayaDestination', 'selectedDestination', 'pricingType'].includes(field)) {
                         updateArticleDesignation(index);
                     }
-                    
+                    // Auto-remplissage Magique du prix
+                    if (['wilayaDepart', 'wilayaDestination', 'pricingType'].includes(field)) {
+                        autoFillArticlePrice(index);
+                    }
+                    updateInvoicePreview();
+                }
+            });
+        });
+
+        // ✅ Listener pour la checkbox de la désignation
+        container.querySelectorAll('input[type="checkbox"][data-field]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const index = parseInt(this.dataset.index);
+                if (currentInvoice.articles && currentInvoice.articles[index]) {
+                    currentInvoice.articles[index][this.dataset.field] = this.checked;
+                    updateArticleDesignation(index);
                     updateInvoicePreview();
                 }
             });
         });
         
-        // ✅ Add input event listeners to text/number fields
-        container.querySelectorAll('input[data-field], textarea[data-field]').forEach(input => {
+        // ✅ Listeners inputs & ENREGISTREMENT AUTOMATIQUE DU NOUVEAU PRIX
+        container.querySelectorAll('input[data-field]:not([type="checkbox"]), textarea[data-field]').forEach(input => {
             input.addEventListener('input', function() {
                 const index = parseInt(this.dataset.index);
                 const field = this.dataset.field;
@@ -1500,9 +1530,26 @@ function renderArticles() {
                 if (currentInvoice.articles && currentInvoice.articles[index]) {
                     currentInvoice.articles[index][field] = value;
                     
-                    // Calculate montant HT
                     if (field === 'qte' || field === 'prixUHT') {
                         const article = currentInvoice.articles[index];
+                        article.montantHT = article.qte * article.prixUHT;
+                        
+                        const montantInput = container.querySelector(`[data-field="montantHT"][data-index="${index}"]`);
+                        if (montantInput) montantInput.value = article.montantHT;
+
+                        // SAUVEGARDE AUTOMATIQUE DU PRIX SI SAISI MANUELLEMENT !
+                        if (field === 'prixUHT' && currentInvoice.clientId && article.wilayaDepart && article.wilayaDestination && article.pricingType) {
+                            const cid = currentInvoice.clientId;
+                            const key = `${article.wilayaDepart}|${article.wilayaDestination}|${article.pricingType}`;
+                            if (!clientWilayaPairPrices[cid]) clientWilayaPairPrices[cid] = {};
+                            clientWilayaPairPrices[cid][key] = value;
+                            saveDataToLocalStorage(); // Sauvegarde en arrière-plan
+                        }
+                    }
+                    updateInvoicePreview();
+                }
+            });
+        });                        const article = currentInvoice.articles[index];
                         article.montantHT = article.qte * article.prixUHT;
                         
                         // Update display
@@ -1534,9 +1581,9 @@ function updateArticleDesignation(articleIndex) {
         new Date(currentInvoice.date).toLocaleDateString('fr-FR', {month:'long'}) : 
         new Date().toLocaleDateString('fr-FR', {month:'long'});
     
-    // ✅ BUILD DESIGNATION LINE BY LINE
-    let designation = `<b>Prestation de transport routier pour le mois de ${mois.charAt(0).toUpperCase() + mois.slice(1)}</b><br>`;
-    
+// ✅ BUILD DESIGNATION LINE BY LINE
+    let typeAddition = (article.showTypeInDesignation && article.pricingType) ? ` (${article.pricingType})` : '';
+    let designation = `<b>Prestation de transport routier${typeAddition} pour le mois de ${mois.charAt(0).toUpperCase() + mois.slice(1)}</b><br>`;    
     // ✅ ONLY ADD CLIENT DESTINATION IF SELECTED
     if (clientDestination) {
         designation += `-DESTINATION CLIENT : ${clientDestination}<br>`;
@@ -1569,35 +1616,35 @@ function updateArticleDesignation(articleIndex) {
     updateInvoicePreview();
 }
 
-// Auto-fill price for individual article
 function autoFillArticlePrice(articleIndex) {
     const article = currentInvoice.articles[articleIndex];
-    const clientId = currentInvoice.clientId;
+    const cid = currentInvoice.clientId;
     const dep = article.wilayaDepart;
     const dst = article.wilayaDestination;
+    const type = article.pricingType;
     
-    if (!clientId || !dep || !dst) {
-        return alert('Veuillez sélectionner le client et les wilayas pour cet article');
+    // On ne fait rien s'il manque une info (on attend que l'utilisateur remplisse tout)
+    if (!cid || !dep || !dst || !type) return;
+    
+    const key = `${dep}|${dst}|${type}`;
+    let price = 0;
+    
+    if (clientWilayaPairPrices[cid] && clientWilayaPairPrices[cid][key]) {
+        price = clientWilayaPairPrices[cid][key];
     }
     
-    const price = getPairPriceForClient(clientId, dep, dst);
-    if (!price) {
-        return alert('Aucun tarif enregistré pour ce trajet.');
+    // Si un prix existe, on l'applique auto
+    if (price > 0) {
+        article.prixUHT = price;
+        article.montantHT = price * article.qte;
+        
+        const prixInput = document.querySelector(`[data-field="prixUHT"][data-index="${articleIndex}"]`);
+        const montantInput = document.querySelector(`[data-field="montantHT"][data-index="${articleIndex}"]`);
+        
+        if (prixInput) prixInput.value = price;
+        if (montantInput) montantInput.value = article.montantHT;
     }
-    
-    article.prixUHT = price;
-    article.montantHT = price * article.qte;
-    
-    // Update the form inputs
-    const prixInput = document.querySelector(`[data-field="prixUHT"][data-index="${articleIndex}"]`);
-    const montantInput = document.querySelector(`[data-field="montantHT"][data-index="${articleIndex}"]`);
-    
-    if (prixInput) prixInput.value = price;
-    if (montantInput) montantInput.value = article.montantHT;
-    
-    updateInvoicePreview();
 }
-
 function previousStep() {
     try {
         if (currentStep > 1) {
@@ -1887,9 +1934,9 @@ function generateInvoiceHTML(invoice) {
                         ${invoice.showDestinationInDoitA && invoice.doitADestination ? `<div class="destination">${invoice.doitADestination}</div>` : ''}
                         <div style="margin-bottom:4px;">${client.adresse}, ${client.wilaya}</div>
                         <div class="client-ids-grid">
-                           ${client.rc ? `<div><strong>RC:</strong> ${client.rc}</div>` : ''}
-                           ${client.nif ? `<div><strong>NIF:</strong> ${client.nif}</div>` : ''}
-                           ${client.nis ? `<div><strong>NIS:</strong> ${client.nis}</div>` : ''}
+${client.rc ? `<div><strong>RC:</strong> ${client.rc}</div>` : ''}
+                           ${client.activite ? `<div><strong>Activité:</strong> ${client.activite}</div>` : ''}
+                           ${client.nif ? `<div><strong>NIF:</strong> ${client.nif}</div>` : ''}                           ${client.nis ? `<div><strong>NIS:</strong> ${client.nis}</div>` : ''}
                            ${client.artimp ? `<div><strong>Art:</strong> ${client.artimp}</div>` : ''}
                         </div>
                     </div>
@@ -4483,6 +4530,10 @@ function loadSettings() {
     document.getElementById('companyPhone').value = settings.phone || '';
     document.getElementById('companyFax').value = settings.fax || '';
 document.getElementById('companyRIB').value = settings.rib || '';
+    if(document.getElementById('companyPricingTypes')) {
+        document.getElementById('companyPricingTypes').value = settings.pricingTypes || 'Transport, Transfert';
+    }
+    // ✅ Load left logo
     // ✅ Load left logo
     const logoLeftDisplay = document.getElementById('logoLeftDisplay');
     if (settings.logoLeft) {
@@ -4512,6 +4563,10 @@ function saveSettings() {
     settings.phone = document.getElementById('companyPhone').value;
     settings.fax = document.getElementById('companyFax').value;
 settings.rib = document.getElementById('companyRIB').value;
+    if(document.getElementById('companyPricingTypes')) {
+        settings.pricingTypes = document.getElementById('companyPricingTypes').value;
+    }
+    // Logos are saved automatically via file input handlers
     // Logos are saved automatically via file input handlers
     saveDataToLocalStorage();
     alert('✅ Paramètres sauvegardés !');
@@ -4655,6 +4710,7 @@ function handleClientSubmit(e) {
             nis:     document.getElementById('clientNIS').value.trim(),
             artimp:  document.getElementById('clientArtImp').value.trim(),
             rc:      document.getElementById('clientRC').value.trim(),
+            activite: document.getElementById('clientActivite') ? document.getElementById('clientActivite').value.trim() : '',
             adresse: document.getElementById('clientAdresse').value.trim(),
             wilaya:  document.getElementById('clientWilaya').value,
             phone:   document.getElementById('clientPhone').value.trim(),
@@ -5164,12 +5220,16 @@ function updateSortIcons(table, sortState) {
 // Initialize wilaya pair prices
 function initializeWilayaPairPrices(clientId) {
   if (!clientWilayaPairPrices[clientId]) clientWilayaPairPrices[clientId] = {};
+  const types = (settings.pricingTypes || 'Transport, Transfert').split(',').map(t => t.trim());
+  
   wilayas.forEach(dep=>{
     wilayas.forEach(dest=>{
       if (dep!==dest) {
-        const k = dep + '|' + dest;
-        if (clientWilayaPairPrices[clientId][k] === undefined)
-          clientWilayaPairPrices[clientId][k] = 0;
+        types.forEach(type => {
+            const k = dep + '|' + dest + '|' + type;
+            if (clientWilayaPairPrices[clientId][k] === undefined)
+              clientWilayaPairPrices[clientId][k] = 0;
+        });
       }
     });
   });
@@ -5239,7 +5299,13 @@ function testDataPersistence() {
 ─────────────────────────────────────────────────*/
 function setupWilayaPriceManagement() {
   const sel = document.getElementById('prixClient');
+  const typeSel = document.getElementById('prixType');
   if (!sel) return;
+  
+  if (typeSel) {
+      const types = (settings.pricingTypes || 'Transport, Transfert').split(',').map(t => t.trim());
+      typeSel.innerHTML = types.map(t => `<option value="${t}">${t}</option>`).join('');
+  }
   
   sel.innerHTML = '<option value="">Choisir…</option>' +
                   clients.map(c => `<option value="${c.id}">${c.nom}</option>`).join('');
@@ -5284,6 +5350,8 @@ function renderWilayaPairTable() {
   let rows = '';
   let count = 0;
 
+const selectedType = document.getElementById('prixType') ? document.getElementById('prixType').value : 'Transport';
+
   wilayas.forEach(dep => {
     if (depFilter && dep !== depFilter) return;
     wilayas.forEach(dst => {
@@ -5291,7 +5359,7 @@ function renderWilayaPairTable() {
       if (dstFilter && dst !== dstFilter) return;
       if (search && !(dep.toLowerCase().includes(search) || dst.toLowerCase().includes(search))) return;
 
-      const key = dep + '|' + dst;
+      const key = dep + '|' + dst + '|' + selectedType;
       const price = clientWilayaPairPrices[cid][key] || 0;
       count++;
 

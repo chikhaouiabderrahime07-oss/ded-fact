@@ -791,9 +791,13 @@ th.sortable.sorted-desc .sort-icon::after {
         </div>
         <div class="card__body">
             <div class="row mb-4">
-			<div class="col-md-4">
+<div class="col-md-3">
   <label class="form-label">Client</label>
   <select id="prixClient" class="form-control"></select>
+</div>
+<div class="col-md-3">
+  <label class="form-label">Type Tarification</label>
+  <select id="prixType" class="form-control" onchange="renderWilayaPairTable()"></select>
 </div>
 
                 <div class="col-md-4">
@@ -893,9 +897,13 @@ th.sortable.sorted-desc .sort-icon::after {
                                 <label for="companyFax" class="form-label">Fax</label>
                                 <input type="text" id="companyFax" class="form-control">
                             </div>
-                            <div class="col-12">
+<div class="col-12">
                                 <label for="companyAddress" class="form-label">Adresse</label>
                                 <textarea id="companyAddress" class="form-control" rows="2"></textarea>
+                            </div>
+                            <div class="col-12 mt-3">
+                                <label for="companyPricingTypes" class="form-label text-primary fw-bold">Types de Tarification (séparés par une virgule)</label>
+                                <input type="text" id="companyPricingTypes" class="form-control" placeholder="Ex: Transport, Transfert, Manutention">
                             </div>
                             
                             <!-- ✅ LEFT LOGO SECTION -->
@@ -1002,9 +1010,13 @@ th.sortable.sorted-desc .sort-icon::after {
               <label class="form-label">Art. Imp</label>
               <input type="text" id="clientArtImp" class="form-control" name="artimp">
             </div>
-            <div class="col-md-4">
+<div class="col-md-4">
               <label class="form-label">RC *</label>
               <input type="text" id="clientRC" class="form-control" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Activité</label>
+              <input type="text" id="clientActivite" class="form-control" placeholder="Ex: Transport routier">
             </div>
             <div class="col-md-8">
               <label class="form-label">Adresse *</label>
