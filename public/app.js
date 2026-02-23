@@ -1610,28 +1610,27 @@ function autoFillArticlePrice(articleIndex) {
     const dst = article.wilayaDestination;
     const type = article.pricingType;
     
-    // On ne fait rien s'il manque une info (on attend que l'utilisateur remplisse tout)
+    // On ne fait rien s'il manque une info
     if (!cid || !dep || !dst || !type) return;
     
     const key = `${dep}|${dst}|${type}`;
-    let price = 0;
+    let price = 0; // Par défaut, on prépare "0"
     
     if (clientWilayaPairPrices[cid] && clientWilayaPairPrices[cid][key]) {
         price = clientWilayaPairPrices[cid][key];
     }
     
-    // Si un prix existe, on l'applique auto
-    if (price > 0) {
-        article.prixUHT = price;
-        article.montantHT = price * article.qte;
-        
-        const prixInput = document.querySelector(`[data-field="prixUHT"][data-index="${articleIndex}"]`);
-        const montantInput = document.querySelector(`[data-field="montantHT"][data-index="${articleIndex}"]`);
-        
-        if (prixInput) prixInput.value = price;
-        if (montantInput) montantInput.value = article.montantHT;
-    }
+    // ON APPLIQUE LE PRIX (Même si c'est 0, pour écraser et réinitialiser l'ancien prix)
+    article.prixUHT = price;
+    article.montantHT = price * article.qte;
+    
+    const prixInput = document.querySelector(`[data-field="prixUHT"][data-index="${articleIndex}"]`);
+    const montantInput = document.querySelector(`[data-field="montantHT"][data-index="${articleIndex}"]`);
+    
+    if (prixInput) prixInput.value = price;
+    if (montantInput) montantInput.value = article.montantHT;
 }
+
 function previousStep() {
     try {
         if (currentStep > 1) {
@@ -1920,13 +1919,13 @@ function generateInvoiceHTML(invoice) {
                         <div class="client-name">${client.nom}</div>
                         ${invoice.showDestinationInDoitA && invoice.doitADestination ? `<div class="destination">${invoice.doitADestination}</div>` : ''}
                         <div style="margin-bottom:4px;">${client.adresse}, ${client.wilaya}</div>
-                        <div class="client-ids-grid">
-${client.rc ? `<div><strong>RC:</strong> ${client.rc}</div>` : ''}
-                           ${client.activite ? `<div><strong>Activité:</strong> ${client.activite}</div>` : ''}
-                           ${client.nif ? `<div><strong>NIF:</strong> ${client.nif}</div>` : ''}
-                           ${client.nis ? `<div><strong>NIS:</strong> ${client.nis}</div>` : ''}
-                           ${client.artimp ? `<div><strong>Art:</strong> ${client.artimp}</div>` : ''}
-                        </div>
+<div class="client-ids-grid">
+                   ${client.rc ? `<div><strong>RC:</strong> ${client.rc}</div>` : ''}
+                   ${client.activite ? `<div style="grid-column: 1 / -1; margin-bottom: 4px;"><strong>Activité:</strong> ${client.activite}</div>` : ''}
+                   ${client.nif ? `<div><strong>NIF:</strong> ${client.nif}</div>` : ''}
+                   ${client.nis ? `<div><strong>NIS:</strong> ${client.nis}</div>` : ''}
+                   ${client.artimp ? `<div><strong>Art:</strong> ${client.artimp}</div>` : ''}
+                </div>
                     </div>
                 </div>
 
@@ -3297,12 +3296,13 @@ function generateInvoiceHTMLForPDF(invoice, options = {}) {
                 <div class="client-name">${client.nom}</div>
                 ${invoice.showDestinationInDoitA && invoice.doitADestination ? `<div class="destination">${invoice.doitADestination}</div>` : ''}
                 <div style="margin-bottom:4px;">${client.adresse}, ${client.wilaya}</div>
-                <div class="client-ids-grid">
-                   ${client.rc ? `<div><strong>RC:</strong> ${client.rc}</div>` : ''}
-                   ${client.nif ? `<div><strong>NIF:</strong> ${client.nif}</div>` : ''}
-                   ${client.nis ? `<div><strong>NIS:</strong> ${client.nis}</div>` : ''}
-                   ${client.artimp ? `<div><strong>Art:</strong> ${client.artimp}</div>` : ''}
-                </div>
+<div class="client-ids-grid">
+                           ${client.rc ? `<div><strong>RC:</strong> ${client.rc}</div>` : ''}
+                           ${client.activite ? `<div style="grid-column: 1 / -1; margin-bottom: 4px;"><strong>Activité:</strong> ${client.activite}</div>` : ''}
+                           ${client.nif ? `<div><strong>NIF:</strong> ${client.nif}</div>` : ''}
+                           ${client.nis ? `<div><strong>NIS:</strong> ${client.nis}</div>` : ''}
+                           ${client.artimp ? `<div><strong>Art:</strong> ${client.artimp}</div>` : ''}
+                        </div>
             </div>
         </div>
       `;
