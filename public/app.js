@@ -5351,7 +5351,7 @@ const selectedType = document.getElementById('prixType') ? document.getElementBy
       const price = clientWilayaPairPrices[cid][key] || 0;
       count++;
 
-      rows += `
+rows += `
         <tr>
           <td class="fw-semibold">${dep}</td>
           <td class="fw-semibold">${dst}</td>
@@ -5359,18 +5359,22 @@ const selectedType = document.getElementById('prixType') ? document.getElementBy
             <div class="input-group">
               <input type="number" class="form-control text-end"
                      value="${price}" min="0"
-                     onchange="updateAndSavePrice('${cid}', '${key}', this.value)">
+                     onchange="updateDraftPrice('${cid}', '${key}', this.value)">
               <span class="input-group-text">DA</span>
             </div>
           </td>
           <td>
-            <button class="btn btn--sm btn--secondary me-2"
-                    onclick="navigator.clipboard.writeText( (clientWilayaPairPrices['${cid}']['${key}']||0).toString() )">
-              <i class="fa fa-copy"></i> Copier
+            <button class="btn btn--sm btn-success me-1 text-white" title="Sauvegarde Rapide"
+                    onclick="quickSavePrice(this)">
+              <i class="fa fa-save"></i>
             </button>
-            <button class="btn btn--sm btn--outline"
-                    onclick="resetAndSavePrice('${cid}', '${key}')">
-              <i class="fa fa-trash"></i> Reset
+            <button class="btn btn--sm btn--secondary me-1" title="Copier"
+                    onclick="navigator.clipboard.writeText( (clientWilayaPairPrices['${cid}']['${key}']||0).toString() )">
+              <i class="fa fa-copy"></i>
+            </button>
+            <button class="btn btn--sm btn--outline text-danger" title="Réinitialiser"
+                    onclick="resetDraftPrice('${cid}', '${key}')">
+              <i class="fa fa-trash"></i>
             </button>
           </td>
         </tr>`;
@@ -5397,17 +5401,31 @@ const selectedType = document.getElementById('prixType') ? document.getElementBy
     </table>
     <div class="mt-2 text-muted"><small>Total : ${count} trajets affichés</small></div>`;
 }
-// ✅ CRITICAL: Save price changes immediately
-function updateAndSavePrice(clientId, key, value) {
+// ✅ MODE BROUILLON : Garder en mémoire SANS sauvegarder en base de données
+function updateDraftPrice(clientId, key, value) {
     clientWilayaPairPrices[clientId][key] = parseFloat(value) || 0;
-    saveDataToLocalStorage(); // ✅ Save immediately
+    // La donnée est prête, mais on attend que l'utilisateur clique sur Sauvegarder !
 }
-// Back to Top Button functionality
 
-function resetAndSavePrice(clientId, key) {
+// ✅ MODE BROUILLON : Remettre à zéro en mémoire
+function resetDraftPrice(clientId, key) {
     clientWilayaPairPrices[clientId][key] = 0;
-    saveDataToLocalStorage(); // ✅ Save immediately
     renderWilayaPairTable();
+}
+
+// ✅ ACTION : Sauvegarde Rapide (depuis la ligne du tableau)
+function quickSavePrice(btnElement) {
+    saveDataToLocalStorage(); // Sauvegarde tout l'état en cours
+    
+    // Petit effet visuel sympa pour confirmer à l'utilisateur
+    const originalHtml = btnElement.innerHTML;
+    btnElement.innerHTML = '<i class="fa fa-check-double"></i>';
+    btnElement.classList.replace('btn-success', 'btn-primary');
+    
+    setTimeout(() => {
+        btnElement.innerHTML = originalHtml;
+        btnElement.classList.replace('btn-primary', 'btn-success');
+    }, 1500);
 }
 
 function autoFillWilayaPrice() {
