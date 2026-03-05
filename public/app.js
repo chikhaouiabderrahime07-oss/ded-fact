@@ -3557,7 +3557,7 @@ async function exportSmartInvoicePDF(invoice, options = {}) {
 
 // --- CONFIGURATION OF ROW LIMITS (You can change these numbers) ---
         // How many lines fit on Page 1 (Needs space for Client Info + Totals + Signature)
-        const LIMIT_PAGE_1 = 3; 
+        const LIMIT_PAGE_1 = 5; 
         
         // How many lines fit on Next Pages WITH Header (Needs space for Logo)
         const LIMIT_PAGE_NEXT_WITH_HEADER = 7; 
