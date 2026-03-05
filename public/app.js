@@ -3403,12 +3403,12 @@ function generateInvoiceHTMLForPDF(invoice, options = {}) {
         @page { margin: 0; }
         body { margin: 0; padding: 0; }
 
-        /* FLEXBOX LAYOUT TO PREVENT OVERLAP */
+/* FLEXBOX LAYOUT TO PREVENT OVERLAP */
         .invoice-preview { 
             font-family: 'Roboto', sans-serif; 
             color: ${dark}; 
             background: #FFF; 
-            padding: 20px 40px; 
+            padding: 20px 40px 50px 40px; /* Lifts the bottom content up by 50px */
             width: 794px;  /* Exact A4 Width */
             height: 1123px; /* Exact A4 Height */
             margin: 0 auto; 
@@ -3481,14 +3481,14 @@ function generateInvoiceHTMLForPDF(invoice, options = {}) {
             padding-top: 20px;
         }
 
-        .signatures-section { margin-bottom: 20px; }
+.signatures-section { margin-bottom: 10px; }
         .signature-row { display: flex; justify-content: space-between; padding: 0 40px; }
         .sig-box { display: flex; flex-direction: column; align-items: center; width: 200px; }
-        .sig-label { font-weight: bold; margin-bottom: 15px; text-transform: uppercase; text-decoration: underline; }
-        .sig-space { height: 80px; width: 100%; }
+        .sig-label { font-weight: bold; margin-bottom: 10px; text-transform: uppercase; text-decoration: underline; }
+        .sig-space { height: 50px; width: 100%; } /* Reduced height to save space */
 
-        .page-number-only { text-align: center; font-size: 0.8rem; color: #666; border-top: 1px solid #eee; padding-top: 5px; }
-
+        .page-number-only { text-align: center; font-size: 0.8rem; color: #666; border-top: 1px solid #eee; padding-top: 10px; padding-bottom: 15px; margin-top: 10px; }
+		
         @media print { .invoice-preview { height: 1123px; } }
       </style>
 
