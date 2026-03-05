@@ -3408,7 +3408,7 @@ function generateInvoiceHTMLForPDF(invoice, options = {}) {
             font-family: 'Roboto', sans-serif; 
             color: ${dark}; 
             background: #FFF; 
-            padding: 20px 40px 50px 40px; /* Lifts the bottom content up by 50px */
+            padding: 20px 40px 80px 40px; /* Increased to 80px to push everything up */
             width: 794px;  /* Exact A4 Width */
             height: 1123px; /* Exact A4 Height */
             margin: 0 auto; 
@@ -3481,14 +3481,13 @@ function generateInvoiceHTMLForPDF(invoice, options = {}) {
             padding-top: 20px;
         }
 
-.signatures-section { margin-bottom: 10px; }
+.signatures-section { margin-bottom: 5px; }
         .signature-row { display: flex; justify-content: space-between; padding: 0 40px; }
         .sig-box { display: flex; flex-direction: column; align-items: center; width: 200px; }
-        .sig-label { font-weight: bold; margin-bottom: 10px; text-transform: uppercase; text-decoration: underline; }
-        .sig-space { height: 50px; width: 100%; } /* Reduced height to save space */
+        .sig-label { font-weight: bold; margin-bottom: 5px; text-transform: uppercase; text-decoration: underline; }
+        .sig-space { height: 30px; width: 100%; } /* Squeezed even more */
 
-        .page-number-only { text-align: center; font-size: 0.8rem; color: #666; border-top: 1px solid #eee; padding-top: 10px; padding-bottom: 15px; margin-top: 10px; }
-		
+        .page-number-only { text-align: center; font-size: 0.8rem; color: #666; border-top: 1px solid #eee; padding-top: 5px; padding-bottom: 30px; margin-top: 5px; } /* Added large bottom padding to lift text */		
         @media print { .invoice-preview { height: 1123px; } }
       </style>
 
