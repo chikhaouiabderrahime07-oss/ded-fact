@@ -1915,13 +1915,12 @@ function generateInvoiceHTML(invoice) {
                         <div class="invoice-date">${biskraDate}</div>
                     </div>
                     <div class="bill-to">
-<div class="bill-to">
-                <div class="bill-to-title">DOIT À :</div>
-                <div class="client-name">${client.nom}</div>
-                ${invoice.showDestinationInDoitA && invoice.doitADestination ? `<div class="destination">${invoice.doitADestination}</div>` : ''}
-                <div style="margin-bottom:4px;">${client.adresse}, ${client.wilaya}</div>
-                ${client.phone ? `<div style="margin-bottom:4px;"><strong>Tél:</strong> ${client.phone}</div>` : ''}
-                <div class="client-ids-grid">
+                        <div class="bill-to-title">DOIT À :</div>
+                        <div class="client-name">${client.nom}</div>
+                        ${invoice.showDestinationInDoitA && invoice.doitADestination ? `<div class="destination">${invoice.doitADestination}</div>` : ''}
+                        <div style="margin-bottom:4px;">${client.adresse}, ${client.wilaya}</div>
+<div class="client-ids-grid">
+                   ${client.phone ? `<div style="grid-column: 1 / -1; margin-bottom: 4px;"><strong>Tél:</strong> ${client.phone}</div>` : ''}
                    ${client.rc ? `<div><strong>RC:</strong> ${client.rc}</div>` : ''}
                    ${client.activite ? `<div style="grid-column: 1 / -1; margin-bottom: 4px;"><strong>Activité:</strong> ${client.activite}</div>` : ''}
                    ${client.nif ? `<div><strong>NIF:</strong> ${client.nif}</div>` : ''}
@@ -3293,14 +3292,13 @@ function generateInvoiceHTMLForPDF(invoice, options = {}) {
                 <div class="invoice-number">Facture N° ${invoice.number}</div>
                 <div class="invoice-date">${biskraDate}</div>
             </div>
-<div class="bill-to">
-                        <div class="bill-to-title">DOIT À :</div>
-                        <div class="client-name">${client.nom}</div>
-                        ${invoice.showDestinationInDoitA && invoice.doitADestination ? `<div class="destination">${invoice.doitADestination}</div>` : ''}
-                        <div style="margin-bottom:4px;">${client.adresse}, ${client.wilaya}</div>
-                        ${client.phone ? `<div style="margin-bottom:4px;"><strong>Tél:</strong> ${client.phone}</div>` : ''}
-                        <div class="client-ids-grid">
-						
+            <div class="bill-to">
+                <div class="bill-to-title">DOIT À :</div>
+                <div class="client-name">${client.nom}</div>
+                ${invoice.showDestinationInDoitA && invoice.doitADestination ? `<div class="destination">${invoice.doitADestination}</div>` : ''}
+                <div style="margin-bottom:4px;">${client.adresse}, ${client.wilaya}</div>
+<div class="client-ids-grid">
+                           ${client.phone ? `<div style="grid-column: 1 / -1; margin-bottom: 4px;"><strong>Tél:</strong> ${client.phone}</div>` : ''}
                            ${client.rc ? `<div><strong>RC:</strong> ${client.rc}</div>` : ''}
                            ${client.activite ? `<div style="grid-column: 1 / -1; margin-bottom: 4px;"><strong>Activité:</strong> ${client.activite}</div>` : ''}
                            ${client.nif ? `<div><strong>NIF:</strong> ${client.nif}</div>` : ''}
@@ -3558,15 +3556,15 @@ async function exportSmartInvoicePDF(invoice, options = {}) {
         }
 
 // --- CONFIGURATION OF ROW LIMITS (You can change these numbers) ---
-        // How many lines fit on Page 1 (Needs space for Client Info)
-        const LIMIT_PAGE_1 = 5; 
+        // How many lines fit on Page 1 (Needs space for Client Info + Totals + Signature)
+        const LIMIT_PAGE_1 = 3; 
+        
         // How many lines fit on Next Pages WITH Header (Needs space for Logo)
-        const LIMIT_PAGE_NEXT_WITH_HEADER = 10; 
+        const LIMIT_PAGE_NEXT_WITH_HEADER = 7; 
+        
         // How many lines fit on Next Pages WITHOUT Header (Full space)
-        const LIMIT_PAGE_NEXT_NO_HEADER = 16; 
-        // Space reserved for the "Totals & Signatures" block (equals about 5 rows of space)
-        const SPACE_FOR_TOTALS = 5; 
-        // ------------------------------------------------------------------
+        const LIMIT_PAGE_NEXT_NO_HEADER = 10; 
+        // ------------------------------------------------------------------        // ------------------------------------------------------------------
 
         // 1. Calculate Pages Logic
         const pages = [];
@@ -3577,25 +3575,14 @@ async function exportSmartInvoicePDF(invoice, options = {}) {
             let limitForThisPage = 0;
 
             if (pageIndex === 1) {
+                // Page 1 is always tight
                 limitForThisPage = LIMIT_PAGE_1;
             } else {
+                // Page 2+ depends on checkbox
                 if (duplicateHeaderAllPages) {
                     limitForThisPage = LIMIT_PAGE_NEXT_WITH_HEADER;
                 } else {
                     limitForThisPage = LIMIT_PAGE_NEXT_NO_HEADER;
-                }
-            }
-
-            // SMART FIX: Check if we are approaching the end
-            const remainingArticles = count - currentArticleIndex;
-            
-            // If it's going to be the last page, we MUST reserve space for the Totals!
-            if (remainingArticles <= limitForThisPage) {
-                const limitWithTotals = limitForThisPage - SPACE_FOR_TOTALS;
-                
-                // If remaining articles + totals take up too much space, cut this page short!
-                if (remainingArticles > limitWithTotals && remainingArticles > 1) {
-                    limitForThisPage = limitWithTotals; 
                 }
             }
 
@@ -3604,6 +3591,7 @@ async function exportSmartInvoicePDF(invoice, options = {}) {
             
             // Check if this is the very last page
             const isLastPage = (currentArticleIndex + articlesChunk.length) >= count;
+
             pages.push({
                 articles: articlesChunk,
                 showCompanyHeader: (pageIndex === 1) || duplicateHeaderAllPages,
