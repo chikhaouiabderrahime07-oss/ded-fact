@@ -1668,17 +1668,26 @@ window.savePriceFromArticle = function(index) {
     saveDataToLocalStorage();
     
     // Visually confirm
-    const btn = document.querySelector(`[data-index="${index}"]`).parentNode.querySelector('.btn-outline-success');
+    const btn = document.querySelector(`[data-field="prixUHT"][data-index="${index}"]`).parentNode.querySelector('.btn-success');
     if (btn) {
         const oldHtml = btn.innerHTML;
-        btn.innerHTML = '<i class="fa fa-check text-success"></i>';
-        btn.classList.replace('btn-outline-success', 'btn-light');
+        // Fancy save animation
+        btn.innerHTML = '<i class="fa fa-check"></i>';
+        btn.classList.replace('btn-success', 'btn-light');
+        btn.style.transform = 'scale(1.15)';
+        btn.style.boxShadow = '0 0 15px rgba(40, 167, 69, 0.8)';
+        btn.style.color = '#28a745';
+        
         setTimeout(() => {
             btn.innerHTML = oldHtml;
-            btn.classList.replace('btn-light', 'btn-outline-success');
+            btn.classList.replace('btn-light', 'btn-success');
+            btn.style.transform = 'scale(1)';
+            btn.style.boxShadow = 'none';
+            btn.style.color = '';
         }, 1500);
     }
 };
+
 function updateArticleDesignation(articleIndex) {
     if (!currentInvoice.articles || !currentInvoice.articles[articleIndex]) return;
     
@@ -1733,10 +1742,10 @@ function autoFillArticlePrice(articleIndex) {
     const cid = currentInvoice.clientId;
     const dep = article.wilayaDepart;
     const dst = article.wilayaDestination;
-    const type = article.pricingType;
+    const type = article.pricingType || 'Défaut';
     
     // On ne fait rien s'il manque une info
-    if (!cid || !dep || !dst || !type) return;
+    if (!cid || !dep || !dst) return;
     
     const key = `${dep}|${dst}|${type}`;
     let price = 0; // Par défaut, on prépare "0"
@@ -1752,7 +1761,42 @@ function autoFillArticlePrice(articleIndex) {
     const prixInput = document.querySelector(`[data-field="prixUHT"][data-index="${articleIndex}"]`);
     const montantInput = document.querySelector(`[data-field="montantHT"][data-index="${articleIndex}"]`);
     
-    if (prixInput) prixInput.value = price;
+    if (prixInput) {
+        prixInput.value = price;
+        
+        // FANCY ANIMATION IF LOADED
+        if (price > 0) {
+            prixInput.style.transition = 'all 0.5s ease';
+            prixInput.style.backgroundColor = 'rgba(40, 167, 69, 0.15)'; // Light green tint
+            prixInput.style.borderColor = '#28a745';
+            prixInput.style.color = '#28a745';
+            prixInput.style.transform = 'scale(1.02)';
+            
+            // Animate the button to show "Magic"
+            const btn = prixInput.parentNode.querySelector('.btn-success');
+            let oldHtml = '';
+            if (btn) {
+                oldHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="fa fa-magic"></i>';
+                btn.classList.replace('btn-success', 'btn-light');
+                btn.style.color = '#28a745';
+                btn.style.borderColor = '#28a745';
+            }
+
+            setTimeout(() => {
+                prixInput.style.backgroundColor = '';
+                prixInput.style.borderColor = '';
+                prixInput.style.color = '';
+                prixInput.style.transform = 'scale(1)';
+                if(btn) {
+                    btn.innerHTML = oldHtml;
+                    btn.classList.replace('btn-light', 'btn-success');
+                    btn.style.color = '';
+                    btn.style.borderColor = '';
+                }
+            }, 1200);
+        }
+    }
     if (montantInput) montantInput.value = article.montantHT;
 }
 
