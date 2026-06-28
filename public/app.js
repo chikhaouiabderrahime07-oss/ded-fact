@@ -102,6 +102,75 @@ const modesPaiement = [
     
 ];
 
+/* ═══════════════════════════════════════════════════════════════════
+   🏦  LISTE OFFICIELLE DES BANQUES ALGÉRIENNES
+   Source : Banque d'Algérie – Journal Officiel – Mise à jour Jan 2026
+   21 banques agréées + options spéciales
+═══════════════════════════════════════════════════════════════════ */
+const ALGERIAN_BANKS = {
+    public: [
+        { value: "BEA",    label: "BEA – Banque Extérieure d'Algérie" },
+        { value: "BNA",    label: "BNA – Banque Nationale d'Algérie" },
+        { value: "CPA",    label: "CPA – Crédit Populaire d'Algérie" },
+        { value: "BDL",    label: "BDL – Banque de Développement Local" },
+        { value: "BADR",   label: "BADR – Banque de l'Agriculture et du Développement Rural" },
+        { value: "CNEP",   label: "CNEP-Banque – Caisse Nationale d'Épargne et de Prévoyance" },
+        { value: "BNH",    label: "BNH – Banque Nationale de l'Habitat" },
+    ],
+    private: [
+        { value: "Al Baraka",      label: "Banque Al Baraka d'Algérie" },
+        { value: "Al Salam",       label: "Al Salam Bank Algeria" },
+        { value: "AGB",            label: "AGB – Gulf Bank Algérie" },
+        { value: "ABC",            label: "Bank ABC – Arab Banking Corporation Algeria" },
+        { value: "Arab Bank",      label: "Arab Bank PLC – Algeria (Succursale)" },
+        { value: "BNP Paribas",    label: "BNP Paribas El Djazair" },
+        { value: "Citibank",       label: "Citibank N.A. Algeria (Succursale)" },
+        { value: "Fransabank",     label: "Fransabank El-Djazair" },
+        { value: "HSBC",           label: "HSBC – Algeria (Succursale)" },
+        { value: "Housing Bank",   label: "Housing Bank for Trade & Finance – Algeria" },
+        { value: "Natixis",        label: "Natixis Algérie" },
+        { value: "SGA",            label: "Société Générale Algérie" },
+        { value: "Trust Bank",     label: "Trust Bank Algeria" },
+        { value: "Ziraat",         label: "T.C. Ziraat Bankasi – Algeria" },
+    ],
+    other: [
+        { value: "CCP",         label: "CCP – Algérie Poste (Compte Courant Postal)" },
+        { value: "Espèces",     label: "💵 Espèces / Caisse (sans banque)" },
+        { value: "Autre",       label: "Autre établissement" },
+    ]
+};
+
+/**
+ * Remplit un <select> avec la liste complète des banques algériennes.
+ * @param {string|HTMLElement} selectorOrEl - Sélecteur CSS ou élément DOM du <select>
+ * @param {string} selectedValue - Valeur à pré-sélectionner (optionnel)
+ */
+function populateBankSelect(selectorOrEl, selectedValue = '') {
+    const el = typeof selectorOrEl === 'string'
+        ? document.querySelector(selectorOrEl)
+        : selectorOrEl;
+    if (!el) return;
+
+    const isSelected = v => v === selectedValue ? ' selected' : '';
+
+    el.innerHTML = `<option value="">— Choisir une banque —</option>
+        <optgroup label="🏛️ Banques Publiques (État)">
+            ${ALGERIAN_BANKS.public.map(b =>
+                `<option value="${b.value}"${isSelected(b.value)}>${b.label}</option>`
+            ).join('')}
+        </optgroup>
+        <optgroup label="🌐 Banques Privées &amp; Étrangères">
+            ${ALGERIAN_BANKS.private.map(b =>
+                `<option value="${b.value}"${isSelected(b.value)}>${b.label}</option>`
+            ).join('')}
+        </optgroup>
+        <optgroup label="💼 Autres / Hors Banque">
+            ${ALGERIAN_BANKS.other.map(b =>
+                `<option value="${b.value}"${isSelected(b.value)}>${b.label}</option>`
+            ).join('')}
+        </optgroup>`;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const modalEl = document.getElementById('modalInvoice');
     if (modalEl) {
@@ -1222,29 +1291,29 @@ function renderStep3() {
   container.innerHTML = `
     <h6>Étape 3/5 - Références et Palettes</h6>
     <div class="row g-3">
-      <div class="col-md-6">
+      <div class="col-md-12">
         <label class="form-label">Nombre de palettes</label>
         <input id="inputPalettes" type="number" class="form-control" value="${currentInvoice.palettes}">
       </div>
       <div class="col-md-6">
-        <label class="form-label">Référence BL</label>
-        <input id="blReferences" class="form-control" value="${currentInvoice.blReferences||''}">
+        <label class="form-label">Références BL <small class="text-muted">(ex: BL001)</small></label>
+        <input id="blReferences" class="form-control" list="datalistBL" value="${currentInvoice.blReferences||''}">
       </div>
       <div class="col-md-6">
         <label class="form-label">Référence Contrat</label>
-        <input id="contratRef" class="form-control" value="${currentInvoice.contratRef||''}">
+        <input id="contratRef" class="form-control" list="datalistContrat" value="${currentInvoice.contratRef||''}">
       </div>
       <div class="col-md-6">
         <label class="form-label">Référence Bon de commande</label>
-        <input id="bdcRef" class="form-control" value="${currentInvoice.bdcRef||''}">
+        <input id="bdcRef" class="form-control" list="datalistBDC" value="${currentInvoice.bdcRef||''}">
       </div>
       <div class="col-md-6">
         <label class="form-label">Réf. Feuille de route</label>
-        <input id="refFeuilleRoute" class="form-control" value="${currentInvoice.refFeuilleRoute||''}">
+        <input id="refFeuilleRoute" class="form-control" list="datalistFeuilleRoute" value="${currentInvoice.refFeuilleRoute||''}">
       </div>
       <div class="col-md-6">
         <label class="form-label">Réf. Bon de transfert</label>
-        <input id="refBonTransfert" class="form-control" value="${currentInvoice.refBonTransfert||''}">
+        <input id="refBonTransfert" class="form-control" list="datalistBonTransfert" value="${currentInvoice.refBonTransfert||''}">
       </div>
     </div>`;
   
@@ -2049,6 +2118,45 @@ function editInvoice(invoiceId) {
     new bootstrap.Modal(document.getElementById('modalInvoice')).show();
 }
 
+// ✅ AUTO-REMPLISSAGE INTELLIGENT (Smart Memory) Globals
+window.recordSmartMemory = function(type, value) {
+    if (!settings.smartMemory) settings.smartMemory = {};
+    if (!value || value.trim() === '') return;
+    const val = value.trim();
+    if (!settings.smartMemory[type]) settings.smartMemory[type] = {};
+    settings.smartMemory[type][val] = (settings.smartMemory[type][val] || 0) + 1;
+};
+
+window.populateSmartMemoryDatalists = function() {
+    if (!settings.smartMemory) return;
+    
+    // Helper to fill datalist if it exists and count >= 2
+    const fillDatalist = (type, listId) => {
+        const dataList = document.getElementById(listId);
+        if (!dataList) return;
+        dataList.innerHTML = ''; // Clear old options
+        const memoryMap = settings.smartMemory[type] || {};
+        
+        // Sort by frequency
+        const sortedValues = Object.keys(memoryMap).sort((a,b) => memoryMap[b] - memoryMap[a]);
+        
+        sortedValues.forEach(val => {
+            if (memoryMap[val] >= 2) {
+                const opt = document.createElement('option');
+                opt.value = val;
+                dataList.appendChild(opt);
+            }
+        });
+    };
+
+    fillDatalist('bl', 'datalistBL');
+    fillDatalist('contrat', 'datalistContrat');
+    fillDatalist('bdc', 'datalistBDC');
+    fillDatalist('feuilleroute', 'datalistFeuilleRoute');
+    fillDatalist('bontransfert', 'datalistBonTransfert');
+    fillDatalist('payref', 'datalistPayRef');
+};
+
 /**
  * Sauvegarde ou modifie une facture selon l'existence de currentInvoice.id.
  * Remplacez entièrement votre fonction saveInvoice par celle-ci.
@@ -2057,12 +2165,6 @@ function saveInvoice() {
     try {
         if (!validateCurrentStep()) return;
 
-        // ❌ REMOVED THIS LINE - IT WAS CAUSING THE BUG:
-        // if (!currentInvoice.wilayaDepart) currentInvoice.wilayaDepart = 'Biskra';
-        
-        // ✅ Don't set defaults for palettes either - let user control it
-        // if (!currentInvoice.palettes || currentInvoice.palettes === undefined) currentInvoice.palettes = 0;
-        
         // ✅ PROPERLY READ ALL FIELDS FROM DOM (Step 3 fields only)
         const inputPalettes = document.getElementById('inputPalettes');
         const blReferences = document.getElementById('blReferences');
@@ -2079,13 +2181,18 @@ function saveInvoice() {
         const refBonTransfert = document.getElementById('refBonTransfert');
         if (refFeuilleRoute) currentInvoice.refFeuilleRoute = refFeuilleRoute.value;
         if (refBonTransfert) currentInvoice.refBonTransfert = refBonTransfert.value;
-        if (inputPalettes) currentInvoice.palettes = parseInt(inputPalettes.value) || 0;
-        if (blReferences) currentInvoice.blReferences = blReferences.value;
-        if (contratRef) currentInvoice.contratRef = contratRef.value;
-        if (bdcRef) currentInvoice.bdcRef = bdcRef.value;
 
         // ✅ IMPORTANT: Don't modify article designations here!
         // User has already set them in Step 4
+
+        // ✅ AUTO-REMPLISSAGE INTELLIGENT (Record)
+        if (typeof recordSmartMemory === 'function') {
+            recordSmartMemory('bl', currentInvoice.blReferences);
+            recordSmartMemory('contrat', currentInvoice.contratRef);
+            recordSmartMemory('bdc', currentInvoice.bdcRef);
+            recordSmartMemory('feuilleroute', currentInvoice.refFeuilleRoute);
+            recordSmartMemory('bontransfert', currentInvoice.refBonTransfert);
+        }
 
         if (currentInvoice.id) {
             // Editing existing invoice
@@ -2610,46 +2717,87 @@ window.updateTrajetChart = function() {
         }
     });
 };
-// Helper for payment chart
+// Helper for payment chart – shows banks + modes with full Algerian bank names
 function renderPaymentMethodChart(invoicesList) {
     if(dashboardCharts.paymentMethods) dashboardCharts.paymentMethods.destroy();
     
+    // Build a flat lookup: value → short label  (BEA → "BEA", Al Baraka → "Al Baraka", etc.)
+    const bankLabelMap = {};
+    [...ALGERIAN_BANKS.public, ...ALGERIAN_BANKS.private, ...ALGERIAN_BANKS.other]
+        .forEach(b => { bankLabelMap[b.value] = b.label; });
+
     const methodsMap = {};
     invoicesList.forEach(inv => {
-        let m = 'Non défini';
-        if (inv.paymentDetails && inv.paymentDetails.method) m = inv.paymentDetails.method;
-        else if (inv.modePaiement) m = inv.modePaiement;
-        m = m.trim().charAt(0).toUpperCase() + m.slice(1).toLowerCase();
-        methodsMap[m] = (methodsMap[m] || 0) + 1;
+        let key = 'Non défini';
+        if (inv.paymentDetails && inv.paymentDetails.bank) {
+            // Show bank name (use full label from ALGERIAN_BANKS if available)
+            key = bankLabelMap[inv.paymentDetails.bank] || inv.paymentDetails.bank;
+        } else if (inv.paymentDetails && inv.paymentDetails.method) {
+            key = inv.paymentDetails.method;
+        } else if (inv.modePaiement) {
+            key = inv.modePaiement;
+        }
+        methodsMap[key] = (methodsMap[key] || 0) + 1;
     });
 
+    // Rich 24-color palette for all possible banks
+    const palette = [
+        '#2563eb','#10b981','#f59e0b','#ef4444','#8b5cf6',
+        '#ec4899','#06b6d4','#84cc16','#f97316','#6366f1',
+        '#14b8a6','#d946ef','#0ea5e9','#a3e635','#fb923c',
+        '#c084fc','#22d3ee','#4ade80','#facc15','#f87171',
+        '#818cf8','#34d399','#fbbf24','#60a5fa'
+    ];
+
+    const labels = Object.keys(methodsMap);
     const ctx = document.getElementById('chartPaymentMethods');
     if(ctx) {
         dashboardCharts.paymentMethods = new Chart(ctx, {
             type: 'doughnut',
             plugins: [ChartDataLabels],
             data: {
-                labels: Object.keys(methodsMap),
+                labels: labels,
                 datasets: [{
                     data: Object.values(methodsMap),
-                    backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#6366f1'],
-                    borderWidth: 0
+                    backgroundColor: labels.map((_, i) => palette[i % palette.length]),
+                    borderWidth: 2,
+                    borderColor: '#fff'
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '65%',
+                cutout: '60%',
                 plugins: {
-                    legend: { position: 'right', labels: { boxWidth: 10 } },
+                    legend: { 
+                        position: 'right', 
+                        labels: { 
+                            boxWidth: 12, 
+                            font: { size: 10 },
+                            // Shorten long bank names in legend
+                            generateLabels: (chart) => {
+                                return chart.data.labels.map((label, i) => ({
+                                    text: label.length > 22 ? label.substring(0, 22) + '…' : label,
+                                    fillStyle: palette[i % palette.length],
+                                    strokeStyle: '#fff',
+                                    lineWidth: 2,
+                                    index: i
+                                }));
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (c) => ` ${c.label}: ${c.raw} facture(s)`
+                        }
+                    },
                     datalabels: {
                         color: '#fff',
-                        font: { weight: 'bold' },
+                        font: { weight: 'bold', size: 10 },
                         formatter: (val, ctx) => {
-                            let sum = 0;
-                            let dataArr = ctx.chart.data.datasets[0].data;
-                            dataArr.map(data => { sum += data; });
-                            return (val*100 / sum).toFixed(0)+"%";
+                            const sum = ctx.chart.data.datasets[0].data.reduce((a,b) => a+b, 0);
+                            const pct = (val * 100 / sum).toFixed(0);
+                            return pct >= 5 ? pct + '%' : '';
                         }
                     }
                 }
@@ -2657,6 +2805,7 @@ function renderPaymentMethodChart(invoicesList) {
         });
     }
 }
+
 
 function renderInvoices() {
   try {
@@ -4261,6 +4410,23 @@ function populateReportFilters() {
     // On ne change la date que si elle est vide (pour ne pas effacer le choix de l'utilisateur si il revient sur l'onglet)
     if (startDate && !startDate.value) startDate.value = `${yyyy}-${mm}-01`;
     if (endDate && !endDate.value) endDate.value = `${yyyy}-${mm}-${dd}`;
+
+    // ✅ Injecter toutes les banques algériennes dans le filtre de rapport
+    const bankFilter = document.getElementById('reportBankFilter');
+    if (bankFilter && bankFilter.options.length <= 1) {
+        // Garde l'option "Toutes les banques" puis injecte les groupes
+        const allBanks = [
+            ...ALGERIAN_BANKS.public,
+            ...ALGERIAN_BANKS.private,
+            ...ALGERIAN_BANKS.other
+        ];
+        allBanks.forEach(b => {
+            const opt = document.createElement('option');
+            opt.value = b.value;
+            opt.textContent = b.label;
+            bankFilter.appendChild(opt);
+        });
+    }
     
   } catch (error) {
     console.error('Error populating report filters:', error);
@@ -4973,9 +5139,9 @@ function filterInvoicesForReport() {
         const activeBtn = document.querySelector('#reportStatus .status-btn.active');
         const statusValue = activeBtn ? activeBtn.dataset.value : 'all';
 
-        // D. Récupérer les modes de paiement cochés
-        const paymentCheckboxes = document.querySelectorAll('#reportPaymentMethods input:checked');
-        const checkedMethods = Array.from(paymentCheckboxes).map(cb => cb.value);
+        // D. ✅ NOUVEAU : Filtrer par banque (select dynamique avec toutes les banques algériennes)
+        const bankFilterEl = document.getElementById('reportBankFilter');
+        const selectedBank = bankFilterEl ? bankFilterEl.value : '';
 
         // E. FILTRAGE
         return invoices.filter(inv => {
@@ -4999,10 +5165,10 @@ function filterInvoicesForReport() {
                 if (today <= dueDate) return false; // Pas encore échu
             }
 
-            // 4. Filtre Mode de Paiement
-            if (checkedMethods.length > 0) {
-                if (!isPaid) return false; // Un impayé n'a pas de mode de paiement
-                if (!inv.paymentDetails || !checkedMethods.includes(inv.paymentDetails.method)) return false;
+            // 4. ✅ Filtre Banque (si une banque est sélectionnée, on filtre uniquement les payées via cette banque)
+            if (selectedBank) {
+                if (!isPaid) return false; // Facture impayée → pas de banque
+                if (!inv.paymentDetails || inv.paymentDetails.bank !== selectedBank) return false;
             }
 
             return true;
@@ -5013,6 +5179,7 @@ function filterInvoicesForReport() {
         return []; // En cas d'erreur, on renvoie une liste vide pour ne pas planter
     }
 }
+
 
 function renderReportTable(filtered) {
     const tbody = document.querySelector('#tableReport tbody');
@@ -5501,18 +5668,20 @@ function openPaymentModal(invoiceId) {
 
     document.getElementById('payInvoiceId').value = inv.id;
     document.getElementById('payAmountDisplay').textContent = formatCurrency(inv.totals.ttc);
+
+    // ✅ Remplir la liste de TOUTES les banques algériennes
+    const savedBank = inv.paymentDetails?.bank || '';
+    populateBankSelect('#payBank', savedBank);
     
     // Charger les infos existantes si elles existent
     if (inv.paymentDetails) {
         document.getElementById('payDate').value = inv.paymentDetails.date || new Date().toISOString().split('T')[0];
         document.getElementById('payRef').value = inv.paymentDetails.ref || '';
-        document.getElementById('payBank').value = inv.paymentDetails.bank || '';
         document.getElementById('payMethod').value = inv.paymentDetails.method || 'Virement';
     } else {
         // Sinon valeurs par défaut
         document.getElementById('payDate').value = new Date().toISOString().split('T')[0];
         document.getElementById('payRef').value = '';
-        document.getElementById('payBank').value = '';
     }
     
     new bootstrap.Modal(document.getElementById('modalPayment')).show();

@@ -322,6 +322,13 @@ th.sortable.sorted-desc .sort-icon::after {
         <i class="fa-solid fa-clock-rotate-left"></i> 
         <span>Restauration</span>
     </a>
+    
+    <div class="mt-4 pt-3 border-top">
+        <button id="theme-toggle" class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2">
+            <i class="fa-solid fa-moon"></i>
+            <span>Mode Sombre</span>
+        </button>
+    </div>
 </nav>
     </aside>
 
@@ -691,17 +698,13 @@ th.sortable.sorted-desc .sort-icon::after {
         </div>
         
         <div class="col-md-3">
-             <label class="form-label fw-bold text-uppercase small text-muted">Paiement</label>
-             <div class="dropdown">
-                <button class="btn btn-light border w-100 dropdown-toggle text-start" type="button" data-bs-toggle="dropdown">
-                    Mode de paiement
-                </button>
-                <div class="dropdown-menu p-3" id="reportPaymentMethods" style="width: 250px;">
-                    <label class="d-block mb-2"><input type="checkbox" class="form-check-input me-2" value="Virement bancaire"> Virement</label>
-                    <label class="d-block mb-2"><input type="checkbox" class="form-check-input me-2" value="Chèque bancaire"> Chèque</label>
-                    <label class="d-block"><input type="checkbox" class="form-check-input me-2" value="Espèces"> Espèces</label>
-                </div>
-             </div>
+             <label class="form-label fw-bold text-uppercase small text-muted">
+                 <i class="fa fa-university me-1"></i>Filtrer par Banque
+             </label>
+             <select id="reportBankFilter" class="form-select form-select-sm">
+                 <option value="">Toutes les banques</option>
+                 <!-- Options injectées dynamiquement par JS (populateBankSelect) -->
+             </select>
         </div>
 
         <div class="col-md-3">
@@ -1122,17 +1125,29 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 <script>
-  ;(function() {
+  document.addEventListener('DOMContentLoaded', function() {
     const html = document.documentElement;
     const toggle = document.getElementById('theme-toggle');
+    if (!toggle) return;
 
     // Initialize from localStorage or default to light
     const saved = localStorage.getItem('theme');
     const initial = saved === 'dark' ? 'dark' : 'light';
     html.setAttribute('data-color-scheme', initial);
-    toggle.textContent = initial === 'dark'
-      ? 'Switch to Light Mode'
-      : 'Switch to Dark Mode';
+    
+    const updateToggleButton = (theme) => {
+        if (theme === 'dark') {
+            toggle.innerHTML = '<i class="fa-solid fa-sun text-warning"></i><span>Mode Clair</span>';
+            toggle.classList.remove('btn-outline-secondary');
+            toggle.classList.add('btn-outline-light');
+        } else {
+            toggle.innerHTML = '<i class="fa-solid fa-moon"></i><span>Mode Sombre</span>';
+            toggle.classList.remove('btn-outline-light');
+            toggle.classList.add('btn-outline-secondary');
+        }
+    };
+    
+    updateToggleButton(initial);
 
     // Toggle on button click
     toggle.addEventListener('click', () => {
@@ -1140,11 +1155,9 @@ document.addEventListener('DOMContentLoaded', function() {
       const next = current === 'light' ? 'dark' : 'light';
       html.setAttribute('data-color-scheme', next);
       localStorage.setItem('theme', next);
-      toggle.textContent = next === 'dark'
-        ? 'Switch to Light Mode'
-        : 'Switch to Dark Mode';
+      updateToggleButton(next);
     });
-  })();
+  });
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <!-- PDF Libraries -->
@@ -1213,8 +1226,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="modal fade" id="modalPayment" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border-0 shadow-lg">
-      <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title"><i class="fa fa-coins me-2"></i>Enregistrer un paiement</h5>
+      <div class="modal-header text-white py-2" style="background: linear-gradient(135deg, #1e3a8a, #2563eb);">
+        <h5 class="modal-title"><i class="fa fa-university me-2"></i>Enregistrer un paiement</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body p-4">
@@ -1227,24 +1240,28 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         </div>
         <form id="formPayment">
+            <!-- 🏦 BANQUE (remplie dynamiquement par populateBankSelect()) -->
             <div class="mb-3">
-                <label class="form-label fw-bold small text-uppercase">Banque *</label>
-                <select id="payBank" class="form-select" required>
-                    <option value="">Choisir banque...</option>
-                    <option value="AGB">AGB</option><option value="Baraka">Banque Al Baraka</option>
-                    <option value="BADR">BADR</option><option value="BDL">BDL</option>
-                    <option value="BNA">BNA</option><option value="CNEP">CNEP</option>
-                    <option value="CPA">CPA</option><option value="Société Générale">Société Générale</option>
-                    <option value="Natixis">Natixis</option><option value="Autre">Autre / Caisse</option>
+                <label class="form-label fw-bold small text-uppercase">
+                    <i class="fa fa-building-columns me-1 text-primary"></i>Banque *
+                </label>
+                <select id="payBank" class="form-select" required size="1">
+                    <option value="">— Choisir une banque —</option>
+                    <!-- Options injectées dynamiquement par populateBankSelect() -->
                 </select>
+                <div class="form-text text-muted">
+                    <i class="fa fa-circle-info me-1"></i>
+                    21 banques agréées par la Banque d'Algérie (Jan 2026)
+                </div>
             </div>
             <div class="row g-3 mb-3">
                 <div class="col-6">
                     <label class="form-label fw-bold small text-uppercase">Mode *</label>
                     <select id="payMethod" class="form-select" required>
-                        <option value="Virement">Virement</option>
-                        <option value="Chèque">Chèque</option>
+                        <option value="Virement">Virement bancaire</option>
+                        <option value="Chèque">Chèque bancaire</option>
                         <option value="Versement">Versement Espèces</option>
+                        <option value="Prélèvement">Prélèvement automatique</option>
                     </select>
                 </div>
                 <div class="col-6">
@@ -1253,17 +1270,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
             <div class="mb-4">
-                <label class="form-label fw-bold small text-uppercase">Référence Transaction *</label>
-                <input type="text" id="payRef" class="form-control" placeholder="Ex: CH789456" required>
+                <label class="form-label">Référence Transaction *</label>
+                <input type="text" id="payRef" class="form-control" list="datalistPayRef" placeholder="Ex: CH789456 / VIR-2026-001" required>
             </div>
             <div class="d-grid">
-                <button type="button" class="btn btn-success btn-lg" onclick="confirmPayment()">
-    ✅ Confirmer le paiement
-</button>
+                <button type="button" class="btn btn-success btn-lg fw-bold shadow-sm" onclick="confirmPayment()">
+                    <i class="fa fa-check-circle me-2"></i>Confirmer le paiement
+                </button>
             </div>
         </form>
       </div>
     </div>
   </div>
 </div>
+<datalist id="datalistBL"></datalist>
+<datalist id="datalistContrat"></datalist>
+<datalist id="datalistBDC"></datalist>
+<datalist id="datalistFeuilleRoute"></datalist>
+<datalist id="datalistBonTransfert"></datalist>
+<datalist id="datalistPayRef"></datalist>
+
+</body>
 </html>
