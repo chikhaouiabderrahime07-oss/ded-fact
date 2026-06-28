@@ -1537,20 +1537,20 @@ function renderArticles() {
                         <label class="form-label">Désignation *</label>
                         <textarea class="form-control" rows="3" data-field="designation" data-index="${index}" required>${article.designation || ''}</textarea>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label">Quantité *</label>
                         <input type="number" class="form-control" data-field="qte" data-index="${index}" value="${article.qte || 1}" min="1" required>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-5">
                         <label class="form-label">Prix U HT *</label>
                         <div class="input-group">
                             <input type="number" class="form-control" data-field="prixUHT" data-index="${index}" value="${article.prixUHT || 0}" min="0" step="0.01" required>
-                            <button class="btn btn-outline-success" type="button" onclick="savePriceFromArticle(${index})" title="Mémoriser ce prix">
+                            <button class="btn btn-success" type="button" onclick="savePriceFromArticle(${index})" title="Mémoriser ce prix">
                                 <i class="fa fa-save"></i>
                             </button>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-5">
                         <label class="form-label">Montant HT</label>
                         <input type="number" class="form-control" data-field="montantHT" data-index="${index}" value="${article.montantHT || 0}" readonly>
                     </div>
