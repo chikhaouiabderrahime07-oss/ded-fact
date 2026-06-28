@@ -68,6 +68,24 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.5px;
 }
 
+/* Force Bootstrap text colors to adapt to our theme */
+.table, 
+.table-hover tbody tr:hover td,
+.form-label, 
+.form-check-label, 
+label, 
+p, 
+span:not(.badge), 
+td, 
+th {
+  color: var(--text-main) !important;
+}
+
+/* Let Bootstrap muted text be our muted text */
+.text-muted {
+  color: var(--text-muted) !important;
+}
+
 /* --- Sidebar (Clean White & Tech) --- */
 .sidebar {
   background-color: var(--bg-sidebar);

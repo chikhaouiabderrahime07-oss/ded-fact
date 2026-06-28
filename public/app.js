@@ -1621,9 +1621,10 @@ function renderArticles() {
                     const article = currentInvoice.articles[index];
                     const value = parseFloat(this.value) || 0;
 
-                    if (value > 0 && currentInvoice.clientId && article.wilayaDepart && article.wilayaDestination && article.pricingType) {
+                    if (value > 0 && currentInvoice.clientId && article.wilayaDepart && article.wilayaDestination) {
                         const cid = currentInvoice.clientId;
-                        const key = `${article.wilayaDepart}|${article.wilayaDestination}|${article.pricingType}`;
+                        const type = article.pricingType || 'Défaut';
+                        const key = `${article.wilayaDepart}|${article.wilayaDestination}|${type}`;
                         
                         if (!settings.smartMemory) settings.smartMemory = {};
                         if (!settings.smartMemory.priceTracker) settings.smartMemory.priceTracker = {};
@@ -1652,14 +1653,15 @@ window.savePriceFromArticle = function(index) {
     const article = currentInvoice.articles[index];
     if (!article || !currentInvoice.clientId) return;
 
-    if (!article.wilayaDepart || !article.wilayaDestination || !article.pricingType) {
-        alert("Veuillez sélectionner le départ, la destination et le type de tarification pour mémoriser le prix.");
+    if (!article.wilayaDepart || !article.wilayaDestination) {
+        alert("Veuillez au moins sélectionner le départ et la destination pour mémoriser le prix.");
         return;
     }
 
     const value = article.prixUHT || 0;
     const cid = currentInvoice.clientId;
-    const key = `${article.wilayaDepart}|${article.wilayaDestination}|${article.pricingType}`;
+    const type = article.pricingType || 'Défaut';
+    const key = `${article.wilayaDepart}|${article.wilayaDestination}|${type}`;
 
     if (!clientWilayaPairPrices[cid]) clientWilayaPairPrices[cid] = {};
     clientWilayaPairPrices[cid][key] = value;
