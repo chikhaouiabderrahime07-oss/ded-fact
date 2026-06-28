@@ -1543,7 +1543,12 @@ function renderArticles() {
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Prix U HT *</label>
-                        <input type="number" class="form-control" data-field="prixUHT" data-index="${index}" value="${article.prixUHT || 0}" min="0" step="0.01" required>
+                        <div class="input-group">
+                            <input type="number" class="form-control" data-field="prixUHT" data-index="${index}" value="${article.prixUHT || 0}" min="0" step="0.01" required>
+                            <button class="btn btn-outline-success" type="button" onclick="savePriceFromArticle(${index})" title="Mémoriser ce prix">
+                                <i class="fa fa-save"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Montant HT</label>
@@ -1588,7 +1593,7 @@ function renderArticles() {
             });
         });
         
-        // Listeners inputs & ENREGISTREMENT AUTOMATIQUE DU NOUVEAU PRIX
+        // Listeners inputs (Calcul en temps réel)
         container.querySelectorAll('input[data-field]:not([type="checkbox"]), textarea[data-field]').forEach(input => {
             input.addEventListener('input', function() {
                 const index = parseInt(this.dataset.index);
@@ -1604,25 +1609,74 @@ function renderArticles() {
                         
                         const montantInput = container.querySelector(`[data-field="montantHT"][data-index="${index}"]`);
                         if (montantInput) montantInput.value = article.montantHT;
-
-                        // SAUVEGARDE AUTOMATIQUE DU PRIX SI SAISI MANUELLEMENT !
-                        if (field === 'prixUHT' && currentInvoice.clientId && article.wilayaDepart && article.wilayaDestination && article.pricingType) {
-                            const cid = currentInvoice.clientId;
-                            const key = `${article.wilayaDepart}|${article.wilayaDestination}|${article.pricingType}`;
-                            if (!clientWilayaPairPrices[cid]) clientWilayaPairPrices[cid] = {};
-                            clientWilayaPairPrices[cid][key] = value;
-                            saveDataToLocalStorage(); // Sauvegarde en arrière-plan
-                        }
                     }
                     updateInvoicePreview();
                 }
             });
+
+            // SMART SAVE PRIX ON BLUR (When user finishes typing)
+            if (input.dataset.field === 'prixUHT') {
+                input.addEventListener('blur', function() {
+                    const index = parseInt(this.dataset.index);
+                    const article = currentInvoice.articles[index];
+                    const value = parseFloat(this.value) || 0;
+
+                    if (value > 0 && currentInvoice.clientId && article.wilayaDepart && article.wilayaDestination && article.pricingType) {
+                        const cid = currentInvoice.clientId;
+                        const key = `${article.wilayaDepart}|${article.wilayaDestination}|${article.pricingType}`;
+                        
+                        if (!settings.smartMemory) settings.smartMemory = {};
+                        if (!settings.smartMemory.priceTracker) settings.smartMemory.priceTracker = {};
+                        
+                        const trackerKey = `${cid}|${key}|${value}`;
+                        settings.smartMemory.priceTracker[trackerKey] = (settings.smartMemory.priceTracker[trackerKey] || 0) + 1;
+                        
+                        // Si tapé 2 fois, on sauvegarde auto
+                        if (settings.smartMemory.priceTracker[trackerKey] >= 2) {
+                            if (!clientWilayaPairPrices[cid]) clientWilayaPairPrices[cid] = {};
+                            clientWilayaPairPrices[cid][key] = value;
+                            saveDataToLocalStorage();
+                        }
+                    }
+                });
+            }
         });
 
     } catch (error) {
         console.error('Error rendering articles:', error);
     }
 }
+
+// Function triggered by the Save button in the UI
+window.savePriceFromArticle = function(index) {
+    const article = currentInvoice.articles[index];
+    if (!article || !currentInvoice.clientId) return;
+
+    if (!article.wilayaDepart || !article.wilayaDestination || !article.pricingType) {
+        alert("Veuillez sélectionner le départ, la destination et le type de tarification pour mémoriser le prix.");
+        return;
+    }
+
+    const value = article.prixUHT || 0;
+    const cid = currentInvoice.clientId;
+    const key = `${article.wilayaDepart}|${article.wilayaDestination}|${article.pricingType}`;
+
+    if (!clientWilayaPairPrices[cid]) clientWilayaPairPrices[cid] = {};
+    clientWilayaPairPrices[cid][key] = value;
+    saveDataToLocalStorage();
+    
+    // Visually confirm
+    const btn = document.querySelector(`[data-index="${index}"]`).parentNode.querySelector('.btn-outline-success');
+    if (btn) {
+        const oldHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fa fa-check text-success"></i>';
+        btn.classList.replace('btn-outline-success', 'btn-light');
+        setTimeout(() => {
+            btn.innerHTML = oldHtml;
+            btn.classList.replace('btn-light', 'btn-outline-success');
+        }, 1500);
+    }
+};
 function updateArticleDesignation(articleIndex) {
     if (!currentInvoice.articles || !currentInvoice.articles[articleIndex]) return;
     

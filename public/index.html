@@ -139,8 +139,8 @@
       top: 100%;
       left: 0;
       right: 0;
-      background: #fff;
-      border: 1px solid #dee2e6;
+      background: var(--bg-surface);
+      border: var(--border-light);
       border-radius: 8px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       z-index: 1000;
@@ -148,45 +148,40 @@
       max-height: 300px;
       overflow: hidden;
     }
-    .client-dropdown.show { display: block; }
-    .dropdown-header {
-      position: relative;
-      padding: 12px;
-      border-bottom: 1px solid #e9ecef;
+    .client-dropdown-header {
+      padding: 10px 12px;
+      border-bottom: var(--border-light);
+      background: var(--bg-app);
     }
+    .client-search-input-wrapper { position: relative; }
     .client-search {
       width: 100%;
-      border: 1px solid #dee2e6;
-      border-radius: 6px;
-      padding: 8px 12px 8px 36px;
+      padding: 8px 12px 8px 32px;
+      border: var(--border-light);
+      border-radius: 20px;
       font-size: 14px;
-      outline: none;
+      background: var(--bg-surface);
+      color: var(--text-main);
     }
     .client-search:focus {
+      outline: none;
       border-color: #007bff;
       box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
     }
     .search-icon {
       position: absolute;
-      left: 24px;
+      left: 10px;
       top: 50%;
       transform: translateY(-50%);
-      color: #6c757d;
+      color: var(--text-muted);
       font-size: 14px;
     }
-    .dropdown-options {
-      max-height: 200px;
+    .client-list {
+      max-height: 240px;
       overflow-y: auto;
+      padding: 4px 0;
     }
     .client-option {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px;
-      cursor: pointer;
-      border-bottom: 1px solid #f8f9fa;
-      transition: background-color 0.2s ease;
-    }
     .client-option:hover {
       background: #f8f9fa;
     }
@@ -359,7 +354,7 @@ th.sortable.sorted-desc .sort-icon::after {
     <div class="row g-3 mb-4">
         <div class="col-lg-8">
             <div class="card h-100 shadow-sm border-0">
-                <div class="card__header bg-white border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
+                <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
                     <h6 class="fw-bold mb-0 text-dark"><i class="fa fa-chart-line me-2 text-primary"></i>Évolution C.A.</h6>
                     <div class="btn-group btn-group-sm">
                         <input type="radio" class="btn-check" name="modeRevenue" id="revHT" autocomplete="off" onchange="updateDashboard('revenue', 'HT')">
@@ -378,7 +373,7 @@ th.sortable.sorted-desc .sort-icon::after {
         
         <div class="col-lg-4">
             <div class="card h-100 shadow-sm border-0">
-                <div class="card__header bg-white border-0 pt-3 px-4">
+                <div class="card__header border-0 pt-3 px-4">
                     <h6 class="fw-bold mb-0 text-dark"><i class="fa fa-wallet me-2 text-success"></i>Modes de Paiement</h6>
                 </div>
                 <div class="card__body d-flex justify-content-center align-items-center">
@@ -393,7 +388,7 @@ th.sortable.sorted-desc .sort-icon::after {
     <div class="row g-3 mb-4">
         <div class="col-lg-5">
             <div class="card h-100 shadow-sm border-0">
-                <div class="card__header bg-white border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
+                <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
                     <h6 class="fw-bold mb-0 text-dark"><i class="fa fa-users me-2 text-info"></i>Répartition Clients</h6>
                     <div class="btn-group btn-group-sm">
                         <input type="radio" class="btn-check" name="modeClients" id="cliHT" autocomplete="off" onchange="updateDashboard('clients', 'HT')">
@@ -412,7 +407,7 @@ th.sortable.sorted-desc .sort-icon::after {
 
         <div class="col-lg-7">
             <div class="card h-100 shadow-sm border-0">
-                <div class="card__header bg-white border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
+                <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
                     <h6 class="fw-bold mb-0 text-dark"><i class="fa fa-route me-2 text-purple"></i>Analyse des Trajets</h6>
                     <select id="chartTrajetClientSelect" class="form-select form-select-sm" style="width: 180px;" onchange="updateTrajetChart()">
                         <option value="">Choisir un client...</option>
@@ -433,7 +428,7 @@ th.sortable.sorted-desc .sort-icon::after {
     <div class="row g-3 mb-4">
         <div class="col-lg-6">
             <div class="card h-100 shadow-sm border-0">
-                <div class="card__header bg-white border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
+                <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
                     <h6 class="fw-bold mb-0 text-dark"><i class="fa fa-balance-scale me-2 text-warning"></i>État des Paiements</h6>
                     <div class="btn-group btn-group-sm">
                         <input type="radio" class="btn-check" name="modeDebt" id="debtHT" autocomplete="off" onchange="updateDashboard('debt', 'HT')">
@@ -452,7 +447,7 @@ th.sortable.sorted-desc .sort-icon::after {
 
         <div class="col-lg-6">
              <div class="card h-100 shadow-sm border-0">
-                <div class="card__header bg-white border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
+                <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
                     <h6 class="fw-bold mb-0 text-dark"><i class="fa fa-hourglass-half me-2 text-danger"></i>Prévisions</h6>
                     <div class="btn-group btn-group-sm">
                         <input type="radio" class="btn-check" name="modeForecast" id="fcHT" autocomplete="off" onchange="updateDashboard('forecast', 'HT')">
@@ -476,7 +471,7 @@ th.sortable.sorted-desc .sort-icon::after {
     </div>
     
     <div class="card shadow-sm border-0">
-        <div class="card__header bg-white border-0 pt-3 px-4 d-flex justify-content-between">
+        <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between">
             <h6 class="fw-bold mb-0 text-dark"><i class="fa fa-history me-2 text-secondary"></i>Dernières Factures</h6>
             <button class="btn btn-sm btn-link text-decoration-none" onclick="showView('invoices')">Voir tout →</button>
         </div>
@@ -598,7 +593,7 @@ th.sortable.sorted-desc .sort-icon::after {
 <table class="table table-hover mb-0 table-vertical-lines" id="tableInvoices">
 								<colgroup>
     <col style="width: 40px;">  <col style="width: 100px;"> <col style="width: 100px;"> <col style="width: 25%;">   <col style="width: 15%;">   <col style="width: 15%;">   <col style="width: 120px;"> <col style="width: 120px;"> </colgroup>
-                                    <thead class="sticky-top bg-white shadow-sm">
+                                    <thead class="sticky-top shadow-sm">
                                         <tr>
                                             <th width="40"><input type="checkbox" id="chkAllInvoices"></th>
                                             <th data-sort="number" class="sortable">N° <span class="sort-icon"></span></th>

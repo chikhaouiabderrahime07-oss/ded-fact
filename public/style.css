@@ -261,20 +261,20 @@ tr.selected-invoice-row td:first-child {
 }
 
 .btn--outline {
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border-light);
   color: var(--text-main);
-  background: #fff;
+  background: var(--bg-surface);
 }
 .btn--outline:hover {
   border-color: var(--color-primary);
   color: var(--color-primary);
-  background: #f8fafc;
+  background: var(--bg-app);
 }
 
 /* --- KPI Cards --- */
 .status-item-pro {
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
   border-left-width: 4px !important; /* Keep the colored stripe */
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-soft);
@@ -284,15 +284,18 @@ tr.selected-invoice-row td:first-child {
 /* --- Modals (Clean) --- */
 .modal-content {
   border: none;
+  background-color: var(--bg-surface);
+  color: var(--text-main);
   border-radius: var(--radius-md);
   box-shadow: 0 20px 50px rgba(0,0,0,0.1);
 }
-.modal-header { border-bottom: 1px solid #f1f5f9; background: #fff; padding: 20px; }
-.modal-footer { border-top: 1px solid #f1f5f9; background: #f8fafc; padding: 20px; }
+.modal-header { border-bottom: 1px solid var(--border-light); background: var(--bg-surface); padding: 20px; }
+.modal-footer { border-top: 1px solid var(--border-light); background: var(--bg-app); padding: 20px; }
 
 /* --- Full Screen Invoice Preview (Paper feel) --- */
 .invoice-container-modal {
-  background: white;
+  background: white; /* Needs to be white because it's paper */
+  color: #000; /* Needs to be black because it's paper */
   width: 210mm;
   min-height: 297mm;
   margin: 30px auto;
@@ -302,7 +305,7 @@ tr.selected-invoice-row td:first-child {
 }
 
 .modal-fullscreen .modal-body {
-  background-color: #e2e8f0; /* Darker backdrop for contrast with paper */
+  background-color: var(--bg-app); /* Darker backdrop for contrast with paper */
 }
 
 /* --- FIXES FOR MODAL & PREVIEW --- */
@@ -347,11 +350,11 @@ input[type="month"] {
 }
 /* Show a placeholder-like label when empty */
 input[type="month"]:invalid::-webkit-datetime-edit {
-    color: #999;
+    color: var(--text-muted);
 }
 input[type="month"]::before {
     content: '📅 Filtrer par Mois'; /* Label for the empty bar */
-    color: #999;
+    color: var(--text-muted);
     position: absolute;
     left: 10px;
     pointer-events: none;
@@ -364,13 +367,13 @@ input[type="month"]:valid::before {
 
 /* --- FIX 2: Gentle Vertical Lines for Invoice Table --- */
 .table-vertical-lines thead th {
-    border-right: 1px solid #e2e8f0; /* Gentle line for headers */
+    border-right: 1px solid var(--border-light); /* Gentle line for headers */
     text-align: center !important;   /* Force Center */
     vertical-align: middle;
 }
 
 .table-vertical-lines tbody td {
-    border-right: 1px solid #f1f5f9; /* Very gentle line for rows */
+    border-right: 1px solid var(--border-light); /* Very gentle line for rows */
     text-align: center !important;   /* Force Center */
     vertical-align: middle;
 }
@@ -386,11 +389,11 @@ input[type="month"]:valid::before {
 
 /* --- FIX 3: Beautify Report Totals (The Footer) --- */
 .report-footer-row td {
-    background-color: #2c3e50 !important; /* Dark Elegant Blue */
+    background-color: var(--color-primary) !important; 
     color: #ffffff !important;           /* White Text */
     font-size: 0.95rem;
     padding: 15px 10px !important;
-    border: 1px solid #34495e !important;
+    border: 1px solid var(--border-light) !important;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -421,7 +424,7 @@ input[type="month"]:valid::before {
     position: sticky;
     top: 0;
     z-index: 10; /* Must be high */
-    background-color: #f8f9fa; /* Must be opaque */
+    background-color: var(--bg-surface); /* Must be opaque */
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
@@ -429,7 +432,7 @@ input[type="month"]:valid::before {
 #tableReport thead th:first-child {
     left: 0;
     z-index: 20; /* Highest priority (corner) */
-    border-right: 2px solid #dee2e6;
+    border-right: 2px solid var(--border-light);
 }
 
 /* 3. First Column Body (Rows) */
@@ -437,8 +440,8 @@ input[type="month"]:valid::before {
     position: sticky;
     left: 0;
     z-index: 5;
-    background-color: #ffffff;
-    border-right: 2px solid #dee2e6;
+    background-color: var(--bg-surface);
+    border-right: 2px solid var(--border-light);
 }
 
 .badge-clickable {
@@ -453,8 +456,8 @@ input[type="month"]:valid::before {
 
 /* --- License Card Style --- */
 .license-card {
-    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); /* Light Green Gradient */
-    border: 1px solid #bbf7d0;
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(21, 128, 61, 0.2) 100%);
+    border: 1px solid rgba(34, 197, 94, 0.3);
     border-radius: 8px;
     padding: 12px;
     margin-top: 15px;
