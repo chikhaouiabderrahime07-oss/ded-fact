@@ -6168,7 +6168,9 @@ function openBatchPaymentModal() {
     // Reset champs
     document.getElementById('payDate').value = new Date().toISOString().split('T')[0];
     document.getElementById('payRef').value = '';
-    document.getElementById('payBank').value = '';
+
+    // ✅ FIX: Populate bank dropdown (was missing, causing empty bank list)
+    populateBankSelect('#payBank', '');
 
     new bootstrap.Modal(document.getElementById('modalPayment')).show();
 }
