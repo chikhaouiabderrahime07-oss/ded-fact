@@ -5153,7 +5153,10 @@ function getFilteredReportInvoices() {
         }
         return true;
     });
+}
 
+function applyReportQuickFilter() {
+    const res = getFilteredReportInvoices();
     renderReportTable(res);
     const countEl = document.getElementById('reportQuickCount');
     if (countEl) {
