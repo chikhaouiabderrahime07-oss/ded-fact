@@ -331,18 +331,52 @@ th.sortable.sorted-desc .sort-icon::after {
     <main class="flex-grow-1 p-4 overflow-auto" id="viewContainer">
         <!-- DASHBOARD VIEW -->
 <section id="view-dashboard" class="app-view">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
             <h2 class="mb-0 fw-bold" style="color:var(--text-main);">Tableau de Bord</h2>
             <div class="text-muted small" id="currentDate"></div>
         </div>
-        <div class="d-flex align-items-center gap-3">
-            <select id="dashboardYearSelect" class="form-select form-select-sm shadow-sm" style="width:140px; font-weight:bold; border: 2px solid var(--color-primary);">
-                <option value="">Toutes années</option>
-                <option value="2024">2024</option>
-                <option value="2025" selected>2025</option>
-                <option value="2026">2026</option>
-            </select>
+        <!-- GLOBAL DASHBOARD FILTER PANEL -->
+        <div class="d-flex align-items-center gap-2 flex-wrap bg-white p-2 rounded shadow-sm border">
+            <div class="d-flex align-items-center gap-1">
+                <i class="fa fa-user text-primary small"></i>
+                <select id="dashboardClientSelect" class="form-select form-select-sm shadow-sm" style="min-width:180px; font-weight:bold; border: 2px solid var(--color-primary);" onchange="updateDashboard()">
+                    <option value="all">👑 Tous les clients</option>
+                </select>
+            </div>
+            <div class="d-flex align-items-center gap-1">
+                <i class="fa fa-calendar-alt text-primary small"></i>
+                <select id="dashboardYearSelect" class="form-select form-select-sm shadow-sm" style="width:120px; font-weight:bold; border: 2px solid var(--color-primary);" onchange="updateDashboard()">
+                    <option value="">Toutes années</option>
+                    <option value="2024">2024</option>
+                    <option value="2025">2025</option>
+                    <option value="2026" selected>2026</option>
+                </select>
+            </div>
+            <div>
+                <select id="dashboardPeriodSelect" class="form-select form-select-sm shadow-sm" style="width:150px; font-weight:bold; border: 2px solid var(--color-primary);" onchange="updateDashboard()">
+                    <option value="all" selected>📅 Toute l'année</option>
+                    <option value="Q1">T1 (Jan - Mar)</option>
+                    <option value="Q2">T2 (Avr - Juin)</option>
+                    <option value="Q3">T3 (Juil - Sep)</option>
+                    <option value="Q4">T4 (Oct - Déc)</option>
+                    <option value="0">Janvier</option>
+                    <option value="1">Février</option>
+                    <option value="2">Mars</option>
+                    <option value="3">Avril</option>
+                    <option value="4">Mai</option>
+                    <option value="5">Juin</option>
+                    <option value="6">Juillet</option>
+                    <option value="7">Août</option>
+                    <option value="8">Septembre</option>
+                    <option value="9">Octobre</option>
+                    <option value="10">Novembre</option>
+                    <option value="11">Décembre</option>
+                </select>
+            </div>
+            <button class="btn btn-outline-secondary btn-sm" onclick="resetDashboardFilters()" title="Réinitialiser tous les filtres">
+                <i class="fa fa-undo"></i>
+            </button>
             <button class="btn btn--primary btn--sm shadow-sm" onclick="updateDashboard()">
                 <i class="fa fa-sync-alt me-1"></i> Actualiser
             </button>
@@ -363,7 +397,10 @@ th.sortable.sorted-desc .sort-icon::after {
                         <label class="btn btn-outline-primary" for="revTTC">TTC</label>
                     </div>
                 </div>
-                <div class="card__body">
+                <div class="text-muted small px-4 pb-2 border-bottom" style="font-size:0.75rem;">
+                    <i class="fa fa-info-circle me-1 text-primary"></i><strong>Légende :</strong> Progression mensuelle du Chiffre d'Affaires sur la sélection active (Année/Période/Client).
+                </div>
+                <div class="card__body pt-3">
                     <div style="height: 300px;">
                         <canvas id="chartRevenueMonth"></canvas>
                     </div>
@@ -376,7 +413,10 @@ th.sortable.sorted-desc .sort-icon::after {
                 <div class="card__header border-0 pt-3 px-4">
                     <h6 class="fw-bold mb-0"><i class="fa fa-wallet me-2 text-success"></i>Modes de Paiement</h6>
                 </div>
-                <div class="card__body d-flex justify-content-center align-items-center">
+                <div class="text-muted small px-4 pb-2 border-bottom" style="font-size:0.75rem;">
+                    <i class="fa fa-info-circle me-1 text-success"></i><strong>Légende :</strong> Répartition des factures selon leur mode de règlement (Virement, Chèque, etc.).
+                </div>
+                <div class="card__body pt-3 d-flex justify-content-center align-items-center">
                     <div style="height: 250px; width: 100%;">
                         <canvas id="chartPaymentMethods"></canvas>
                     </div>
@@ -397,7 +437,10 @@ th.sortable.sorted-desc .sort-icon::after {
                         <label class="btn btn-outline-primary" for="cliTTC">TTC</label>
                     </div>
                 </div>
-                <div class="card__body d-flex justify-content-center align-items-center">
+                <div class="text-muted small px-4 pb-2 border-bottom" style="font-size:0.75rem;">
+                    <i class="fa fa-info-circle me-1 text-info"></i><strong>Légende :</strong> Classement des clients générant le plus de chiffre d'affaires sur la période active.
+                </div>
+                <div class="card__body pt-3 d-flex justify-content-center align-items-center">
                     <div style="height: 280px; width: 100%;">
                         <canvas id="chartTopClients"></canvas>
                     </div>
@@ -413,7 +456,10 @@ th.sortable.sorted-desc .sort-icon::after {
                         <option value="">Choisir un client...</option>
                     </select>
                 </div>
-                <div class="card__body">
+                <div class="text-muted small px-4 pb-2 border-bottom" style="font-size:0.75rem;">
+                    <i class="fa fa-info-circle me-1 text-purple"></i><strong>Légende :</strong> Top 10 des trajets par Wilaya (Départ ➝ Destination) du client sélectionné.
+                </div>
+                <div class="card__body pt-3">
                     <div style="height: 280px;">
                         <canvas id="chartTrajets"></canvas>
                     </div>
@@ -728,19 +774,54 @@ th.sortable.sorted-desc .sort-icon::after {
       </div>
     </div>
 <div class="card__body">
+      <!-- Quick filter bar for instant filtering of loaded report -->
+      <div id="reportQuickFilter" class="p-3 mb-3 bg-light rounded border d-flex flex-wrap gap-2 align-items-center">
+        <div class="flex-grow-1" style="min-width: 200px;">
+          <input type="text" id="reportQuickSearch" class="form-control form-control-sm" placeholder="Rechercher (client, n°, ref, banque...)" oninput="applyReportQuickFilter()">
+        </div>
+        <div>
+          <select id="reportQuickBank" class="form-select form-select-sm" style="min-width: 150px;" onchange="applyReportQuickFilter()">
+            <option value="">Toutes banques</option>
+          </select>
+        </div>
+        <div>
+          <select id="reportQuickMode" class="form-select form-select-sm" style="min-width: 130px;" onchange="applyReportQuickFilter()">
+            <option value="">Tous modes</option>
+            <option value="Virement">Virement</option>
+            <option value="Chèque">Chèque</option>
+            <option value="Versement">Versement</option>
+          </select>
+        </div>
+        <div>
+          <select id="reportQuickStatus" class="form-select form-select-sm" style="min-width: 130px;" onchange="applyReportQuickFilter()">
+            <option value="">Tous états</option>
+            <option value="paid">Payée</option>
+            <option value="unpaid">Impayée</option>
+          </select>
+        </div>
+        <div>
+          <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetReportQuickFilter()" title="Réinitialiser filtres">
+            <i class="fa fa-times"></i>
+          </button>
+        </div>
+        <div class="text-muted small ms-2" id="reportQuickCount"></div>
+      </div>
       <div class="table-responsive" style="max-height: 60vh; overflow: auto; border-bottom: 1px solid #dee2e6;">
         <table id="tableReport" class="table table-hover align-middle mb-0" style="border-collapse: separate; border-spacing: 0;">
 <thead class="table-light">
                 <tr class="text-uppercase small fw-bold text-center align-middle" style="font-size: 0.75rem; border-bottom: 2px solid #333;">
                     <th class="sortable" data-sort="status" style="width: 80px; border-right: 1px solid #dee2e6;">État</th>
                     
-                    <th class="sortable" data-sort="ref" style="border-right: 1px solid #dee2e6; min-width: 120px;">Ref. Paiement</th>
+                    <th class="sortable" data-sort="ref" style="border-right: 1px solid #dee2e6; min-width: 110px;">Ref. Transaction</th>
+                    <th class="sortable" data-sort="bank" style="border-right: 1px solid #dee2e6; min-width: 100px;">Banque</th>
+                    <th class="sortable" data-sort="mode" style="border-right: 1px solid #dee2e6; min-width: 90px;">Mode</th>
+                    <th class="sortable" data-sort="datePay" style="border-right: 1px solid #dee2e6; min-width: 105px;">Date Paiement</th>
                     
                     <th class="sortable" data-sort="month" style="border-right: 1px solid #dee2e6;">Mois</th>
                     
                     <th class="sortable" data-sort="bl" style="border-right: 1px solid #dee2e6;">BL (Qté)</th>
                     
-                    <th class="sortable" data-sort="date" style="border-right: 1px solid #dee2e6;">Date</th>
+                    <th class="sortable" data-sort="date" style="border-right: 1px solid #dee2e6;">Date Facture</th>
                     
                     <th class="sortable" data-sort="number" style="border-right: 1px solid #dee2e6;">N° Facture</th>
                     
@@ -913,6 +994,30 @@ th.sortable.sorted-desc .sort-icon::after {
                                 <input type="file" id="logoRightInput" class="form-control" accept="image/*">
                             </div>
                         </div>
+
+                        <!-- EXCEL EXPORT COLORS -->
+                        <div class="row mt-3 border-top pt-3">
+                            <div class="col-12 mb-2">
+                                <h6 class="fw-bold text-primary"><i class="fa fa-file-excel me-2"></i>Couleurs Export Excel (Lignes alternées)</h6>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="excelColorEven" class="form-label">Lignes Paires (Défaut : Bleu clair)</label>
+                                <input type="color" id="excelColorEven" class="form-control form-control-color w-100" value="#dbe9ff">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="excelColorOdd" class="form-label">Lignes Impaires (Défaut : Blanc)</label>
+                                <input type="color" id="excelColorOdd" class="form-control form-control-color w-100" value="#ffffff">
+                            </div>
+                            <div class="col-12 mt-2 d-flex gap-2">
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="setExcelColors('#dbe9ff', '#ffffff')">
+                                    <i class="fa fa-sync me-1"></i> Bleu / Blanc (défaut)
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setExcelColors('#ffffff', '#ffffff')">
+                                    <i class="fa fa-square me-1"></i> Tout en blanc
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="mt-4">
                             <button type="button" onclick="saveSettings()" class="btn btn--primary">
                                 <i class="fa fa-save me-2"></i>Enregistrer les paramètres
@@ -1154,7 +1259,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <!-- PDF Libraries -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>

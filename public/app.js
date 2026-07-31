@@ -2341,570 +2341,18 @@ function saveInvoice() {
         alert('Erreur lors de la sauvegarde de la facture');
     }
 }
-// 1. REGISTER PLUGIN (Put this at the top of app.js)
+// 1. REGISTER PLUGIN
 if (typeof ChartDataLabels !== 'undefined') {
     Chart.register(ChartDataLabels);
 }
 
-// Global Settings
+// Global chart mode settings (HT/TTC toggles)
 let chartSettings = {
     revenue: 'TTC',
     clients: 'TTC',
     debt: 'TTC',
     forecast: 'TTC'
 };
-
-// ---------------------------------------------------------
-// FIXED DASHBOARD FUNCTION
-
-
-// ---------------------------------------------------------
-// INTERACTIVE DASHBOARD (Clickable HT/TTC Cards)
-// ---------------------------------------------------------
-window.updateDashboard = function(targetChart = null, mode = null) {
-    try {
-        // 1. Update Settings if button clicked (or Badge clicked)
-        if (targetChart && mode) {
-            chartSettings[targetChart] = mode;
-            // Also update radio buttons if they exist in the DOM
-            const radioBtn = document.getElementById(
-                targetChart === 'revenue' ? (mode === 'HT' ? 'revHT' : 'revTTC') :
-                targetChart === 'clients' ? (mode === 'HT' ? 'cliHT' : 'cliTTC') :
-                targetChart === 'debt' ? (mode === 'HT' ? 'debtHT' : 'debtTTC') :
-                targetChart === 'forecast' ? (mode === 'HT' ? 'fcHT' : 'fcTTC') : null
-            );
-            if (radioBtn) radioBtn.checked = true;
-        }
-
-        const yearSelect = document.getElementById('dashboardYearSelect');
-        const yearValue = yearSelect ? yearSelect.value : new Date().getFullYear().toString();
-
-        // 2. Filter Data
-        const yearInvoices = invoices.filter(inv => {
-            if (yearValue === '') return true; 
-            const d = new Date(inv.date || inv.createdAt);
-            return d.getFullYear() === parseInt(yearValue);
-        });
-
-        // 3. KPI CALCULATIONS (HT & TTC)
-        
-        // A. Revenue
-        const revTTC = yearInvoices.reduce((sum, inv) => sum + (inv.totals?.ttc || 0), 0);
-        const revHT  = yearInvoices.reduce((sum, inv) => sum + (inv.totals?.ht || 0), 0);
-
-        // B. Paid
-        const paidInvoices = yearInvoices.filter(inv => inv.paid || inv.paymentStatus === 'encaissee');
-        const paidTTC = paidInvoices.reduce((sum, inv) => sum + (inv.totals?.ttc || 0), 0);
-        const paidHT  = paidInvoices.reduce((sum, inv) => sum + (inv.totals?.ht || 0), 0);
-
-        // C. Debt
-        const debtTTC = revTTC - paidTTC;
-        const debtHT  = revHT - paidHT;
-
-        // D. Overdue
-        const overdueInvoices = yearInvoices.filter(inv => !inv.paid && new Date(new Date(inv.date).getTime() + ((inv.delaiPaiement||30) * 86400000)) < new Date());
-        const overdueTTC = overdueInvoices.reduce((sum, inv) => sum + (inv.totals?.ttc || 0), 0);
-        const overdueHT  = overdueInvoices.reduce((sum, inv) => sum + (inv.totals?.ht || 0), 0);
-
-        // 4. HELPER: Generate Card HTML
-        // This function swaps the Big/Small numbers based on the active mode
-        const renderCard = (title, settingKey, color, icon, valTTC, valHT, footerText) => {
-            const currentMode = chartSettings[settingKey] || 'TTC'; // e.g. 'HT' or 'TTC'
-            
-            // Define Primary (Big) and Secondary (Small) values based on selection
-            const primaryVal = currentMode === 'TTC' ? valTTC : valHT;
-            const primaryLabel = currentMode;
-            
-            const secondaryVal = currentMode === 'TTC' ? valHT : valTTC;
-            const secondaryLabel = currentMode === 'TTC' ? 'HT' : 'TTC';
-
-            // Define badge styles (Active vs Inactive)
-            const badgeBase = "badge badge-clickable ms-2";
-            const badgePrimaryClass = `bg-${color}-subtle text-${color} border border-${color}-subtle`;
-            const badgeSecondaryClass = `bg-light text-secondary border`;
-
-            // Onclick handlers
-            const clickPrimary = `updateDashboard('${settingKey}', '${primaryLabel}')`;
-            const clickSecondary = `updateDashboard('${settingKey}', '${secondaryLabel}')`;
-
-            return `
-                <div class="col-lg-3 col-md-6">
-                    <div class="card border-0 shadow-sm h-100 overflow-hidden">
-                        <div class="card-body p-3 position-relative">
-                            <div class="border-start border-4 border-${color} position-absolute top-0 bottom-0 start-0"></div>
-                            <div class="ms-2">
-                                <div class="text-uppercase small fw-bold text-muted mb-2">${title}</div>
-                                
-                                <div class="d-flex align-items-baseline">
-                                    <span class="h4 fw-bold text-${color} mb-0">${formatCurrency(primaryVal).replace('DA','')}</span>
-                                    <span class="badge ${badgePrimaryClass} ms-2" onclick="${clickPrimary}">${primaryLabel} <i class="fa fa-check-circle ms-1" style="font-size:0.6em"></i></span>
-                                </div>
-
-                                <div class="d-flex align-items-baseline mt-1" style="cursor:pointer;" onclick="${clickSecondary}" title="Cliquez pour voir en ${secondaryLabel}">
-                                    <span class="h6 fw-normal text-secondary mb-0">${formatCurrency(secondaryVal).replace('DA','')}</span>
-                                    <span class="badge badge-clickable bg-white text-secondary border ms-2">${secondaryLabel}</span>
-                                </div>
-
-                                <div class="small text-${color} mt-3 pt-2 border-top">
-                                    <i class="fa ${icon} me-1"></i> ${footerText}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        };
-
-        // 5. RENDER CARDS
-        const kpiContainer = document.getElementById('kpiContainer');
-        if (kpiContainer) {
-            let html = '';
-            
-            // Revenue Card (Controls 'revenue' chart)
-            html += renderCard("Chiffre d'Affaires", 'revenue', 'primary', 'fa-file-invoice', revTTC, revHT, `${yearInvoices.length} factures`);
-            
-            // Paid Card (Controls 'debt' chart)
-            html += renderCard("Total Encaissé", 'debt', 'success', 'fa-check-circle', paidTTC, paidHT, "Payé");
-            
-            // Debt Card (Controls 'debt' chart)
-            html += renderCard("Crédit Client", 'debt', 'warning', 'fa-clock', debtTTC, debtHT, "En attente");
-            
-            // Overdue Card (Controls 'forecast' chart - closest fit)
-            html += renderCard("Retards de Paiement", 'forecast', 'danger', 'fa-exclamation-triangle', overdueTTC, overdueHT, `${overdueInvoices.length} factures échues`);
-
-            kpiContainer.innerHTML = html;
-        }
-
-        const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
-
-        // --- PREPARE CHART DATA ---
-        // A. Revenue
-        const dataRev = Array(12).fill(0);
-        yearInvoices.forEach(inv => {
-            const m = new Date(inv.date).getMonth();
-            const val = chartSettings.revenue === 'HT' ? (inv.totals?.ht || 0) : (inv.totals?.ttc || 0);
-            dataRev[m] += val;
-        });
-
-        // B. Clients
-        const clientData = {};
-        let totalClientVal = 0;
-        yearInvoices.forEach(inv => {
-            const cName = clients.find(c => c.id === inv.clientId)?.nom || 'Inconnu';
-            const val = chartSettings.clients === 'HT' ? (inv.totals?.ht || 0) : (inv.totals?.ttc || 0);
-            clientData[cName] = (clientData[cName] || 0) + val;
-            totalClientVal += val;
-        });
-        const sortedClients = Object.entries(clientData).sort((a,b) => b[1] - a[1]);
-        const clientLabels = sortedClients.map(item => {
-            const name = item[0];
-            const val = item[1];
-            const percent = totalClientVal > 0 ? ((val / totalClientVal) * 100).toFixed(1) : 0;
-            return `${name} (${percent}%)`; 
-        });
-        const clientValues = sortedClients.map(item => item[1]);
-
-        // C. Debt Status
-        const paidValChart = paidInvoices.reduce((s, i) => s + (chartSettings.debt === 'HT' ? i.totals.ht : i.totals.ttc), 0);
-        const totalValChart = yearInvoices.reduce((s, i) => s + (chartSettings.debt === 'HT' ? i.totals.ht : i.totals.ttc), 0);
-        const unpaidValChart = totalValChart - paidValChart;
-
-        // D. Forecast
-        const forecastData = Array(12).fill(0);
-        yearInvoices.filter(inv => !inv.paid).forEach(inv => {
-            const d = new Date(inv.date);
-            const delay = (inv.delaiPaiement !== undefined) ? parseInt(inv.delaiPaiement) : 30;
-            d.setDate(d.getDate() + delay);
-            if(yearValue === '' || d.getFullYear() === parseInt(yearValue)) {
-                const val = chartSettings.forecast === 'HT' ? (inv.totals?.ht || 0) : (inv.totals?.ttc || 0);
-                forecastData[d.getMonth()] += val;
-            }
-        });
-
-        // --- RENDER CHARTS ---
-        const destroy = (key) => { if(dashboardCharts[key]) { dashboardCharts[key].destroy(); dashboardCharts[key] = null; } };
-
-        // 1. REVENUE
-        destroy('revenueMonth');
-        const ctxRev = document.getElementById('chartRevenueMonth');
-        if (ctxRev) {
-            dashboardCharts.revenueMonth = new Chart(ctxRev, {
-                type: 'bar',
-                data: {
-                    labels: months,
-                    datasets: [{ 
-                        label: `C.A. ${chartSettings.revenue}`, 
-                        data: dataRev, 
-                        backgroundColor: '#2563eb', borderRadius: 4 
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } }
-                }
-            });
-        }
-
-        // 2. CLIENTS
-        destroy('topClients');
-        const ctxClients = document.getElementById('chartTopClients');
-        if (ctxClients) {
-            dashboardCharts.topClients = new Chart(ctxClients, {
-                type: 'doughnut',
-                plugins: [ChartDataLabels],
-                data: {
-                    labels: clientLabels,
-                    datasets: [{
-                        data: clientValues,
-                        backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1'],
-                        borderWidth: 1,
-                        borderColor: '#fff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '50%',
-                    plugins: { 
-                        legend: { position: 'right', labels: { boxWidth: 10, font: {size: 11} } },
-                        tooltip: { callbacks: { label: (c) => `${c.label.split(' (')[0]}: ${formatCurrency(c.raw)}` } },
-                        datalabels: {
-                            color: '#fff', font: { weight: 'bold', size: 11 },
-                            formatter: (val, ctx) => (val/totalClientVal > 0.03) ? ((val/totalClientVal)*100).toFixed(1)+"%" : ''
-                        }
-                    }
-                }
-            });
-        }
-
-        // 3. DEBT
-        destroy('debtStatus');
-        const ctxDebt = document.getElementById('chartDebtStatus');
-        if (ctxDebt) {
-            dashboardCharts.debtStatus = new Chart(ctxDebt, {
-                type: 'bar',
-                data: {
-                    labels: ['Global'],
-                    datasets: [
-                        { label: 'Payé', data: [paidValChart], backgroundColor: '#10b981', barThickness: 40 },
-                        { label: 'Impayé', data: [unpaidValChart], backgroundColor: '#f59e0b', barThickness: 40 },
-                    ]
-                },
-                options: {
-                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-                    scales: { x: { stacked: true }, y: { stacked: true, display: false } },
-                    plugins: { legend: { position: 'bottom' } }
-                }
-            });
-        }
-
-        // 4. FORECAST
-        destroy('forecast');
-        const ctxCast = document.getElementById('chartForecast');
-        if (ctxCast) {
-            dashboardCharts.forecast = new Chart(ctxCast, {
-                type: 'line',
-                data: {
-                    labels: months,
-                    datasets: [{
-                        label: `Entrées (${chartSettings.forecast})`,
-                        data: forecastData,
-                        borderColor: '#dc2626', backgroundColor: 'rgba(220, 38, 38, 0.05)',
-                        fill: true, tension: 0.4
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-            });
-        }
-        
-        // Populate Trajet Dropdown
-        const trajetSelect = document.getElementById('chartTrajetClientSelect');
-        if (trajetSelect && trajetSelect.options.length <= 1) {
-             trajetSelect.innerHTML = '<option value="">Vue Globale (Tous)</option>';
-             [...clients].sort((a,b) => a.nom.localeCompare(b.nom)).forEach(c => {
-                 trajetSelect.innerHTML += `<option value="${c.id}">${c.nom}</option>`;
-             });
-        }
-
-        renderPaymentMethodChart(yearInvoices);
-        updateTrajetChart();
-        updateRecentInvoicesTable();
-
-    } catch (error) {
-        console.error('Dashboard Error:', error);
-    }
-};
-
-// ---------------------------------------------------------
-// FIXED TRAJET CHART FUNCTION (MERGED)
-// ---------------------------------------------------------
-window.updateTrajetChart = function() {
-    const select = document.getElementById('chartTrajetClientSelect');
-    const canvas = document.getElementById('chartTrajets');
-    const emptyState = document.getElementById('trajetEmptyState');
-    
-    if (!select || !canvas) return;
-
-    // Get selected client ID (or null for global view)
-    const clientId = select.value ? parseInt(select.value, 10) : null;
-
-    // Filter invoices (Specific Client OR All)
-    let targetInvoices = invoices;
-    if (clientId) {
-        targetInvoices = invoices.filter(inv => inv.clientId === clientId);
-    }
-
-    // Gather Trajet Data
-    const trajetsMap = {}; 
-    
-    targetInvoices.forEach(inv => {
-        if (inv.articles && inv.articles.length > 0) {
-            inv.articles.forEach(art => {
-                const dep = art.wilayaDepart || inv.wilayaDepart || 'Inconnu';
-                const dest = art.selectedDestination || art.wilayaDestination || inv.wilayaDestination || 'Inconnu';
-                
-                if (dep !== 'Inconnu' && dest !== 'Inconnu') {
-                    const key = `${dep} ➝ ${dest}`;
-                    trajetsMap[key] = (trajetsMap[key] || 0) + 1;
-                }
-            });
-        }
-    });
-
-    const sortedTrajets = Object.entries(trajetsMap)
-        .sort((a,b) => b[1] - a[1])
-        .slice(0, 10);
-
-    // Handle "No Data"
-    if (sortedTrajets.length === 0) {
-        if(dashboardCharts.trajets) dashboardCharts.trajets.destroy();
-        canvas.style.display = 'none';
-        if(emptyState) {
-            emptyState.classList.remove('d-none');
-            emptyState.innerHTML = clientId 
-                ? '<small class="text-muted">Aucun trajet trouvé pour ce client.</small>'
-                : '<small class="text-muted">Aucune donnée de trajet disponible.</small>';
-        }
-        return;
-    }
-
-    // Render Chart
-    canvas.style.display = 'block';
-    if(emptyState) emptyState.classList.add('d-none');
-    if(dashboardCharts.trajets) dashboardCharts.trajets.destroy();
-
-    dashboardCharts.trajets = new Chart(canvas, {
-        type: 'bar',
-        data: {
-            labels: sortedTrajets.map(t => t[0]),
-            datasets: [{
-                label: 'Nombre de voyages',
-                data: sortedTrajets.map(t => t[1]),
-                backgroundColor: 'rgba(109, 40, 217, 0.7)',
-                borderColor: 'rgba(109, 40, 217, 1)',
-                borderWidth: 1,
-                borderRadius: 4
-            }]
-        },
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { 
-                legend: { display: false },
-                tooltip: { callbacks: { label: (c) => `${c.raw} voyages` } },
-                datalabels: {
-                    anchor: 'end',
-                    align: 'end',
-                    color: '#666',
-                    font: { size: 10 },
-                    formatter: (val) => val
-                }
-            },
-            scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
-        }
-    });
-};
-
-// ---------------------------------------------------------
-// FIXED TRAJET CHART FUNCTION (MERGED)
-// ---------------------------------------------------------
-window.updateTrajetChart = function() {
-    const select = document.getElementById('chartTrajetClientSelect');
-    const canvas = document.getElementById('chartTrajets');
-    const emptyState = document.getElementById('trajetEmptyState');
-    
-    if (!select || !canvas) return;
-
-    // Get selected client ID (or null for global view)
-    const clientId = select.value ? parseInt(select.value, 10) : null;
-
-    // Filter invoices (Specific Client OR All)
-    let targetInvoices = invoices;
-    if (clientId) {
-        targetInvoices = invoices.filter(inv => inv.clientId === clientId);
-    }
-
-    // Gather Trajet Data
-    const trajetsMap = {}; 
-    
-    targetInvoices.forEach(inv => {
-        if (inv.articles && inv.articles.length > 0) {
-            inv.articles.forEach(art => {
-                const dep = art.wilayaDepart || inv.wilayaDepart || 'Inconnu';
-                const dest = art.selectedDestination || art.wilayaDestination || inv.wilayaDestination || 'Inconnu';
-                
-                if (dep !== 'Inconnu' && dest !== 'Inconnu') {
-                    const key = `${dep} ➝ ${dest}`;
-                    trajetsMap[key] = (trajetsMap[key] || 0) + 1;
-                }
-            });
-        }
-    });
-
-    const sortedTrajets = Object.entries(trajetsMap)
-        .sort((a,b) => b[1] - a[1])
-        .slice(0, 10);
-
-    // Handle "No Data"
-    if (sortedTrajets.length === 0) {
-        if(dashboardCharts.trajets) dashboardCharts.trajets.destroy();
-        canvas.style.display = 'none';
-        if(emptyState) {
-            emptyState.classList.remove('d-none');
-            emptyState.innerHTML = clientId 
-                ? '<small class="text-muted">Aucun trajet trouvé pour ce client.</small>'
-                : '<small class="text-muted">Aucune donnée de trajet disponible.</small>';
-        }
-        return;
-    }
-
-    // Render Chart
-    canvas.style.display = 'block';
-    if(emptyState) emptyState.classList.add('d-none');
-    if(dashboardCharts.trajets) dashboardCharts.trajets.destroy();
-
-    dashboardCharts.trajets = new Chart(canvas, {
-        type: 'bar',
-        data: {
-            labels: sortedTrajets.map(t => t[0]),
-            datasets: [{
-                label: 'Nombre de voyages',
-                data: sortedTrajets.map(t => t[1]),
-                backgroundColor: 'rgba(109, 40, 217, 0.7)',
-                borderColor: 'rgba(109, 40, 217, 1)',
-                borderWidth: 1,
-                borderRadius: 4
-            }]
-        },
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { 
-                legend: { display: false },
-                tooltip: { callbacks: { label: (c) => `${c.raw} voyages` } },
-                datalabels: {
-                    anchor: 'end',
-                    align: 'end',
-                    color: '#666',
-                    font: { size: 10 },
-                    formatter: (val) => val
-                }
-            },
-            scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
-        }
-    });
-};
-// Helper for payment chart – shows banks + modes with full Algerian bank names
-function renderPaymentMethodChart(invoicesList) {
-    if(dashboardCharts.paymentMethods) dashboardCharts.paymentMethods.destroy();
-    
-    // Build a flat lookup: value → short label  (BEA → "BEA", Al Baraka → "Al Baraka", etc.)
-    const bankLabelMap = {};
-    [...ALGERIAN_BANKS.public, ...ALGERIAN_BANKS.private, ...ALGERIAN_BANKS.other]
-        .forEach(b => { bankLabelMap[b.value] = b.label; });
-
-    const methodsMap = {};
-    invoicesList.forEach(inv => {
-        let key = 'Non défini';
-        if (inv.paymentDetails && inv.paymentDetails.bank) {
-            // Show bank name (use full label from ALGERIAN_BANKS if available)
-            key = bankLabelMap[inv.paymentDetails.bank] || inv.paymentDetails.bank;
-        } else if (inv.paymentDetails && inv.paymentDetails.method) {
-            key = inv.paymentDetails.method;
-        } else if (inv.modePaiement) {
-            key = inv.modePaiement;
-        }
-        methodsMap[key] = (methodsMap[key] || 0) + 1;
-    });
-
-    // Rich 24-color palette for all possible banks
-    const palette = [
-        '#2563eb','#10b981','#f59e0b','#ef4444','#8b5cf6',
-        '#ec4899','#06b6d4','#84cc16','#f97316','#6366f1',
-        '#14b8a6','#d946ef','#0ea5e9','#a3e635','#fb923c',
-        '#c084fc','#22d3ee','#4ade80','#facc15','#f87171',
-        '#818cf8','#34d399','#fbbf24','#60a5fa'
-    ];
-
-    const labels = Object.keys(methodsMap);
-    const ctx = document.getElementById('chartPaymentMethods');
-    if(ctx) {
-        dashboardCharts.paymentMethods = new Chart(ctx, {
-            type: 'doughnut',
-            plugins: [ChartDataLabels],
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: Object.values(methodsMap),
-                    backgroundColor: labels.map((_, i) => palette[i % palette.length]),
-                    borderWidth: 2,
-                    borderColor: '#fff'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '60%',
-                plugins: {
-                    legend: { 
-                        position: 'right', 
-                        labels: { 
-                            boxWidth: 12, 
-                            font: { size: 10 },
-                            // Shorten long bank names in legend
-                            generateLabels: (chart) => {
-                                return chart.data.labels.map((label, i) => ({
-                                    text: label.length > 22 ? label.substring(0, 22) + '…' : label,
-                                    fillStyle: palette[i % palette.length],
-                                    strokeStyle: '#fff',
-                                    lineWidth: 2,
-                                    index: i
-                                }));
-                            }
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: (c) => ` ${c.label}: ${c.raw} facture(s)`
-                        }
-                    },
-                    datalabels: {
-                        color: '#fff',
-                        font: { weight: 'bold', size: 10 },
-                        formatter: (val, ctx) => {
-                            const sum = ctx.chart.data.datasets[0].data.reduce((a,b) => a+b, 0);
-                            const pct = (val * 100 / sum).toFixed(0);
-                            return pct >= 5 ? pct + '%' : '';
-                        }
-                    }
-                }
-            }
-        });
-    }
-}
 
 
 function renderInvoices() {
@@ -4141,200 +3589,337 @@ function toggleAllInvoices() {
     }
 }
 
-// Dashboard
+// ═══════════════════════════════════════════════════════════════
+// ████  DASHBOARD — COMPLETE REWRITE  ████
+// ═══════════════════════════════════════════════════════════════
 let revenueChartInstance = null;
 
-function updateDashboard() {
+// ─── Populate client dropdowns ───
+function populateDashboardClientSelect() {
+    if (!clients || !clients.length) return;
+    const sorted = [...clients].sort((a, b) => (a.nom || '').localeCompare(b.nom || ''));
+
+    const mainSel = document.getElementById('dashboardClientSelect');
+    if (mainSel && mainSel.options.length <= 1) {
+        mainSel.innerHTML = '<option value="all">👑 Tous les clients</option>';
+        sorted.forEach(c => { mainSel.innerHTML += `<option value="${c.id}">${c.nom}</option>`; });
+    }
+
+    const trajetSel = document.getElementById('chartTrajetClientSelect');
+    if (trajetSel && trajetSel.options.length <= 1) {
+        trajetSel.innerHTML = '<option value="">🌍 Vue Globale</option>';
+        sorted.forEach(c => { trajetSel.innerHTML += `<option value="${c.id}">${c.nom}</option>`; });
+    }
+}
+
+// ─── Reset all filters ───
+function resetDashboardFilters() {
+    const cs = document.getElementById('dashboardClientSelect');
+    const ys = document.getElementById('dashboardYearSelect');
+    const ps = document.getElementById('dashboardPeriodSelect');
+    const tcs = document.getElementById('chartTrajetClientSelect');
+    if (cs) cs.value = 'all';
+    if (ys) ys.value = '2026';
+    if (ps) ps.value = 'all';
+    if (tcs) tcs.value = '';
+    // Reset HT/TTC toggles
+    chartSettings = { revenue: 'TTC', clients: 'TTC', debt: 'TTC', forecast: 'TTC' };
+    ['revTTC', 'cliTTC', 'debtTTC', 'fcTTC'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.checked = true;
+    });
+    updateDashboard();
+}
+
+// ─── CORE: Filter invoices by Client + Year + Period ───
+function getDashboardFilteredInvoices() {
+    const clientSel = document.getElementById('dashboardClientSelect');
+    const yearSel   = document.getElementById('dashboardYearSelect');
+    const periodSel = document.getElementById('dashboardPeriodSelect');
+
+    const clientVal = clientSel ? clientSel.value : 'all';
+    const yearVal   = yearSel ? yearSel.value : '';
+    const periodVal = periodSel ? periodSel.value : 'all';
+
+    return invoices.filter(inv => {
+        // Client filter
+        if (clientVal !== 'all' && String(inv.clientId) !== String(clientVal)) return false;
+
+        // Year filter
+        const d = new Date(inv.date || inv.createdAt);
+        if (yearVal !== '' && d.getFullYear() !== parseInt(yearVal)) return false;
+
+        // Period filter
+        if (periodVal !== 'all') {
+            const m = d.getMonth();
+            if (periodVal === 'Q1' && (m < 0 || m > 2)) return false;
+            if (periodVal === 'Q2' && (m < 3 || m > 5)) return false;
+            if (periodVal === 'Q3' && (m < 6 || m > 8)) return false;
+            if (periodVal === 'Q4' && (m < 9 || m > 11)) return false;
+            if (!isNaN(periodVal) && m !== parseInt(periodVal)) return false;
+        }
+        return true;
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ████  MAIN UPDATE DASHBOARD  ████
+// ═══════════════════════════════════════════════════════════════
+function updateDashboard(targetChart, mode) {
     try {
-        const yearSelect = document.getElementById('dashboardYearSelect');
-        const yearValue = yearSelect ? yearSelect.value : new Date().getFullYear().toString();
-
-        // 1. FILTER DATA (Handle "All Years")
-        const yearInvoices = invoices.filter(inv => {
-            if (yearValue === '') return true; // Show all years
-            const d = new Date(inv.date || inv.createdAt);
-            return d.getFullYear() === parseInt(yearValue);
-        });
-
-        // 2. KPI CALCULATIONS
-        const totalRevenueTTC = yearInvoices.reduce((sum, inv) => sum + (inv.totals?.ttc || 0), 0);
-        
-        const paidInvoices = yearInvoices.filter(inv => inv.paid || inv.paymentStatus === 'encaissee');
-        const paidAmount = paidInvoices.reduce((sum, inv) => sum + (inv.totals?.ttc || 0), 0);
-        
-        const unpaidAmount = totalRevenueTTC - paidAmount;
-        const recoveryRate = totalRevenueTTC > 0 ? ((paidAmount / totalRevenueTTC) * 100).toFixed(1) : 0;
-
-        const today = new Date();
-        const overdueInvoices = yearInvoices.filter(inv => !inv.paid && new Date(new Date(inv.date).getTime() + ((inv.delaiPaiement||30) * 86400000)) < today);
-
-        // 3. RENDER KPI CARDS
-        const kpiContainer = document.getElementById('kpiContainer');
-        if (kpiContainer) {
-            kpiContainer.innerHTML = `
-                <div class="col-lg-3 col-md-6">
-                    <div class="p-3 bg-white rounded shadow-sm border-start border-4 border-primary h-100">
-                        <div class="text-uppercase small fw-bold text-muted mb-1">Chiffre d'Affaires</div>
-                        <div class="h3 fw-bold text-dark mb-0">${formatCurrency(totalRevenueTTC).replace('DA','')}</div>
-                        <div class="small text-muted mt-1">${yearInvoices.length} factures</div>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <div class="p-3 bg-white rounded shadow-sm border-start border-4 border-success h-100">
-                        <div class="text-uppercase small fw-bold text-muted mb-1">Encaissé</div>
-                        <div class="h3 fw-bold text-success mb-0">${formatCurrency(paidAmount).replace('DA','')}</div>
-                        <div class="small text-success mt-1">${recoveryRate}% Recouvré</div>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <div class="p-3 bg-white rounded shadow-sm border-start border-4 border-warning h-100">
-                        <div class="text-uppercase small fw-bold text-muted mb-1">Crédit Client</div>
-                        <div class="h3 fw-bold text-warning mb-0">${formatCurrency(unpaidAmount).replace('DA','')}</div>
-                        <div class="small text-muted mt-1">En attente</div>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <div class="p-3 bg-white rounded shadow-sm border-start border-4 border-danger h-100">
-                        <div class="text-uppercase small fw-bold text-muted mb-1">Retards</div>
-                        <div class="h3 fw-bold text-danger mb-0">${overdueInvoices.length}</div>
-                        <div class="small text-danger mt-1">Factures échues</div>
-                    </div>
-                </div>
-            `;
+        // Handle HT/TTC toggle clicks
+        if (targetChart && mode) {
+            chartSettings[targetChart] = mode;
+            const radioMap = {
+                revenue:  { HT: 'revHT',  TTC: 'revTTC'  },
+                clients:  { HT: 'cliHT',  TTC: 'cliTTC'  },
+                debt:     { HT: 'debtHT', TTC: 'debtTTC' },
+                forecast: { HT: 'fcHT',   TTC: 'fcTTC'   }
+            };
+            const radioId = radioMap[targetChart]?.[mode];
+            if (radioId) { const el = document.getElementById(radioId); if (el) el.checked = true; }
         }
 
-        // --- PREPARE DATA ---
-        const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
-        
-        // A. Revenue
-        const dataHT = Array(12).fill(0);
-        const dataTTC = Array(12).fill(0);
-        yearInvoices.forEach(inv => {
-            const m = new Date(inv.date).getMonth();
-            dataHT[m] += inv.totals?.ht || 0;
-            dataTTC[m] += inv.totals?.ttc || 0;
+        // Populate dropdowns
+        populateDashboardClientSelect();
+
+        // 1. FILTER DATA
+        const filtered = getDashboardFilteredInvoices();
+
+        // 2. KPI CALCULATIONS
+        const revTTC = filtered.reduce((s, i) => s + (i.totals?.ttc || 0), 0);
+        const revHT  = filtered.reduce((s, i) => s + (i.totals?.ht  || 0), 0);
+
+        const paidList = filtered.filter(i => i.paid || i.paymentStatus === 'encaissee');
+        const paidTTC  = paidList.reduce((s, i) => s + (i.totals?.ttc || 0), 0);
+        const paidHT   = paidList.reduce((s, i) => s + (i.totals?.ht  || 0), 0);
+
+        const debtTTC = revTTC - paidTTC;
+        const debtHT  = revHT  - paidHT;
+
+        const today = new Date();
+        const overdueList = filtered.filter(i => {
+            if (i.paid || i.paymentStatus === 'encaissee') return false;
+            const due = new Date(new Date(i.date).getTime() + ((i.delaiPaiement || 30) * 86400000));
+            return due < today;
+        });
+        const overdueTTC = overdueList.reduce((s, i) => s + (i.totals?.ttc || 0), 0);
+        const overdueHT  = overdueList.reduce((s, i) => s + (i.totals?.ht  || 0), 0);
+
+        const recoveryRate = revTTC > 0 ? ((paidTTC / revTTC) * 100).toFixed(1) : '0.0';
+
+        // 3. KPI CARD RENDERER
+        const renderCard = (title, settingKey, color, icon, valTTC, valHT, footerText) => {
+            const cur = chartSettings[settingKey] || 'TTC';
+            const primaryVal = cur === 'TTC' ? valTTC : valHT;
+            const primaryLabel = cur;
+            const secondaryVal = cur === 'TTC' ? valHT : valTTC;
+            const secondaryLabel = cur === 'TTC' ? 'HT' : 'TTC';
+            return `
+                <div class="col-lg-3 col-md-6">
+                    <div class="card border-0 shadow-sm h-100 overflow-hidden">
+                        <div class="card-body p-3 position-relative">
+                            <div class="border-start border-4 border-${color} position-absolute top-0 bottom-0 start-0"></div>
+                            <div class="ms-2">
+                                <div class="text-uppercase small fw-bold text-muted mb-2">${title}</div>
+                                <div class="d-flex align-items-baseline">
+                                    <span class="h4 fw-bold text-${color} mb-0">${formatCurrency(primaryVal).replace('DA','')}</span>
+                                    <span class="badge bg-${color}-subtle text-${color} border border-${color}-subtle ms-2" onclick="updateDashboard('${settingKey}', '${primaryLabel}')" style="cursor:pointer">${primaryLabel} <i class="fa fa-check-circle ms-1" style="font-size:0.6em"></i></span>
+                                </div>
+                                <div class="d-flex align-items-baseline mt-1" style="cursor:pointer;" onclick="updateDashboard('${settingKey}', '${secondaryLabel}')" title="Voir en ${secondaryLabel}">
+                                    <span class="h6 fw-normal text-secondary mb-0">${formatCurrency(secondaryVal).replace('DA','')}</span>
+                                    <span class="badge bg-white text-secondary border ms-2">${secondaryLabel}</span>
+                                </div>
+                                <div class="small text-${color} mt-3 pt-2 border-top">
+                                    <i class="fa ${icon} me-1"></i> ${footerText}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+        };
+
+        // 4. RENDER KPI CARDS
+        const kpiC = document.getElementById('kpiContainer');
+        if (kpiC) {
+            kpiC.innerHTML = ''
+                + renderCard("Chiffre d'Affaires", 'revenue', 'primary', 'fa-file-invoice', revTTC, revHT, `${filtered.length} facture(s)`)
+                + renderCard("Total Encaissé", 'debt', 'success', 'fa-check-circle', paidTTC, paidHT, `${recoveryRate}% recouvré`)
+                + renderCard("Crédit Client", 'debt', 'warning', 'fa-clock', debtTTC, debtHT, "En attente de paiement")
+                + renderCard("Retards de Paiement", 'forecast', 'danger', 'fa-exclamation-triangle', overdueTTC, overdueHT, `${overdueList.length} facture(s) échue(s)`);
+        }
+
+        // ─── CHART DATA PREP ───
+        const months = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+        const destroy = (key) => { if (dashboardCharts[key]) { dashboardCharts[key].destroy(); dashboardCharts[key] = null; } };
+
+        // A. Revenue by month
+        const dataRev = Array(12).fill(0);
+        filtered.forEach(inv => {
+            const m = new Date(inv.date || inv.createdAt).getMonth();
+            dataRev[m] += chartSettings.revenue === 'HT' ? (inv.totals?.ht || 0) : (inv.totals?.ttc || 0);
         });
 
-        // B. Payment Methods (COUNTS ALL 155 INVOICES)
+        // B. Payment methods (by bank for paid, by modePaiement for unpaid)
         const methodsMap = {};
-        yearInvoices.forEach(inv => {
-            let m = 'Non défini';
-            
-            // 1. If paid, use the confirmed method
-            if (inv.paymentDetails && inv.paymentDetails.method) {
-                m = inv.paymentDetails.method;
-            } 
-            // 2. If unpaid (or no confirmed method), use the PLANNED method from invoice creation
-            else if (inv.modePaiement) {
-                m = inv.modePaiement;
+        const bankLabelMap = {};
+        if (typeof ALGERIAN_BANKS !== 'undefined') {
+            [...ALGERIAN_BANKS.public, ...ALGERIAN_BANKS.private, ...ALGERIAN_BANKS.other]
+                .forEach(b => { bankLabelMap[b.value] = b.label; });
+        }
+        filtered.forEach(inv => {
+            let key = 'Non défini';
+            if (inv.paymentDetails && inv.paymentDetails.bank) {
+                key = bankLabelMap[inv.paymentDetails.bank] || inv.paymentDetails.bank;
+            } else if (inv.paymentDetails && inv.paymentDetails.method) {
+                key = inv.paymentDetails.method;
+            } else if (inv.modePaiement) {
+                key = inv.modePaiement;
             }
-            
-            // Clean up text
-            m = m.trim();
-            m = m.charAt(0).toUpperCase() + m.slice(1).toLowerCase();
-            
-            methodsMap[m] = (methodsMap[m] || 0) + 1;
+            methodsMap[key] = (methodsMap[key] || 0) + 1;
         });
 
         // C. Top Clients
-        const clientRev = {};
-        yearInvoices.forEach(inv => {
+        const clientData = {};
+        let totalClientVal = 0;
+        filtered.forEach(inv => {
             const cName = clients.find(c => c.id === inv.clientId)?.nom || 'Inconnu';
-            clientRev[cName] = (clientRev[cName] || 0) + (inv.totals?.ttc || 0);
+            const val = chartSettings.clients === 'HT' ? (inv.totals?.ht || 0) : (inv.totals?.ttc || 0);
+            clientData[cName] = (clientData[cName] || 0) + val;
+            totalClientVal += val;
         });
-        const sortedClients = Object.entries(clientRev).sort((a,b) => b[1] - a[1]).slice(0, 5);
+        const sortedClients = Object.entries(clientData).sort((a, b) => b[1] - a[1]);
 
-        // D. Forecast (CORRECT LOGIC: Uses specific invoice delay)
+        // D. Debt status
+        const paidChartVal = paidList.reduce((s, i) => s + (chartSettings.debt === 'HT' ? (i.totals?.ht||0) : (i.totals?.ttc||0)), 0);
+        const totalChartVal = filtered.reduce((s, i) => s + (chartSettings.debt === 'HT' ? (i.totals?.ht||0) : (i.totals?.ttc||0)), 0);
+        const unpaidChartVal = totalChartVal - paidChartVal;
+
+        // E. Forecast
+        const yearSel = document.getElementById('dashboardYearSelect');
+        const yearValue = yearSel ? yearSel.value : '';
         const forecastData = Array(12).fill(0);
-        yearInvoices.filter(inv => !inv.paid).forEach(inv => {
+        filtered.filter(inv => !inv.paid).forEach(inv => {
             const d = new Date(inv.date);
-            
-            // HERE IS THE FIX: We use the delay saved in the invoice (Step 2)
-            // If it's empty for some reason, we fallback to 30.
             const delay = (inv.delaiPaiement !== undefined && inv.delaiPaiement !== null) ? parseInt(inv.delaiPaiement) : 30;
-            
             d.setDate(d.getDate() + delay);
-            
-            // Add to chart if it falls in the selected year
-            if(yearValue === '' || d.getFullYear() === parseInt(yearValue)) {
-                forecastData[d.getMonth()] += inv.totals?.ttc || 0;
+            if (yearValue === '' || d.getFullYear() === parseInt(yearValue)) {
+                forecastData[d.getMonth()] += chartSettings.forecast === 'HT' ? (inv.totals?.ht || 0) : (inv.totals?.ttc || 0);
             }
         });
 
-        // --- RENDER CHARTS ---
-        const destroy = (key) => { if(dashboardCharts[key]) dashboardCharts[key].destroy(); };
+        // ─── RENDER CHARTS ───
+        const palette = ['#2563eb','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#84cc16','#f97316','#6366f1','#14b8a6','#d946ef','#0ea5e9','#a3e635','#fb923c','#c084fc','#22d3ee','#4ade80','#facc15','#f87171','#818cf8','#34d399','#fbbf24','#60a5fa'];
+        const hasDataLabels = typeof ChartDataLabels !== 'undefined';
 
-        // 1. REVENUE (Bar)
+        // 1. REVENUE BAR CHART
         destroy('revenueMonth');
         const ctxRev = document.getElementById('chartRevenueMonth');
         if (ctxRev) {
             dashboardCharts.revenueMonth = new Chart(ctxRev, {
                 type: 'bar',
+                plugins: hasDataLabels ? [ChartDataLabels] : [],
                 data: {
                     labels: months,
-                    datasets: [
-                        { label: 'TTC', data: dataTTC, backgroundColor: '#2563eb', borderRadius: 4 }
-                    ]
+                    datasets: [{ 
+                        label: `C.A. ${chartSettings.revenue}`, 
+                        data: dataRev, 
+                        backgroundColor: '#2563eb', 
+                        borderRadius: 6 
+                    }]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } }
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: (c) => formatCurrency(c.raw) } },
+                        datalabels: hasDataLabels ? {
+                            anchor: 'end', align: 'top', color: '#333', font: { size: 9, weight: 'bold' },
+                            formatter: (v) => v > 0 ? (v / 1000000).toFixed(1) + 'M' : ''
+                        } : false
+                    },
+                    scales: { y: { beginAtZero: true, ticks: { callback: v => (v / 1000000).toFixed(0) + 'M' } } }
                 }
             });
         }
 
-        // 2. PAYMENT METHODS (CIRCULAR / DOUGHNUT)
+        // 2. PAYMENT METHODS DOUGHNUT
         destroy('paymentMethods');
         const ctxPay = document.getElementById('chartPaymentMethods');
         if (ctxPay) {
+            const payLabels = Object.keys(methodsMap);
             dashboardCharts.paymentMethods = new Chart(ctxPay, {
                 type: 'doughnut',
+                plugins: hasDataLabels ? [ChartDataLabels] : [],
                 data: {
-                    labels: Object.keys(methodsMap),
+                    labels: payLabels,
                     datasets: [{
                         data: Object.values(methodsMap),
-                        backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#6366f1', '#cbd5e1'],
-                        borderWidth: 0
+                        backgroundColor: payLabels.map((_, i) => palette[i % palette.length]),
+                        borderWidth: 2, borderColor: '#fff'
                     }]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '65%',
-                    plugins: { 
-                        legend: { position: 'right', labels: { boxWidth: 10, font: {size:11} } } 
+                    responsive: true, maintainAspectRatio: false, cutout: '60%',
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                boxWidth: 12, font: { size: 10 },
+                                generateLabels: (chart) => chart.data.labels.map((label, i) => ({
+                                    text: label.length > 22 ? label.substring(0, 22) + '…' : label,
+                                    fillStyle: palette[i % palette.length], strokeStyle: '#fff', lineWidth: 2, index: i
+                                }))
+                            }
+                        },
+                        tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.raw} facture(s)` } },
+                        datalabels: hasDataLabels ? {
+                            color: '#fff', font: { weight: 'bold', size: 10 },
+                            formatter: (val, ctx) => {
+                                const sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                const pct = (val * 100 / sum).toFixed(0);
+                                return pct >= 5 ? pct + '%' : '';
+                            }
+                        } : false
                     }
                 }
             });
         }
 
-        // 3. TOP CLIENTS (CIRCULAR / DOUGHNUT)
+        // 3. TOP CLIENTS DOUGHNUT
         destroy('topClients');
-        const ctxClients = document.getElementById('chartTopClients');
-        if (ctxClients) {
-            dashboardCharts.topClients = new Chart(ctxClients, {
+        const ctxCli = document.getElementById('chartTopClients');
+        if (ctxCli) {
+            const cliLabels = sortedClients.map(([name, val]) => {
+                const pct = totalClientVal > 0 ? ((val / totalClientVal) * 100).toFixed(1) : 0;
+                return `${name} (${pct}%)`;
+            });
+            dashboardCharts.topClients = new Chart(ctxCli, {
                 type: 'doughnut',
+                plugins: hasDataLabels ? [ChartDataLabels] : [],
                 data: {
-                    labels: sortedClients.map(i => i[0]),
+                    labels: cliLabels,
                     datasets: [{
                         data: sortedClients.map(i => i[1]),
-                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
-                        borderWidth: 0
+                        backgroundColor: cliLabels.map((_, i) => palette[i % palette.length]),
+                        borderWidth: 2, borderColor: '#fff'
                     }]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '60%',
-                    plugins: { 
-                        legend: { position: 'right', labels: { boxWidth: 10, font: {size:11} } } 
+                    responsive: true, maintainAspectRatio: false, cutout: '50%',
+                    plugins: {
+                        legend: { position: 'right', labels: { boxWidth: 10, font: { size: 11 } } },
+                        tooltip: { callbacks: { label: (c) => `${c.label.split(' (')[0]}: ${formatCurrency(c.raw)}` } },
+                        datalabels: hasDataLabels ? {
+                            color: '#fff', font: { weight: 'bold', size: 11 },
+                            formatter: (val) => (val / totalClientVal > 0.03) ? ((val / totalClientVal) * 100).toFixed(1) + '%' : ''
+                        } : false
                     }
                 }
             });
         }
 
-        // 4. DEBT STATUS (Bar)
+        // 4. DEBT STATUS BAR
         destroy('debtStatus');
         const ctxDebt = document.getElementById('chartDebtStatus');
         if (ctxDebt) {
@@ -4343,60 +3928,53 @@ function updateDashboard() {
                 data: {
                     labels: ['État Global'],
                     datasets: [
-                        { label: 'Payé', data: [paidAmount], backgroundColor: '#10b981', barThickness: 40 },
-                        { label: 'Impayé', data: [unpaidAmount], backgroundColor: '#f59e0b', barThickness: 40 },
+                        { label: 'Payé', data: [paidChartVal], backgroundColor: '#10b981', barThickness: 40 },
+                        { label: 'Impayé', data: [unpaidChartVal], backgroundColor: '#f59e0b', barThickness: 40 },
                     ]
                 },
                 options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom' } },
-                    scales: { x: { stacked: true }, y: { stacked: true, display: false } }
+                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    scales: { x: { stacked: true }, y: { stacked: true, display: false } },
+                    plugins: { 
+                        legend: { position: 'bottom' },
+                        tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${formatCurrency(c.raw)}` } },
+                        datalabels: false
+                    }
                 }
             });
         }
 
-        // 5. FORECAST (Line)
+        // 5. FORECAST LINE
         destroy('forecast');
-        const ctxCast = document.getElementById('chartForecast');
-        if (ctxCast) {
-            dashboardCharts.forecast = new Chart(ctxCast, {
+        const ctxFc = document.getElementById('chartForecast');
+        if (ctxFc) {
+            dashboardCharts.forecast = new Chart(ctxFc, {
                 type: 'line',
                 data: {
                     labels: months,
                     datasets: [{
-                        label: 'Entrées prévues',
+                        label: `Entrées prévues (${chartSettings.forecast})`,
                         data: forecastData,
-                        borderColor: '#dc2626',
-                        backgroundColor: 'rgba(220, 38, 38, 0.05)',
-                        fill: true,
-                        tension: 0.4
+                        borderColor: '#dc2626', backgroundColor: 'rgba(220, 38, 38, 0.05)',
+                        fill: true, tension: 0.4, pointRadius: 4, pointHoverRadius: 8
                     }]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } }
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: (c) => formatCurrency(c.raw) } },
+                        datalabels: false
+                    },
+                    scales: { y: { beginAtZero: true, ticks: { callback: v => (v / 1000000).toFixed(1) + 'M' } } }
                 }
             });
         }
 
-        // 6. Populate Client List for Trajets
-// 6. Populate Client List for Trajets (Updated)
-        const trajetSelect = document.getElementById('chartTrajetClientSelect');
-        if (trajetSelect && trajetSelect.options.length <= 1) {
-             // Clear and set default
-             trajetSelect.innerHTML = '<option value="">Vue Globale (Tous)</option>';
-             
-             // Add Clients
-             [...clients].sort((a,b) => a.nom.localeCompare(b.nom)).forEach(c => {
-                 trajetSelect.innerHTML += `<option value="${c.id}">${c.nom}</option>`;
-             });
-        }
-        
-        // Update other components
+        // 6. TRAJETS
         updateTrajetChart();
+
+        // 7. RECENT INVOICES TABLE
         updateRecentInvoicesTable();
 
     } catch (error) {
@@ -4404,100 +3982,126 @@ function updateDashboard() {
     }
 }
 
+// ═══════════════════════════════════════════════════════════════
+// ████  TRAJET CHART  ████
+// ═══════════════════════════════════════════════════════════════
 function updateTrajetChart() {
     const select = document.getElementById('chartTrajetClientSelect');
     const canvas = document.getElementById('chartTrajets');
     const emptyState = document.getElementById('trajetEmptyState');
-    
-    if (!select || !canvas) return;
+    if (!canvas) return;
 
-    const clientId = parseInt(select.value);
-
-    // If no client selected, show empty state
+    // Get client: specific dropdown first, then fallback to global
+    let clientId = (select && select.value !== '') ? parseInt(select.value, 10) : null;
     if (!clientId) {
-        if(dashboardCharts.trajets) dashboardCharts.trajets.destroy();
-        canvas.style.display = 'none';
-        emptyState.classList.remove('d-none');
-        return;
+        const globalSel = document.getElementById('dashboardClientSelect');
+        if (globalSel && globalSel.value !== 'all') {
+            clientId = parseInt(globalSel.value, 10);
+            if (select) select.value = globalSel.value;
+        }
     }
 
-    // Client selected: Show canvas, hide empty state
-    canvas.style.display = 'block';
-    emptyState.classList.add('d-none');
+    // Get year & period
+    const yearSel   = document.getElementById('dashboardYearSelect');
+    const periodSel = document.getElementById('dashboardPeriodSelect');
+    const yearVal   = yearSel ? yearSel.value : '';
+    const periodVal = periodSel ? periodSel.value : 'all';
 
-    // Gather Trajet Data
-    const trajetsMap = {}; // Key: "Dep -> Dest", Value: Count (or Revenue)
-    
+    // Gather trajet data
+    const trajetsMap = {};
     invoices.forEach(inv => {
-        if (inv.clientId === clientId) {
-            // Check articles
-            if (inv.articles && inv.articles.length > 0) {
-                inv.articles.forEach(art => {
-                    // Use Selected Destination if available, else Wilaya Dest
-                    const dest = art.selectedDestination || art.wilayaDestination || 'Inconnu';
-                    const dep = art.wilayaDepart || 'Inconnu';
+        if (clientId && inv.clientId !== clientId) return;
+
+        const d = new Date(inv.date || inv.createdAt);
+        if (yearVal !== '' && d.getFullYear() !== parseInt(yearVal)) return;
+        if (periodVal !== 'all') {
+            const m = d.getMonth();
+            if (periodVal === 'Q1' && (m < 0 || m > 2)) return;
+            if (periodVal === 'Q2' && (m < 3 || m > 5)) return;
+            if (periodVal === 'Q3' && (m < 6 || m > 8)) return;
+            if (periodVal === 'Q4' && (m < 9 || m > 11)) return;
+            if (!isNaN(periodVal) && m !== parseInt(periodVal)) return;
+        }
+
+        if (inv.articles && inv.articles.length > 0) {
+            inv.articles.forEach(art => {
+                let dest = (art.wilayaDestination && art.wilayaDestination.trim() !== '' && art.wilayaDestination !== 'Inconnu')
+                    ? art.wilayaDestination.trim()
+                    : (art.selectedDestination || 'Inconnu');
+                if (dest.toLowerCase().startsWith('pour le compte')) {
+                    dest = art.wilayaDestination || 'Inconnu';
+                }
+                const dep = (art.wilayaDepart && art.wilayaDepart.trim() !== '') ? art.wilayaDepart.trim() : 'Inconnu';
+                if (dep !== 'Inconnu' && dest !== 'Inconnu') {
                     const key = `${dep} ➝ ${dest}`;
-                    
-                    // We count occurrences (Frequency)
                     trajetsMap[key] = (trajetsMap[key] || 0) + 1;
-                });
-            }
+                }
+            });
         }
     });
 
-    // Sort by frequency
-    const sortedTrajets = Object.entries(trajetsMap)
-        .sort((a,b) => b[1] - a[1])
-        .slice(0, 10); // Top 10
+    const sortedTrajets = Object.entries(trajetsMap).sort((a, b) => b[1] - a[1]).slice(0, 10);
 
-    // Render Chart
-    if(dashboardCharts.trajets) dashboardCharts.trajets.destroy();
+    if (dashboardCharts.trajets) { dashboardCharts.trajets.destroy(); dashboardCharts.trajets = null; }
 
+    if (sortedTrajets.length === 0) {
+        canvas.style.display = 'none';
+        if (emptyState) {
+            emptyState.classList.remove('d-none');
+            emptyState.innerHTML = clientId
+                ? '<small class="text-muted">Aucun trajet trouvé pour ce client.</small>'
+                : '<small class="text-muted">Aucune donnée de trajet disponible.</small>';
+        }
+        return;
+    }
+
+    canvas.style.display = 'block';
+    if (emptyState) emptyState.classList.add('d-none');
+
+    const hasDataLabels = typeof ChartDataLabels !== 'undefined';
     dashboardCharts.trajets = new Chart(canvas, {
         type: 'bar',
+        plugins: hasDataLabels ? [ChartDataLabels] : [],
         data: {
             labels: sortedTrajets.map(t => t[0]),
             datasets: [{
-                label: 'Fréquence des trajets',
+                label: 'Nombre de voyages',
                 data: sortedTrajets.map(t => t[1]),
-                backgroundColor: 'rgba(109, 40, 217, 0.7)', // Purple
+                backgroundColor: 'rgba(109, 40, 217, 0.7)',
                 borderColor: 'rgba(109, 40, 217, 1)',
-                borderWidth: 1,
-                borderRadius: 4
+                borderWidth: 1, borderRadius: 4
             }]
         },
         options: {
-            indexAxis: 'y', // Horizontal bars for readable names
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { 
+            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+            plugins: {
                 legend: { display: false },
-                tooltip: { callbacks: { label: (c) => `${c.raw} voyages` } }
+                tooltip: { callbacks: { label: (c) => `${c.raw} voyages` } },
+                datalabels: hasDataLabels ? {
+                    anchor: 'end', align: 'end', color: '#666', font: { size: 10 },
+                    formatter: (val) => val
+                } : false
             },
             scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
         }
     });
 }
-// Function to toggle the chart mode
+
+// ─── Legacy toggle (kept for backward compatibility) ───
 function toggleChartMode() {
     chartMode = (chartMode === 'TTC') ? 'HT' : 'TTC';
-    
-    // Update button text
     const btn = document.getElementById('btnToggleChart');
-    if(btn) {
+    if (btn) {
         btn.innerHTML = (chartMode === 'TTC') ? 'Voir en HT' : 'Voir en TTC';
         btn.classList.toggle('btn-outline-primary');
         btn.classList.toggle('btn-primary');
     }
-    
     updateDashboard();
 }
 
 // Reports
 function populateReportFilters() {
   try {
-    // Note : La liste des clients est gérée automatiquement par le "Elegant Client Picker" au chargement.
-    
     // Réinitialiser les dates à ce mois-ci par défaut
     const today = new Date();
     const yyyy = today.getFullYear();
@@ -4511,15 +4115,15 @@ function populateReportFilters() {
     if (startDate && !startDate.value) startDate.value = `${yyyy}-${mm}-01`;
     if (endDate && !endDate.value) endDate.value = `${yyyy}-${mm}-${dd}`;
 
-    // ✅ Injecter toutes les banques algériennes dans le filtre de rapport
+    // ✅ Injecter toutes les banques algériennes dans les deux filtres banques de rapport
+    const allBanks = [
+        ...ALGERIAN_BANKS.public,
+        ...ALGERIAN_BANKS.private,
+        ...ALGERIAN_BANKS.other
+    ];
+
     const bankFilter = document.getElementById('reportBankFilter');
     if (bankFilter && bankFilter.options.length <= 1) {
-        // Garde l'option "Toutes les banques" puis injecte les groupes
-        const allBanks = [
-            ...ALGERIAN_BANKS.public,
-            ...ALGERIAN_BANKS.private,
-            ...ALGERIAN_BANKS.other
-        ];
         allBanks.forEach(b => {
             const opt = document.createElement('option');
             opt.value = b.value;
@@ -4527,7 +4131,16 @@ function populateReportFilters() {
             bankFilter.appendChild(opt);
         });
     }
-    
+
+    const quickBankFilter = document.getElementById('reportQuickBank');
+    if (quickBankFilter && quickBankFilter.options.length <= 1) {
+        allBanks.forEach(b => {
+            const opt = document.createElement('option');
+            opt.value = b.value;
+            opt.textContent = b.label;
+            quickBankFilter.appendChild(opt);
+        });
+    }
   } catch (error) {
     console.error('Error populating report filters:', error);
   }
@@ -4535,114 +4148,136 @@ function populateReportFilters() {
 
 function exportReportXLS() {
     try {
-        const filtered = filterInvoicesForReport();
-        
+        const filtered = getFilteredReportInvoices();
         if (filtered.length === 0) {
             alert('Aucune facture disponible pour l\'export');
             return;
         }
-        
-        // 1. DÉFINITION DES COLONNES
+
+        // Colors from settings (strip # and uppercase for xlsx-js-style)
+        const colorEven   = (settings.excelColorEven || '#dbe9ff').replace('#', '').toUpperCase();
+        const colorOdd    = (settings.excelColorOdd  || '#ffffff').replace('#', '').toUpperCase();
+        const colorHeader = '003366';
+        const colorTotal  = '2D3748';
+
+        const wb = XLSX.utils.book_new();
+        const ws = {};
+
+        // --- Column definitions ---
         const headers = [
-            'ETAT', 
-            'REF. PAIEMENT', // Corrected column
-            'MOIS', 
-            'BL (Qté)', 
-            'DATE', 
-            'N° FACTURE', 
-            'CLIENT', 
-            'MONTANT HT', 
-            'TOTAL TTC', 
-            'ENCAISSÉ TTC', 
-            'CRÉANCE HT', 
-            'CRÉANCE TTC'
+            'ETAT', 'REF. TRANSACTION', 'BANQUE', 'MODE', 'DATE PAIEMENT',
+            'MOIS', 'BL (Qt\u00e9)', 'DATE FACTURE', 'N\u00b0 FACTURE', 'CLIENT',
+            'MONTANT HT', 'TOTAL TTC', 'ENCAISS\u00c9 TTC', 'CR\u00c9ANCE HT', 'CR\u00c9ANCE TTC'
         ];
-        
-        const data = [];
-        data.push(headers);
-        
+
+        // --- Header style ---
+        const headerStyle = {
+            fill: { fgColor: { rgb: colorHeader } },
+            font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 10 },
+            alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+            border: { top:{style:'thin',color:{rgb:'AAAAAA'}}, bottom:{style:'thin',color:{rgb:'AAAAAA'}}, left:{style:'thin',color:{rgb:'AAAAAA'}}, right:{style:'thin',color:{rgb:'AAAAAA'}} }
+        };
+        headers.forEach((h, ci) => {
+            const ref = XLSX.utils.encode_cell({ r: 0, c: ci });
+            ws[ref] = { v: h, t: 's', s: headerStyle };
+        });
+
         let tHT = 0, tTTC = 0, tPaid = 0, tDebtHT = 0, tDebtTTC = 0, tBL = 0;
-        
-        filtered.forEach(inv => {
+        const numFmt = '#,##0.00 "DA"';
+
+        filtered.forEach((inv, rowIdx) => {
+            const r      = rowIdx + 1;
+            const bgColor = rowIdx % 2 === 0 ? colorEven : colorOdd;
+
+            const cs = (align = 'left', bold = false, color = '000000') => ({
+                fill: { fgColor: { rgb: bgColor } },
+                font: { sz: 9, bold, color: { rgb: color } },
+                alignment: { horizontal: align, vertical: 'center' },
+                border: { top:{style:'thin',color:{rgb:'DDDDDD'}}, bottom:{style:'thin',color:{rgb:'DDDDDD'}}, left:{style:'thin',color:{rgb:'DDDDDD'}}, right:{style:'thin',color:{rgb:'DDDDDD'}} }
+            });
+            const ns = (color = '000000', bold = false) => ({
+                fill: { fgColor: { rgb: bgColor } },
+                font: { sz: 9, bold, color: { rgb: color } },
+                numFmt,
+                alignment: { horizontal: 'right', vertical: 'center' },
+                border: { top:{style:'thin',color:{rgb:'DDDDDD'}}, bottom:{style:'thin',color:{rgb:'DDDDDD'}}, left:{style:'thin',color:{rgb:'DDDDDD'}}, right:{style:'thin',color:{rgb:'DDDDDD'}} }
+            });
+
             const client = clients.find(c => c.id === inv.clientId)?.nom || 'Inconnu';
             const isPaid = inv.paid || inv.paymentStatus === 'encaissee';
-            const etat = isPaid ? 'PAYÉE' : 'IMPAYÉE';
-            
-            // Calculs
-            const ht = inv.totals?.ht || 0;
-            const ttc = inv.totals?.ttc || 0;
-            const paid = isPaid ? ttc : 0;
-            const debtHT = !isPaid ? ht : 0;
+            const ht     = inv.totals?.ht  || 0;
+            const ttc    = inv.totals?.ttc || 0;
+            const paid   = isPaid ? ttc : 0;
+            const debtHT  = !isPaid ? ht  : 0;
             const debtTTC = !isPaid ? ttc : 0;
-            const bl = (inv.articles || []).reduce((s, a) => s + (parseInt(a.qte)||0), 0);
-            
-            // Formatage Dates
-            const dateObj = new Date(inv.date);
-            const dateStr = dateObj.toLocaleDateString('fr-FR');
-            
-            // Mois en français (Janvier 2025)
-            let monthStr = dateObj.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+            const bl = (inv.articles || []).reduce((s, a) => s + (parseInt(a.qte) || 0), 0);
+
+            const dateObj  = new Date(inv.date);
+            const dateStr  = dateObj.toLocaleDateString('fr-FR');
+            let   monthStr = dateObj.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
             monthStr = monthStr.charAt(0).toUpperCase() + monthStr.slice(1);
 
-            // --- CORRECTION: CONSTRUCTION DE LA RÉFÉRENCE PAIEMENT (TEXTE BRUT) ---
-            let refPaiement = '-';
-            
+            let pBank = '-', pMode = '-', pDate = '-', pRef = '-';
             if (isPaid && inv.paymentDetails) {
-                const payDateObj = new Date(inv.paymentDetails.date);
-                const payDateStr = payDateObj.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                const banque = inv.paymentDetails.bank || 'Banque inconnue';
-                const ref = inv.paymentDetails.ref || '?';
-                
-                // Format Excel friendly: "AGB - 12/05/2025 (#REF123)"
-                refPaiement = `${banque} - ${payDateStr} (#${ref})`;
+                pBank = inv.paymentDetails.bank   || '-';
+                pMode = inv.paymentDetails.method || '-';
+                pDate = inv.paymentDetails.date   ? new Date(inv.paymentDetails.date).toLocaleDateString('fr-FR') : '-';
+                pRef  = inv.paymentDetails.ref    || '-';
             }
 
-            // Ajout de la ligne
-            data.push([
-                etat,
-                refPaiement, // Now contains the correct text
-                monthStr,
-                bl,
-                dateStr,
-                inv.number,
-                client,
-                ht,
-                ttc,
-                paid,
-                debtHT,
-                debtTTC
-            ]);
-            
-            // Cumul Totaux
+            const row = [
+                { v: isPaid ? 'PAY\u00c9E' : 'IMPAY\u00c9E', t: 's', s: cs('center', true, isPaid ? '006400' : '8B0000') },
+                { v: pRef,    t: 's', s: cs('center') },
+                { v: pBank,   t: 's', s: cs('center') },
+                { v: pMode,   t: 's', s: cs('center') },
+                { v: pDate,   t: 's', s: cs('center') },
+                { v: monthStr, t: 's', s: cs('left') },
+                { v: bl,       t: 'n', s: cs('center') },
+                { v: dateStr,  t: 's', s: cs('center') },
+                { v: inv.number, t: 's', s: cs('center', true) },
+                { v: client,   t: 's', s: cs('left') },
+                { v: ht,       t: 'n', s: ns() },
+                { v: ttc,      t: 'n', s: ns('000000', true) },
+                { v: paid,     t: 'n', s: ns('006400', true) },
+                { v: debtHT,   t: 'n', s: ns('8B0000') },
+                { v: debtTTC,  t: 'n', s: ns('8B0000', true) }
+            ];
+            row.forEach((cell, ci) => { ws[XLSX.utils.encode_cell({ r, c: ci })] = cell; });
+
             tHT += ht; tTTC += ttc; tPaid += paid; tDebtHT += debtHT; tDebtTTC += debtTTC; tBL += bl;
         });
-        
-        // Ligne des TOTAUX en bas
-        data.push(['TOTAL', '', '', tBL, '', '', '', tHT, tTTC, tPaid, tDebtHT, tDebtTTC]);
-        
-        // Création du fichier Excel
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet(data);
-        
-        // Ajustement des largeurs de colonnes
-        ws['!cols'] = [
-            {wch:10}, // Etat
-            {wch:40}, // Ref Paiement (Increased width for full text)
-            {wch:15}, // Mois
-            {wch:8},  // BL
-            {wch:12}, // Date
-            {wch:12}, // N°
-            {wch:30}, // Client
-            {wch:15}, // HT
-            {wch:15}, // TTC
-            {wch:15}, // Encaissé
-            {wch:15}, // Créance HT
-            {wch:15}  // Créance TTC
+
+        // --- Total row ---
+        const totalR = filtered.length + 1;
+        const ts = (align = 'center', color = 'FFFFFF', bold = true) => ({
+            fill: { fgColor: { rgb: colorTotal } },
+            font: { bold, color: { rgb: color }, sz: 10 },
+            alignment: { horizontal: align, vertical: 'center' },
+            border: { top:{style:'medium',color:{rgb:'000000'}}, bottom:{style:'medium',color:{rgb:'000000'}}, left:{style:'thin',color:{rgb:'555555'}}, right:{style:'thin',color:{rgb:'555555'}} }
+        });
+        const tns = (color = 'FFFFFF') => ({ ...ts('right', color), numFmt });
+
+        const totalRow = [
+            { v: 'TOTAUX',             t: 's', s: ts() },
+            { v: '',  t: 's', s: ts() }, { v: '', t: 's', s: ts() }, { v: '', t: 's', s: ts() }, { v: '', t: 's', s: ts() },
+            { v: `${filtered.length} facture(s)`, t: 's', s: ts() },
+            { v: tBL, t: 'n', s: ts('center') },
+            { v: '', t: 's', s: ts() }, { v: '', t: 's', s: ts() }, { v: '', t: 's', s: ts() },
+            { v: tHT,     t: 'n', s: tns() },
+            { v: tTTC,    t: 'n', s: tns() },
+            { v: tPaid,   t: 'n', s: tns('90EE90') },
+            { v: tDebtHT, t: 'n', s: tns('FFB3B3') },
+            { v: tDebtTTC,t: 'n', s: tns('FFB3B3') }
         ];
+        totalRow.forEach((cell, ci) => { ws[XLSX.utils.encode_cell({ r: totalR, c: ci })] = cell; });
+
+        ws['!ref']  = XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:totalR,c:headers.length-1} });
+        ws['!cols'] = [{wch:10},{wch:18},{wch:18},{wch:12},{wch:14},{wch:18},{wch:8},{wch:12},{wch:12},{wch:30},{wch:16},{wch:16},{wch:16},{wch:16},{wch:16}];
+        ws['!rows'] = [{ hpt: 28 }, ...Array(filtered.length + 1).fill({ hpt: 18 })];
 
         XLSX.utils.book_append_sheet(wb, ws, 'Rapport Financier');
-        XLSX.writeFile(wb, `Rapport_Financier_${new Date().toISOString().slice(0,10)}.xlsx`);
-        
+        XLSX.writeFile(wb, `Rapport_Financier_${new Date().toISOString().slice(0,10)}.xlsx`, { cellStyles: true });
+
     } catch (error) {
         console.error('Erreur Export Excel:', error);
         alert('Erreur lors de l\'export Excel.');
@@ -4773,6 +4408,13 @@ function exportReportPDF() {
 }
 
 // Settings
+function setExcelColors(even, odd) {
+    const elEven = document.getElementById('excelColorEven');
+    const elOdd = document.getElementById('excelColorOdd');
+    if (elEven) elEven.value = even;
+    if (elOdd) elOdd.value = odd;
+}
+
 function loadSettings() {
     // Load all text inputs
     document.getElementById('companyName').value = settings.name || '';
@@ -4784,11 +4426,15 @@ function loadSettings() {
     document.getElementById('companyAddress').value = settings.address || '';
     document.getElementById('companyPhone').value = settings.phone || '';
     document.getElementById('companyFax').value = settings.fax || '';
-document.getElementById('companyRIB').value = settings.rib || '';
+    document.getElementById('companyRIB').value = settings.rib || '';
     if(document.getElementById('companyPricingTypes')) {
         document.getElementById('companyPricingTypes').value = settings.pricingTypes || 'Transport, Transfert';
     }
-    // ✅ Load left logo
+    const elEven = document.getElementById('excelColorEven');
+    const elOdd = document.getElementById('excelColorOdd');
+    if (elEven) elEven.value = settings.excelColorEven || '#dbe9ff';
+    if (elOdd) elOdd.value = settings.excelColorOdd || '#ffffff';
+
     // ✅ Load left logo
     const logoLeftDisplay = document.getElementById('logoLeftDisplay');
     if (settings.logoLeft) {
@@ -4817,12 +4463,15 @@ function saveSettings() {
     settings.address = document.getElementById('companyAddress').value;
     settings.phone = document.getElementById('companyPhone').value;
     settings.fax = document.getElementById('companyFax').value;
-settings.rib = document.getElementById('companyRIB').value;
+    settings.rib = document.getElementById('companyRIB').value;
     if(document.getElementById('companyPricingTypes')) {
         settings.pricingTypes = document.getElementById('companyPricingTypes').value;
     }
-    // Logos are saved automatically via file input handlers
-    // Logos are saved automatically via file input handlers
+    const elEven = document.getElementById('excelColorEven');
+    const elOdd = document.getElementById('excelColorOdd');
+    if (elEven) settings.excelColorEven = elEven.value;
+    if (elOdd) settings.excelColorOdd = elOdd.value;
+
     saveDataToLocalStorage();
     alert('✅ Paramètres sauvegardés !');
 }
@@ -5265,10 +4914,12 @@ function filterInvoicesForReport() {
                 if (today <= dueDate) return false; // Pas encore échu
             }
 
-            // 4. ✅ Filtre Banque (si une banque est sélectionnée, on filtre uniquement les payées via cette banque)
+            // 4. ✅ Filtre Banque (flexible et insensible à la casse)
             if (selectedBank) {
                 if (!isPaid) return false; // Facture impayée → pas de banque
-                if (!inv.paymentDetails || inv.paymentDetails.bank !== selectedBank) return false;
+                const b = (inv.paymentDetails?.bank || '').toLowerCase().trim();
+                const target = selectedBank.toLowerCase().trim();
+                if (b !== target && !b.includes(target) && !target.includes(b)) return false;
             }
 
             return true;
@@ -5293,6 +4944,10 @@ function renderReportTable(filtered) {
     if (filtered.length > 0 && typeof reportSort !== 'undefined') {
         const getVal = (item, key) => {
              if (key === 'status') return item.paid ? 1 : 0;
+             if (key === 'ref') return item.paymentDetails?.ref || '';
+             if (key === 'bank') return item.paymentDetails?.bank || '';
+             if (key === 'mode') return item.paymentDetails?.method || '';
+             if (key === 'datePay') return item.paymentDetails?.date ? new Date(item.paymentDetails.date).getTime() : 0;
              if (key === 'date') return new Date(item.date).getTime();
              if (key === 'number') return parseInt(item.number.split('/')[0]) || 0;
              if (key === 'amount') return item.totals.ttc;
@@ -5317,13 +4972,13 @@ function renderReportTable(filtered) {
     let totalHT = 0, totalTTC = 0, totalPaid = 0, totalDebtHT = 0, totalDebtTTC = 0, totalBL = 0;
     
     if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="13" class="text-center p-5 text-muted">Aucune donnée trouvée pour cette période.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="16" class="text-center p-5 text-muted">Aucune donnée trouvée pour cette période.</td></tr>';
         if(summaryContainer) summaryContainer.innerHTML = '';
         if(tfoot) tfoot.innerHTML = '';
         return;
     }
 
-    // --- Generate Rows (Added no-wrap-money class to currency columns) ---
+    // --- Generate Rows ---
     const rowsHTML = filtered.map(inv => {
         const client = clients.find(c => c.id === inv.clientId)?.nom || 'Inconnu';
         const isPaid = inv.paid || inv.paymentStatus === 'encaissee';
@@ -5350,17 +5005,28 @@ function renderReportTable(filtered) {
             ? '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Payée</span>' 
             : '<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">Impayée</span>';
 
-        let refPaiementHtml = '-';
-        if (isPaid && inv.paymentDetails) {
-            refPaiementHtml = `<div class="fw-bold text-dark" style="font-size:0.75rem;">${inv.paymentDetails.bank || 'Banque?'}</div>
-                               <div class="fw-bold text-primary" style="font-size:0.7rem;">${inv.paymentDetails.ref || '#'}</div>`;
+        const refVal = (isPaid && inv.paymentDetails?.ref) ? inv.paymentDetails.ref : '-';
+        const bankVal = (isPaid && inv.paymentDetails?.bank) ? inv.paymentDetails.bank : '-';
+        const modeVal = (isPaid && inv.paymentDetails?.method) ? inv.paymentDetails.method : '-';
+        let datePayVal = '-';
+        if (isPaid && inv.paymentDetails?.date) {
+            const dp = new Date(inv.paymentDetails.date);
+            if (!isNaN(dp.getTime())) {
+                datePayVal = dp.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            } else {
+                datePayVal = inv.paymentDetails.date;
+            }
         }
 
         return `
             <tr style="vertical-align: middle; font-size: 0.85rem; border-bottom: 1px solid #eee;">
                 <td class="text-center" style="border-right: 1px solid #eee;">${badge}</td>
                 
-                <td class="text-center" style="border-right: 1px solid #eee; line-height: 1.1;">${refPaiementHtml}</td>
+                <td class="text-center fw-bold text-primary" style="border-right: 1px solid #eee;">${refVal}</td>
+                <td class="text-center fw-bold text-dark" style="border-right: 1px solid #eee;">${bankVal}</td>
+                <td class="text-center" style="border-right: 1px solid #eee;">${modeVal}</td>
+                <td class="text-center font-monospace" style="border-right: 1px solid #eee;">${datePayVal}</td>
+                
                 <td class="text-center fw-bold text-secondary text-capitalize" style="border-right: 1px solid #eee;">${monthStr}</td>
                 <td class="text-center" style="border-right: 1px solid #eee;">${bl}</td>
                 <td class="text-center font-monospace text-muted" style="border-right: 1px solid #eee;">${dateStr}</td>
@@ -5387,7 +5053,7 @@ function renderReportTable(filtered) {
     if (tfoot) {
         tfoot.innerHTML = `
             <tr class="report-footer-row">
-                <td colspan="3" class="report-footer-label">TOTAUX GÉNÉRAUX</td>
+                <td colspan="6" class="report-footer-label">TOTAUX GÉNÉRAUX</td>
                 
                 <td class="text-center fw-bold text-warning" style="font-size:1.1rem; border-left:1px solid #eee;">${totalBL}</td>
                 
@@ -5428,12 +5094,91 @@ function renderReportTable(filtered) {
     }
 }
 
+let currentReportList = [];
+
+function initReportQuickFilter(list) {
+    currentReportList = list || [];
+    const bankSelect = document.getElementById('reportQuickBank');
+    if (bankSelect) {
+        const banks = new Set();
+        currentReportList.forEach(inv => {
+            if ((inv.paid || inv.paymentStatus === 'encaissee') && inv.paymentDetails && inv.paymentDetails.bank) {
+                banks.add(inv.paymentDetails.bank);
+            }
+        });
+        bankSelect.innerHTML = '<option value="">Toutes banques</option>';
+        Array.from(banks).sort().forEach(b => {
+            bankSelect.innerHTML += `<option value="${b}">${b}</option>`;
+        });
+    }
+    const searchEl = document.getElementById('reportQuickSearch');
+    if(searchEl) searchEl.value = '';
+    const modeEl = document.getElementById('reportQuickMode');
+    if(modeEl) modeEl.value = '';
+    const statusEl = document.getElementById('reportQuickStatus');
+    if(statusEl) statusEl.value = '';
+    applyReportQuickFilter();
+}
+
+function getFilteredReportInvoices() {
+    const list = (currentReportList && currentReportList.length > 0) ? currentReportList : filterInvoicesForReport();
+    const search = (document.getElementById('reportQuickSearch')?.value || '').toLowerCase().trim();
+    const bank = (document.getElementById('reportQuickBank')?.value || '').toLowerCase().trim();
+    const mode = (document.getElementById('reportQuickMode')?.value || '').toLowerCase().trim();
+    const status = document.getElementById('reportQuickStatus')?.value || '';
+
+    return (list || []).filter(inv => {
+        const isPaid = inv.paid || inv.paymentStatus === 'encaissee';
+        if (status === 'paid' && !isPaid) return false;
+        if (status === 'unpaid' && isPaid) return false;
+
+        if (bank) {
+            if (!isPaid) return false;
+            const b = (inv.paymentDetails?.bank || '').toLowerCase().trim();
+            if (b !== bank && !b.includes(bank) && !bank.includes(b)) return false;
+        }
+
+        if (mode) {
+            if (!isPaid) return false;
+            const m = (inv.paymentDetails?.method || inv.modePaiement || '').toLowerCase().trim();
+            if (m !== mode && !m.includes(mode) && !mode.includes(m)) return false;
+        }
+
+        if (search) {
+            const clientNom = clients.find(c => c.id === inv.clientId)?.nom || '';
+            const num = inv.number || '';
+            const pRef = (inv.paymentDetails?.ref || '') + ' ' + (inv.paymentDetails?.bank || '') + ' ' + (inv.paymentDetails?.method || '') + ' ' + (inv.modePaiement || '');
+            const combined = `${num} ${clientNom} ${pRef}`.toLowerCase();
+            if (!combined.includes(search)) return false;
+        }
+        return true;
+    });
+
+    renderReportTable(res);
+    const countEl = document.getElementById('reportQuickCount');
+    if (countEl) {
+        countEl.textContent = `ℹ️ ${res.length} ligne(s) affichée(s) sur ${currentReportList.length}`;
+    }
+}
+
+function resetReportQuickFilter() {
+    const searchEl = document.getElementById('reportQuickSearch');
+    if(searchEl) searchEl.value = '';
+    const bankEl = document.getElementById('reportQuickBank');
+    if(bankEl) bankEl.value = '';
+    const modeEl = document.getElementById('reportQuickMode');
+    if(modeEl) modeEl.value = '';
+    const statusEl = document.getElementById('reportQuickStatus');
+    if(statusEl) statusEl.value = '';
+    applyReportQuickFilter();
+}
+
 function loadReport() {
   // 1. Filtrer les données
   const filtered = filterInvoicesForReport();
   
-  // 2. Afficher le tableau et les cartes résumés
-  renderReportTable(filtered);
+  // 2. Initialiser le filtre rapide et afficher le tableau
+  initReportQuickFilter(filtered);
   
   // 3. Afficher la section (Wrapper)
   const wrapper = document.getElementById('reportWrapper');
