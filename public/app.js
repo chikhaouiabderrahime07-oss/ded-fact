@@ -4034,7 +4034,8 @@ function updateTrajetChart() {
                 const dep = (art.wilayaDepart && art.wilayaDepart.trim() !== '') ? art.wilayaDepart.trim() : 'Inconnu';
                 if (dep !== 'Inconnu' && dest !== 'Inconnu') {
                     const key = `${dep} ➝ ${dest}`;
-                    trajetsMap[key] = (trajetsMap[key] || 0) + 1;
+                    const qty = parseInt(art.qte) || 1;
+                    trajetsMap[key] = (trajetsMap[key] || 0) + qty;
                 }
             });
         }
