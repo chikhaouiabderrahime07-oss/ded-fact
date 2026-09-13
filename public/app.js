@@ -1967,8 +1967,9 @@ function calculateTotals() {
 }
 
 
-function generateInvoiceHTML(invoice) {
+function generateInvoiceHTML(invoice, options = {}) {
     try {
+        const isDuplicata = options.duplicata || false;
         const client = clients.find(c => c.id === invoice.clientId);
         if (!client) {
             return '<div class="p-3 text-dark">Sélectionnez un client pour voir l’aperçu</div>';
@@ -1998,6 +1999,9 @@ function generateInvoiceHTML(invoice) {
         if (invoice.refBonTransfert) refs.push(`<div><strong>Réf. Bon de transfert :</strong> ${invoice.refBonTransfert}</div>`);
         
         const refsHTML = refs.length > 0 ? `<div class="references-list">${refs.join('')}</div>` : '';
+
+        // DUPLICATA stamp
+        const duplicataHTML = isDuplicata ? `<div style="color: #CC0000; font-weight: bold; font-size: 1.1em; letter-spacing: 2px; margin-top: 2px; border: 2px solid #CC0000; display: inline-block; padding: 1px 10px; border-radius: 3px;">DUPLICATA</div>` : '';
 
         const totalHT = invoice.totals?.ht || 0;
         const totalTTC = invoice.totals?.ttc || 0;
@@ -2081,6 +2085,7 @@ function generateInvoiceHTML(invoice) {
                 <div class="invoice-meta-container">
                     <div class="meta-left">
                         <div class="invoice-number">Facture N° ${invoice.number}</div>
+                        ${duplicataHTML}
                         <div class="invoice-date">${biskraDate}</div>
                     </div>
                     <div class="bill-to">
@@ -2490,19 +2495,32 @@ function renderInvoices() {
    FULL SCREEN MODAL PREVIEW LOGIC
 ----------------------------------------------------------- */
 function openViewInvoiceModal(invoice) {
-    // 1. Generate HTML
+    // 1. Reset duplicata checkbox
+    const chk = document.getElementById('chkDuplicata');
+    if (chk) chk.checked = false;
+
+    // 2. Generate HTML
     const content = document.getElementById('fullScreenPreviewContent');
     if(content) {
         content.innerHTML = generateInvoiceHTML(invoice);
     }
     
-    // 2. Set current invoice for export
+    // 3. Set current invoice for export
     window.currentPreviewInvoice = invoice;
 
-    // 3. Open Modal
+    // 4. Open Modal
     const modalEl = document.getElementById('modalViewInvoice');
     if(modalEl) {
         new bootstrap.Modal(modalEl).show();
+    }
+}
+
+function toggleDuplicata() {
+    const chk = document.getElementById('chkDuplicata');
+    const isDup = chk ? chk.checked : false;
+    const content = document.getElementById('fullScreenPreviewContent');
+    if (content && window.currentPreviewInvoice) {
+        content.innerHTML = generateInvoiceHTML(window.currentPreviewInvoice, { duplicata: isDup });
     }
 }
 
@@ -2512,6 +2530,11 @@ function exportOpenedInvoicePDF() {
         const modalEl = document.getElementById('modalViewInvoice');
         const modal = bootstrap.Modal.getInstance(modalEl);
         if(modal) modal.hide();
+
+        // Pass duplicata state to the PDF export
+        const chk = document.getElementById('chkDuplicata');
+        const isDup = chk ? chk.checked : false;
+        window.currentPreviewInvoice._duplicata = isDup;
 
         setTimeout(() => {
             exportInvoiceToPDF(window.currentPreviewInvoice);
@@ -2753,7 +2776,7 @@ function exportInvoiceToPDF(invoice) {
 // Single page PDF export (3 or fewer articles)
 function exportSinglePagePDF(invoice) {
     const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = generateInvoiceHTML(invoice);
+    tempDiv.innerHTML = generateInvoiceHTML(invoice, { duplicata: invoice._duplicata || false });
     tempDiv.style.position = 'absolute';
     tempDiv.style.left = '-9999px';
     tempDiv.style.width = '800px';
@@ -2888,7 +2911,8 @@ function generatePDFPage(pdf, invoiceData, isFirstPage) {
             totalPages: invoiceData.totalPages || 1,
             showHeader: invoiceData.showHeader !== false,
             showTotals: invoiceData.showTotals !== false,
-            isFirstPage: isFirstPage
+            isFirstPage: isFirstPage,
+            duplicata: invoiceData._duplicata || false
         });
         tempDiv.style.position = 'absolute';
         tempDiv.style.left = '-9999px';
@@ -2936,7 +2960,8 @@ function generateInvoiceHTMLForPDF(invoice, options = {}) {
       showSignatures = true,
       currentPage = 1,
       totalPages = 1,
-      articlesToShow = null
+      articlesToShow = null,
+      duplicata = false
     } = options;
 
     const client = clients.find(c => c.id === invoice.clientId);
@@ -2987,6 +3012,7 @@ function generateInvoiceHTMLForPDF(invoice, options = {}) {
         <div class="invoice-meta-container">
             <div class="meta-left">
                 <div class="invoice-number">Facture N° ${invoice.number}</div>
+                ${duplicata ? '<div style="color: #CC0000; font-weight: bold; font-size: 1.1em; letter-spacing: 2px; margin-top: 2px; border: 2px solid #CC0000; display: inline-block; padding: 1px 10px; border-radius: 3px;">DUPLICATA</div>' : ''}
                 <div class="invoice-date">${biskraDate}</div>
             </div>
             <div class="bill-to">
@@ -3321,7 +3347,8 @@ async function exportSmartInvoicePDF(invoice, options = {}) {
                 showCompanyHeader: pg.showCompanyHeader,
                 showInvoiceMeta: pg.showInvoiceMeta,
                 showTotals: pg.showTotals,
-                showSignatures: showSignatures && pg.showTotals
+                showSignatures: showSignatures && pg.showTotals,
+                duplicata: invoice._duplicata || false
             };
 
             // Render the page

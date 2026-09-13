@@ -1308,7 +1308,11 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="modal-content">
       <div class="modal-header bg-dark text-white py-2">
         <h5 class="modal-title fs-6"><i class="fa fa-eye me-2"></i>Aperçu Facture</h5>
-        <div class="ms-auto d-flex gap-2">
+        <div class="ms-auto d-flex gap-2 align-items-center">
+            <label class="form-check form-switch mb-0 text-white d-flex align-items-center gap-1" style="cursor:pointer;">
+                <input class="form-check-input" type="checkbox" id="chkDuplicata" onchange="toggleDuplicata()">
+                <span class="small fw-bold">DUPLICATA</span>
+            </label>
             <button class="btn btn-sm btn-light" onclick="exportOpenedInvoicePDF()">
                 <i class="fa fa-download me-1"></i> PDF
             </button>
