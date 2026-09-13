@@ -3443,9 +3443,13 @@ function exportInvoiceToPDF(invoice) {
             // Get values from modal inputs
             const showHeaderAll = document.getElementById('exportShowHeaderAll').checked;
             const qualityScale = parseInt(document.getElementById('exportQuality').value) || 2;
+            const isDuplicata = document.getElementById('exportDuplicata')?.checked || false;
             
             // Close modal
             modal.hide();
+            
+            // Set duplicata flag on invoice
+            window.currentExportInvoice._duplicata = isDuplicata;
             
             // Run Export
             exportSmartInvoicePDF(window.currentExportInvoice, {
@@ -3453,7 +3457,7 @@ function exportInvoiceToPDF(invoice) {
                 maxRowsPerPage: 10,
                 showSignatures: true,
                 duplicateHeaderAllPages: showHeaderAll,
-                scaleFactor: qualityScale // ✅ Pass scale factor
+                scaleFactor: qualityScale
             });
         });
     } else {
