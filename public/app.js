@@ -2735,12 +2735,64 @@ function exportSelectedInvoicePDF() {
             return;
         }
         
+        // Collect all selected invoices
+        const selectedInvoices = [];
         checkboxes.forEach(checkbox => {
             const invoiceId = parseInt(checkbox.dataset.id);
             const invoice = invoices.find(inv => inv.id === invoiceId);
-            if (invoice) {
-                exportInvoiceToPDF(invoice); // This is your existing function for one invoice
+            if (invoice) selectedInvoices.push(invoice);
+        });
+
+        if (selectedInvoices.length === 0) return;
+
+        // Open the export options modal ONCE for all invoices
+        const modalEl = document.getElementById('modalExportOptions');
+        if (!modalEl) {
+            alert("Erreur: Modal d'exportation introuvable.");
+            return;
+        }
+
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+
+        // Replace the confirm button to remove old listeners
+        const btnConfirm = document.getElementById('btnConfirmExport');
+        const newBtn = btnConfirm.cloneNode(true);
+        btnConfirm.parentNode.replaceChild(newBtn, btnConfirm);
+
+        newBtn.addEventListener('click', async () => {
+            // Read settings from modal
+            const showHeaderAll = document.getElementById('exportShowHeaderAll').checked;
+            const qualityScale = parseInt(document.getElementById('exportQuality').value) || 2;
+            const isDuplicata = document.getElementById('exportDuplicata')?.checked || false;
+
+            // Close modal
+            modal.hide();
+
+            // Export all invoices sequentially with a delay
+            for (let i = 0; i < selectedInvoices.length; i++) {
+                const inv = selectedInvoices[i];
+                inv._duplicata = isDuplicata;
+
+                try {
+                    await exportSmartInvoicePDF(inv, {
+                        pageSize: 'normal',
+                        maxRowsPerPage: 10,
+                        showSignatures: true,
+                        duplicateHeaderAllPages: showHeaderAll,
+                        scaleFactor: qualityScale
+                    });
+                } catch (err) {
+                    console.error(`Error exporting invoice ${inv.number}:`, err);
+                }
+
+                // Small delay between exports to let browser breathe
+                if (i < selectedInvoices.length - 1) {
+                    await new Promise(r => setTimeout(r, 800));
+                }
             }
+
+            alert(`✅ ${selectedInvoices.length} facture(s) exportée(s) avec succès !`);
         });
     } catch (error) {
         console.error('Error exporting PDF:', error);
