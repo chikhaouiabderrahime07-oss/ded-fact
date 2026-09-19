@@ -3789,7 +3789,7 @@ function updateDashboard(targetChart, mode) {
         const overdueTTC = overdueList.reduce((s, i) => s + (i.totals?.ttc || 0), 0);
         const overdueHT  = overdueList.reduce((s, i) => s + (i.totals?.ht  || 0), 0);
 
-        const recoveryRate = revTTC > 0 ? ((paidTTC / revTTC) * 100).toFixed(3) : '0.000';
+        const recoveryRate = revTTC > 0 ? ((paidTTC / revTTC) * 100).toFixed(5) : '0.00000';
 
         // 3. KPI CARD RENDERER
         const renderCard = (title, settingKey, color, icon, valTTC, valHT, footerText) => {
@@ -3960,7 +3960,7 @@ function updateDashboard(targetChart, mode) {
                             color: '#fff', font: { weight: 'bold', size: 10 },
                             formatter: (val, ctx) => {
                                 const sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-                                const pct = (val * 100 / sum).toFixed(3);
+                                const pct = (val * 100 / sum).toFixed(5);
                                 return pct >= 5 ? pct + '%' : '';
                             }
                         } : false
@@ -3974,7 +3974,7 @@ function updateDashboard(targetChart, mode) {
         const ctxCli = document.getElementById('chartTopClients');
         if (ctxCli) {
             const cliLabels = sortedClients.map(([name, val]) => {
-                const pct = totalClientVal > 0 ? ((val / totalClientVal) * 100).toFixed(3) : 0;
+                const pct = totalClientVal > 0 ? ((val / totalClientVal) * 100).toFixed(5) : 0;
                 return `${name} (${pct}%)`;
             });
             dashboardCharts.topClients = new Chart(ctxCli, {
@@ -3995,7 +3995,7 @@ function updateDashboard(targetChart, mode) {
                         tooltip: { callbacks: { label: (c) => `${c.label.split(' (')[0]}: ${formatCurrency(c.raw)}` } },
                         datalabels: hasDataLabels ? {
                             color: '#fff', font: { weight: 'bold', size: 11 },
-                            formatter: (val) => (val / totalClientVal > 0.03) ? ((val / totalClientVal) * 100).toFixed(3) + '%' : ''
+                            formatter: (val) => (val / totalClientVal > 0.03) ? ((val / totalClientVal) * 100).toFixed(5) + '%' : ''
                         } : false
                     }
                 }
@@ -4181,6 +4181,372 @@ function toggleChartMode() {
         btn.classList.toggle('btn-primary');
     }
     updateDashboard();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ████  DASHBOARD EXCEL EXPORT  ████
+// ═══════════════════════════════════════════════════════════════
+function exportDashboardToExcel() {
+    try {
+        const filtered = getDashboardFilteredInvoices();
+        if (filtered.length === 0) {
+            alert('Aucune donnée à exporter. Vérifiez vos filtres.');
+            return;
+        }
+
+        const wb = XLSX.utils.book_new();
+        const months = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+        // ── STYLE HELPERS ──
+        const colorHeader = '003366';
+        const colorSubHeader = '1a5276';
+        const colorEven = 'dbe9ff';
+        const colorOdd = 'ffffff';
+        const colorTotal = '2D3748';
+        const colorSuccess = '10b981';
+        const colorDanger = 'ef4444';
+        const colorWarning = 'f59e0b';
+
+        const hdrStyle = (bg = colorHeader) => ({
+            font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11, name: 'Calibri' },
+            fill: { fgColor: { rgb: bg } },
+            alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+            border: { top: {style:'thin',color:{rgb:'000000'}}, bottom: {style:'thin',color:{rgb:'000000'}}, left: {style:'thin',color:{rgb:'000000'}}, right: {style:'thin',color:{rgb:'000000'}} }
+        });
+        const rowStyle = (isEven, align = 'center') => ({
+            font: { sz: 10, name: 'Calibri' },
+            fill: { fgColor: { rgb: isEven ? colorEven : colorOdd } },
+            alignment: { horizontal: align, vertical: 'center' },
+            border: { top: {style:'thin',color:{rgb:'CCCCCC'}}, bottom: {style:'thin',color:{rgb:'CCCCCC'}}, left: {style:'thin',color:{rgb:'CCCCCC'}}, right: {style:'thin',color:{rgb:'CCCCCC'}} }
+        });
+        const moneyStyle = (isEven) => ({
+            ...rowStyle(isEven, 'right'),
+            numFmt: '#,##0.00'
+        });
+        const pctStyle = (isEven) => ({
+            ...rowStyle(isEven, 'center'),
+            numFmt: '0.00000"%"'
+        });
+        const totalStyle = (align = 'center') => ({
+            font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11, name: 'Calibri' },
+            fill: { fgColor: { rgb: colorTotal } },
+            alignment: { horizontal: align, vertical: 'center' },
+            border: { top: {style:'medium',color:{rgb:'000000'}}, bottom: {style:'medium',color:{rgb:'000000'}}, left: {style:'thin',color:{rgb:'000000'}}, right: {style:'thin',color:{rgb:'000000'}} },
+            numFmt: '#,##0.00'
+        });
+        const titleStyle = () => ({
+            font: { bold: true, sz: 14, color: { rgb: '003366' }, name: 'Calibri' },
+            alignment: { horizontal: 'left', vertical: 'center' }
+        });
+        const subtitleStyle = () => ({
+            font: { italic: true, sz: 10, color: { rgb: '666666' }, name: 'Calibri' },
+            alignment: { horizontal: 'left' }
+        });
+
+        // Helpers
+        const c = (v, s) => ({ v, t: typeof v === 'number' ? 'n' : 's', s });
+        const addSheet = (ws, name) => { XLSX.utils.book_append_sheet(wb, ws, name); };
+
+        // Get filter description
+        const yearSel = document.getElementById('dashboardYearSelect');
+        const clientSel = document.getElementById('dashboardClientSelect');
+        const periodSel = document.getElementById('dashboardPeriodSelect');
+        const filterDesc = `Filtres: ${clientSel?.selectedOptions[0]?.text || 'Tous'} | ${yearSel?.value || 'Toutes'} | ${periodSel?.selectedOptions[0]?.text || 'Toute période'}`;
+        const exportDate = new Date().toLocaleString('fr-DZ');
+
+        // ══════════════════════════════════════
+        // SHEET 1: KPIs SUMMARY
+        // ══════════════════════════════════════
+        const ws1 = {};
+        const revTTC = filtered.reduce((s, i) => s + (i.totals?.ttc || 0), 0);
+        const revHT  = filtered.reduce((s, i) => s + (i.totals?.ht  || 0), 0);
+        const paidList = filtered.filter(i => i.paid || i.paymentStatus === 'encaissee');
+        const paidTTC = paidList.reduce((s, i) => s + (i.totals?.ttc || 0), 0);
+        const paidHT  = paidList.reduce((s, i) => s + (i.totals?.ht  || 0), 0);
+        const debtTTC = revTTC - paidTTC;
+        const debtHT  = revHT - paidHT;
+        const today = new Date();
+        const overdueList = filtered.filter(i => {
+            if (i.paid || i.paymentStatus === 'encaissee') return false;
+            const due = new Date(new Date(i.date).getTime() + ((i.delaiPaiement || 30) * 86400000));
+            return due < today;
+        });
+        const overdueTTC = overdueList.reduce((s, i) => s + (i.totals?.ttc || 0), 0);
+        const overdueHT  = overdueList.reduce((s, i) => s + (i.totals?.ht  || 0), 0);
+        const recoveryPct = revTTC > 0 ? (paidTTC / revTTC * 100) : 0;
+
+        ws1['A1'] = c('📊 TABLEAU DE BORD — INDICATEURS CLÉS', titleStyle());
+        ws1['A2'] = c(filterDesc, subtitleStyle());
+        ws1['A3'] = c(`Exporté le: ${exportDate}`, subtitleStyle());
+
+        ws1['A5'] = c('INDICATEUR', hdrStyle()); ws1['B5'] = c('MONTANT HT (DA)', hdrStyle()); ws1['C5'] = c('MONTANT TTC (DA)', hdrStyle()); ws1['D5'] = c('DÉTAIL', hdrStyle());
+
+        const kpiRows = [
+            ["Chiffre d'Affaires Global", revHT, revTTC, `${filtered.length} facture(s)`],
+            ["Total Encaissé", paidHT, paidTTC, `${recoveryPct.toFixed(5)}% recouvré`],
+            ["Crédit Client (Impayé)", debtHT, debtTTC, `${filtered.length - paidList.length} facture(s) en attente`],
+            ["Retards de Paiement", overdueHT, overdueTTC, `${overdueList.length} facture(s) en retard`],
+        ];
+        kpiRows.forEach((row, i) => {
+            const r = 6 + i;
+            const isE = i % 2 === 0;
+            ws1[`A${r}`] = c(row[0], rowStyle(isE, 'left'));
+            ws1[`B${r}`] = c(row[1], moneyStyle(isE));
+            ws1[`C${r}`] = c(row[2], moneyStyle(isE));
+            ws1[`D${r}`] = c(row[3], rowStyle(isE, 'left'));
+        });
+        ws1['!ref'] = 'A1:D10';
+        ws1['!cols'] = [{wch:35},{wch:22},{wch:22},{wch:30}];
+        ws1['!merges'] = [{s:{r:0,c:0},e:{r:0,c:3}},{s:{r:1,c:0},e:{r:1,c:3}}];
+        addSheet(ws1, '📊 KPIs');
+
+        // ══════════════════════════════════════
+        // SHEET 2: REVENUE BY MONTH
+        // ══════════════════════════════════════
+        const ws2 = {};
+        const dataRevHT = Array(12).fill(0);
+        const dataRevTTC = Array(12).fill(0);
+        const dataCount = Array(12).fill(0);
+        filtered.forEach(inv => {
+            const m = new Date(inv.date || inv.createdAt).getMonth();
+            dataRevHT[m] += inv.totals?.ht || 0;
+            dataRevTTC[m] += inv.totals?.ttc || 0;
+            dataCount[m]++;
+        });
+
+        ws2['A1'] = c('📈 CHIFFRE D\'AFFAIRES PAR MOIS', titleStyle());
+        ws2['A2'] = c(filterDesc, subtitleStyle());
+        ws2['A4'] = c('MOIS', hdrStyle()); ws2['B4'] = c('NB FACTURES', hdrStyle()); ws2['C4'] = c('TOTAL HT (DA)', hdrStyle()); ws2['D4'] = c('TOTAL TTC (DA)', hdrStyle()); ws2['E4'] = c('% DU C.A.', hdrStyle());
+
+        let totalFactCount = 0;
+        months.forEach((m, i) => {
+            const r = 5 + i;
+            const isE = i % 2 === 0;
+            const pct = revTTC > 0 ? (dataRevTTC[i] / revTTC * 100) : 0;
+            totalFactCount += dataCount[i];
+            ws2[`A${r}`] = c(m, rowStyle(isE, 'left'));
+            ws2[`B${r}`] = c(dataCount[i], rowStyle(isE));
+            ws2[`C${r}`] = c(dataRevHT[i], moneyStyle(isE));
+            ws2[`D${r}`] = c(dataRevTTC[i], moneyStyle(isE));
+            ws2[`E${r}`] = c(pct.toFixed(5) + '%', rowStyle(isE));
+        });
+        // Total row
+        const r2t = 17;
+        ws2[`A${r2t}`] = c('TOTAL', totalStyle('left'));
+        ws2[`B${r2t}`] = c(totalFactCount, totalStyle());
+        ws2[`C${r2t}`] = c(revHT, totalStyle('right'));
+        ws2[`D${r2t}`] = c(revTTC, totalStyle('right'));
+        ws2[`E${r2t}`] = c('100%', totalStyle());
+        ws2['!ref'] = `A1:E${r2t}`;
+        ws2['!cols'] = [{wch:18},{wch:15},{wch:22},{wch:22},{wch:15}];
+        ws2['!merges'] = [{s:{r:0,c:0},e:{r:0,c:4}}];
+        addSheet(ws2, '📈 C.A. par Mois');
+
+        // ══════════════════════════════════════
+        // SHEET 3: TOP CLIENTS
+        // ══════════════════════════════════════
+        const ws3 = {};
+        const clientData = {};
+        const clientCountData = {};
+        filtered.forEach(inv => {
+            const cName = clients.find(c2 => c2.id === inv.clientId)?.nom || 'Inconnu';
+            const htVal = inv.totals?.ht || 0;
+            const ttcVal = inv.totals?.ttc || 0;
+            if (!clientData[cName]) clientData[cName] = { ht: 0, ttc: 0, count: 0 };
+            clientData[cName].ht += htVal;
+            clientData[cName].ttc += ttcVal;
+            clientData[cName].count++;
+        });
+        const sortedClients = Object.entries(clientData).sort((a, b) => b[1].ttc - a[1].ttc);
+
+        ws3['A1'] = c('👥 RÉPARTITION PAR CLIENT', titleStyle());
+        ws3['A2'] = c(filterDesc, subtitleStyle());
+        ws3['A4'] = c('#', hdrStyle()); ws3['B4'] = c('CLIENT', hdrStyle()); ws3['C4'] = c('NB FACTURES', hdrStyle()); ws3['D4'] = c('TOTAL HT (DA)', hdrStyle()); ws3['E4'] = c('TOTAL TTC (DA)', hdrStyle()); ws3['F4'] = c('% DU C.A.', hdrStyle()); ws3['G4'] = c('RANG', hdrStyle());
+
+        sortedClients.forEach(([name, data], i) => {
+            const r = 5 + i;
+            const isE = i % 2 === 0;
+            const pct = revTTC > 0 ? (data.ttc / revTTC * 100) : 0;
+            ws3[`A${r}`] = c(i + 1, rowStyle(isE));
+            ws3[`B${r}`] = c(name, rowStyle(isE, 'left'));
+            ws3[`C${r}`] = c(data.count, rowStyle(isE));
+            ws3[`D${r}`] = c(data.ht, moneyStyle(isE));
+            ws3[`E${r}`] = c(data.ttc, moneyStyle(isE));
+            ws3[`F${r}`] = c(pct.toFixed(5) + '%', rowStyle(isE));
+            ws3[`G${r}`] = c(i < 3 ? '🥇🥈🥉'[i] : `#${i+1}`, rowStyle(isE));
+        });
+        const r3t = 5 + sortedClients.length;
+        ws3[`A${r3t}`] = c('', totalStyle()); ws3[`B${r3t}`] = c('TOTAL', totalStyle('left')); ws3[`C${r3t}`] = c(filtered.length, totalStyle()); ws3[`D${r3t}`] = c(revHT, totalStyle('right')); ws3[`E${r3t}`] = c(revTTC, totalStyle('right')); ws3[`F${r3t}`] = c('100%', totalStyle()); ws3[`G${r3t}`] = c('', totalStyle());
+        ws3['!ref'] = `A1:G${r3t}`;
+        ws3['!cols'] = [{wch:5},{wch:30},{wch:14},{wch:22},{wch:22},{wch:16},{wch:8}];
+        ws3['!merges'] = [{s:{r:0,c:0},e:{r:0,c:6}}];
+        addSheet(ws3, '👥 Clients');
+
+        // ══════════════════════════════════════
+        // SHEET 4: PAYMENT METHODS
+        // ══════════════════════════════════════
+        const ws4 = {};
+        const methodsMap = {};
+        const bankLabelMap = {};
+        if (typeof ALGERIAN_BANKS !== 'undefined') {
+            [...ALGERIAN_BANKS.public, ...ALGERIAN_BANKS.private, ...ALGERIAN_BANKS.other]
+                .forEach(b => { bankLabelMap[b.value] = b.label; });
+        }
+        filtered.forEach(inv => {
+            let key = 'Non défini';
+            if (inv.paymentDetails && inv.paymentDetails.bank) {
+                key = bankLabelMap[inv.paymentDetails.bank] || inv.paymentDetails.bank;
+            } else if (inv.paymentDetails && inv.paymentDetails.method) {
+                key = inv.paymentDetails.method;
+            } else if (inv.modePaiement) {
+                key = inv.modePaiement;
+            }
+            if (!methodsMap[key]) methodsMap[key] = { count: 0, ht: 0, ttc: 0 };
+            methodsMap[key].count++;
+            methodsMap[key].ht += inv.totals?.ht || 0;
+            methodsMap[key].ttc += inv.totals?.ttc || 0;
+        });
+        const sortedMethods = Object.entries(methodsMap).sort((a, b) => b[1].count - a[1].count);
+
+        ws4['A1'] = c('💳 MODES DE PAIEMENT', titleStyle());
+        ws4['A2'] = c(filterDesc, subtitleStyle());
+        ws4['A4'] = c('MODE / BANQUE', hdrStyle()); ws4['B4'] = c('NB FACTURES', hdrStyle()); ws4['C4'] = c('% DES FACTURES', hdrStyle()); ws4['D4'] = c('MONTANT HT (DA)', hdrStyle()); ws4['E4'] = c('MONTANT TTC (DA)', hdrStyle());
+
+        sortedMethods.forEach(([name, data], i) => {
+            const r = 5 + i;
+            const isE = i % 2 === 0;
+            const pct = filtered.length > 0 ? (data.count / filtered.length * 100) : 0;
+            ws4[`A${r}`] = c(name, rowStyle(isE, 'left'));
+            ws4[`B${r}`] = c(data.count, rowStyle(isE));
+            ws4[`C${r}`] = c(pct.toFixed(5) + '%', rowStyle(isE));
+            ws4[`D${r}`] = c(data.ht, moneyStyle(isE));
+            ws4[`E${r}`] = c(data.ttc, moneyStyle(isE));
+        });
+        const r4t = 5 + sortedMethods.length;
+        ws4[`A${r4t}`] = c('TOTAL', totalStyle('left')); ws4[`B${r4t}`] = c(filtered.length, totalStyle()); ws4[`C${r4t}`] = c('100%', totalStyle()); ws4[`D${r4t}`] = c(revHT, totalStyle('right')); ws4[`E${r4t}`] = c(revTTC, totalStyle('right'));
+        ws4['!ref'] = `A1:E${r4t}`;
+        ws4['!cols'] = [{wch:35},{wch:14},{wch:16},{wch:22},{wch:22}];
+        ws4['!merges'] = [{s:{r:0,c:0},e:{r:0,c:4}}];
+        addSheet(ws4, '💳 Paiements');
+
+        // ══════════════════════════════════════
+        // SHEET 5: DEBT ANALYSIS
+        // ══════════════════════════════════════
+        const ws5 = {};
+        const unpaidList = filtered.filter(i => !i.paid && i.paymentStatus !== 'encaissee');
+        ws5['A1'] = c('⚠️ ANALYSE DES CRÉANCES', titleStyle());
+        ws5['A2'] = c(filterDesc, subtitleStyle());
+
+        ws5['A4'] = c('CATÉGORIE', hdrStyle()); ws5['B4'] = c('NB FACTURES', hdrStyle()); ws5['C4'] = c('MONTANT HT (DA)', hdrStyle()); ws5['D4'] = c('MONTANT TTC (DA)', hdrStyle()); ws5['E4'] = c('% DU TOTAL', hdrStyle());
+        const debtRows = [
+            ['✅ Payées', paidList.length, paidHT, paidTTC, revTTC > 0 ? (paidTTC/revTTC*100) : 0],
+            ['⏳ En attente (dans délai)', unpaidList.length - overdueList.length, debtHT - overdueHT, debtTTC - overdueTTC, revTTC > 0 ? ((debtTTC-overdueTTC)/revTTC*100) : 0],
+            ['🔴 En retard (hors délai)', overdueList.length, overdueHT, overdueTTC, revTTC > 0 ? (overdueTTC/revTTC*100) : 0],
+        ];
+        debtRows.forEach((row, i) => {
+            const r = 5 + i;
+            const isE = i % 2 === 0;
+            ws5[`A${r}`] = c(row[0], rowStyle(isE, 'left'));
+            ws5[`B${r}`] = c(row[1], rowStyle(isE));
+            ws5[`C${r}`] = c(row[2], moneyStyle(isE));
+            ws5[`D${r}`] = c(row[3], moneyStyle(isE));
+            ws5[`E${r}`] = c(row[4].toFixed(5) + '%', rowStyle(isE));
+        });
+        ws5['A8'] = c('TOTAL', totalStyle('left')); ws5['B8'] = c(filtered.length, totalStyle()); ws5['C8'] = c(revHT, totalStyle('right')); ws5['D8'] = c(revTTC, totalStyle('right')); ws5['E8'] = c('100%', totalStyle());
+        ws5['!ref'] = 'A1:E8';
+        ws5['!cols'] = [{wch:30},{wch:14},{wch:22},{wch:22},{wch:14}];
+        ws5['!merges'] = [{s:{r:0,c:0},e:{r:0,c:4}}];
+        addSheet(ws5, '⚠️ Créances');
+
+        // ══════════════════════════════════════
+        // SHEET 6: FORECAST
+        // ══════════════════════════════════════
+        const ws6 = {};
+        const forecastHT = Array(12).fill(0);
+        const forecastTTC = Array(12).fill(0);
+        const forecastCount = Array(12).fill(0);
+        filtered.filter(inv => !inv.paid).forEach(inv => {
+            const d = new Date(inv.date);
+            const delay = parseInt(inv.delaiPaiement) || 30;
+            d.setDate(d.getDate() + delay);
+            forecastHT[d.getMonth()] += inv.totals?.ht || 0;
+            forecastTTC[d.getMonth()] += inv.totals?.ttc || 0;
+            forecastCount[d.getMonth()]++;
+        });
+        ws6['A1'] = c('🔮 PRÉVISION DES ENCAISSEMENTS', titleStyle());
+        ws6['A2'] = c(filterDesc, subtitleStyle());
+        ws6['A4'] = c('MOIS D\'ÉCHÉANCE', hdrStyle()); ws6['B4'] = c('NB FACTURES', hdrStyle()); ws6['C4'] = c('MONTANT HT (DA)', hdrStyle()); ws6['D4'] = c('MONTANT TTC (DA)', hdrStyle());
+        let fcTotalCount = 0, fcTotalHT = 0, fcTotalTTC = 0;
+        months.forEach((m, i) => {
+            const r = 5 + i;
+            const isE = i % 2 === 0;
+            fcTotalCount += forecastCount[i]; fcTotalHT += forecastHT[i]; fcTotalTTC += forecastTTC[i];
+            ws6[`A${r}`] = c(m, rowStyle(isE, 'left'));
+            ws6[`B${r}`] = c(forecastCount[i], rowStyle(isE));
+            ws6[`C${r}`] = c(forecastHT[i], moneyStyle(isE));
+            ws6[`D${r}`] = c(forecastTTC[i], moneyStyle(isE));
+        });
+        ws6['A17'] = c('TOTAL', totalStyle('left')); ws6['B17'] = c(fcTotalCount, totalStyle()); ws6['C17'] = c(fcTotalHT, totalStyle('right')); ws6['D17'] = c(fcTotalTTC, totalStyle('right'));
+        ws6['!ref'] = 'A1:D17';
+        ws6['!cols'] = [{wch:22},{wch:14},{wch:22},{wch:22}];
+        ws6['!merges'] = [{s:{r:0,c:0},e:{r:0,c:3}}];
+        addSheet(ws6, '🔮 Prévisions');
+
+        // ══════════════════════════════════════
+        // SHEET 7: TRAJETS
+        // ══════════════════════════════════════
+        const ws7 = {};
+        const trajetsMap = {};
+        filtered.forEach(inv => {
+            if (inv.articles && inv.articles.length > 0) {
+                inv.articles.forEach(art => {
+                    let dest = (art.wilayaDestination && art.wilayaDestination.trim() !== '' && art.wilayaDestination !== 'Inconnu')
+                        ? art.wilayaDestination.trim() : (art.selectedDestination || 'Inconnu');
+                    if (dest.toLowerCase().startsWith('pour le compte')) dest = art.wilayaDestination || 'Inconnu';
+                    const dep = (art.wilayaDepart && art.wilayaDepart.trim() !== '') ? art.wilayaDepart.trim() : 'Inconnu';
+                    if (dep !== 'Inconnu' && dest !== 'Inconnu') {
+                        const key = `${dep} ➝ ${dest}`;
+                        const qty = parseInt(art.qte) || 1;
+                        if (!trajetsMap[key]) trajetsMap[key] = { voyages: 0, factures: 0 };
+                        trajetsMap[key].voyages += qty;
+                        trajetsMap[key].factures++;
+                    }
+                });
+            }
+        });
+        const sortedTrajets = Object.entries(trajetsMap).sort((a, b) => b[1].voyages - a[1].voyages);
+        const totalVoyages = sortedTrajets.reduce((s, t) => s + t[1].voyages, 0);
+
+        ws7['A1'] = c('🚛 ANALYSE DES TRAJETS', titleStyle());
+        ws7['A2'] = c(filterDesc, subtitleStyle());
+        ws7['A4'] = c('#', hdrStyle()); ws7['B4'] = c('TRAJET', hdrStyle()); ws7['C4'] = c('NB VOYAGES', hdrStyle()); ws7['D4'] = c('NB FACTURES', hdrStyle()); ws7['E4'] = c('% DES VOYAGES', hdrStyle());
+
+        sortedTrajets.forEach(([route, data], i) => {
+            const r = 5 + i;
+            const isE = i % 2 === 0;
+            const pct = totalVoyages > 0 ? (data.voyages / totalVoyages * 100) : 0;
+            ws7[`A${r}`] = c(i + 1, rowStyle(isE));
+            ws7[`B${r}`] = c(route, rowStyle(isE, 'left'));
+            ws7[`C${r}`] = c(data.voyages, rowStyle(isE));
+            ws7[`D${r}`] = c(data.factures, rowStyle(isE));
+            ws7[`E${r}`] = c(pct.toFixed(5) + '%', rowStyle(isE));
+        });
+        const r7t = 5 + sortedTrajets.length;
+        ws7[`A${r7t}`] = c('', totalStyle()); ws7[`B${r7t}`] = c('TOTAL', totalStyle('left')); ws7[`C${r7t}`] = c(totalVoyages, totalStyle()); ws7[`D${r7t}`] = c(sortedTrajets.reduce((s,t)=>s+t[1].factures,0), totalStyle()); ws7[`E${r7t}`] = c('100%', totalStyle());
+        ws7['!ref'] = `A1:E${r7t}`;
+        ws7['!cols'] = [{wch:5},{wch:35},{wch:14},{wch:14},{wch:16}];
+        ws7['!merges'] = [{s:{r:0,c:0},e:{r:0,c:4}}];
+        addSheet(ws7, '🚛 Trajets');
+
+        // ── SAVE FILE ──
+        const fileName = `Dashboard_${yearSel?.value || 'All'}_${new Date().toISOString().slice(0,10)}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+        alert(`✅ Export réussi ! Fichier: ${fileName}\n\n7 feuilles générées:\n• KPIs\n• C.A. par Mois\n• Clients\n• Paiements\n• Créances\n• Prévisions\n• Trajets`);
+
+    } catch (error) {
+        console.error('Dashboard Excel export error:', error);
+        alert('Erreur lors de l\'export Excel: ' + error.message);
+    }
 }
 
 // Reports
@@ -5153,8 +5519,8 @@ function renderReportTable(filtered) {
     }
 
     if (summaryContainer) {
-        const percentPaid = totalTTC > 0 ? ((totalPaid / totalTTC) * 100).toFixed(3) : '0.000';
-        const percentDebt = totalTTC > 0 ? (((totalTTC - totalPaid) / totalTTC) * 100).toFixed(3) : '0.000';
+        const percentPaid = totalTTC > 0 ? ((totalPaid / totalTTC) * 100).toFixed(5) : '0.00000';
+        const percentDebt = totalTTC > 0 ? (((totalTTC - totalPaid) / totalTTC) * 100).toFixed(5) : '0.00000';
         summaryContainer.innerHTML = `
         <div class="col-md-4">
             <div class="p-3 bg-white border rounded shadow-sm h-100 border-start border-4 border-secondary">
