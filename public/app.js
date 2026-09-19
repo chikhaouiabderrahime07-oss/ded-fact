@@ -3789,7 +3789,7 @@ function updateDashboard(targetChart, mode) {
         const overdueTTC = overdueList.reduce((s, i) => s + (i.totals?.ttc || 0), 0);
         const overdueHT  = overdueList.reduce((s, i) => s + (i.totals?.ht  || 0), 0);
 
-        const recoveryRate = revTTC > 0 ? ((paidTTC / revTTC) * 100).toFixed(1) : '0.0';
+        const recoveryRate = revTTC > 0 ? ((paidTTC / revTTC) * 100).toFixed(3) : '0.000';
 
         // 3. KPI CARD RENDERER
         const renderCard = (title, settingKey, color, icon, valTTC, valHT, footerText) => {
@@ -3960,7 +3960,7 @@ function updateDashboard(targetChart, mode) {
                             color: '#fff', font: { weight: 'bold', size: 10 },
                             formatter: (val, ctx) => {
                                 const sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-                                const pct = (val * 100 / sum).toFixed(0);
+                                const pct = (val * 100 / sum).toFixed(3);
                                 return pct >= 5 ? pct + '%' : '';
                             }
                         } : false
@@ -3974,7 +3974,7 @@ function updateDashboard(targetChart, mode) {
         const ctxCli = document.getElementById('chartTopClients');
         if (ctxCli) {
             const cliLabels = sortedClients.map(([name, val]) => {
-                const pct = totalClientVal > 0 ? ((val / totalClientVal) * 100).toFixed(1) : 0;
+                const pct = totalClientVal > 0 ? ((val / totalClientVal) * 100).toFixed(3) : 0;
                 return `${name} (${pct}%)`;
             });
             dashboardCharts.topClients = new Chart(ctxCli, {
@@ -3995,7 +3995,7 @@ function updateDashboard(targetChart, mode) {
                         tooltip: { callbacks: { label: (c) => `${c.label.split(' (')[0]}: ${formatCurrency(c.raw)}` } },
                         datalabels: hasDataLabels ? {
                             color: '#fff', font: { weight: 'bold', size: 11 },
-                            formatter: (val) => (val / totalClientVal > 0.03) ? ((val / totalClientVal) * 100).toFixed(1) + '%' : ''
+                            formatter: (val) => (val / totalClientVal > 0.03) ? ((val / totalClientVal) * 100).toFixed(3) + '%' : ''
                         } : false
                     }
                 }
@@ -5153,8 +5153,8 @@ function renderReportTable(filtered) {
     }
 
     if (summaryContainer) {
-        const percentPaid = totalTTC > 0 ? Math.round((totalPaid / totalTTC) * 100) : 0;
-        const percentDebt = 100 - percentPaid;
+        const percentPaid = totalTTC > 0 ? ((totalPaid / totalTTC) * 100).toFixed(3) : '0.000';
+        const percentDebt = totalTTC > 0 ? (((totalTTC - totalPaid) / totalTTC) * 100).toFixed(3) : '0.000';
         summaryContainer.innerHTML = `
         <div class="col-md-4">
             <div class="p-3 bg-white border rounded shadow-sm h-100 border-start border-4 border-secondary">
