@@ -4347,9 +4347,8 @@ function exportDashboardToExcel() {
         // ══════════════════════════════════════
         const ws3 = {};
         const clientData = {};
-        const clientCountData = {};
         filtered.forEach(inv => {
-            const cName = clients.find(c2 => c2.id === inv.clientId)?.nom || 'Inconnu';
+            const cName = clients.find(c2 => String(c2.id) === String(inv.clientId))?.nom || 'Inconnu';
             const htVal = inv.totals?.ht || 0;
             const ttcVal = inv.totals?.ttc || 0;
             if (!clientData[cName]) clientData[cName] = { ht: 0, ttc: 0, count: 0 };
@@ -4363,6 +4362,7 @@ function exportDashboardToExcel() {
         ws3['A2'] = c(filterDesc, subtitleStyle());
         ws3['A4'] = c('#', hdrStyle()); ws3['B4'] = c('CLIENT', hdrStyle()); ws3['C4'] = c('NB FACTURES', hdrStyle()); ws3['D4'] = c('TOTAL HT (DA)', hdrStyle()); ws3['E4'] = c('TOTAL TTC (DA)', hdrStyle()); ws3['F4'] = c('% DU C.A.', hdrStyle()); ws3['G4'] = c('RANG', hdrStyle());
 
+        const medals = ['🥇', '🥈', '🥉'];
         sortedClients.forEach(([name, data], i) => {
             const r = 5 + i;
             const isE = i % 2 === 0;
@@ -4373,7 +4373,7 @@ function exportDashboardToExcel() {
             ws3[`D${r}`] = c(data.ht, moneyStyle(isE));
             ws3[`E${r}`] = c(data.ttc, moneyStyle(isE));
             ws3[`F${r}`] = c(pct.toFixed(5) + '%', rowStyle(isE));
-            ws3[`G${r}`] = c(i < 3 ? '🥇🥈🥉'[i] : `#${i+1}`, rowStyle(isE));
+            ws3[`G${r}`] = c(i < 3 ? medals[i] : `#${i+1}`, rowStyle(isE));
         });
         const r3t = 5 + sortedClients.length;
         ws3[`A${r3t}`] = c('', totalStyle()); ws3[`B${r3t}`] = c('TOTAL', totalStyle('left')); ws3[`C${r3t}`] = c(filtered.length, totalStyle()); ws3[`D${r3t}`] = c(revHT, totalStyle('right')); ws3[`E${r3t}`] = c(revTTC, totalStyle('right')); ws3[`F${r3t}`] = c('100%', totalStyle()); ws3[`G${r3t}`] = c('', totalStyle());
