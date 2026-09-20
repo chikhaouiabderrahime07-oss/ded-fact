@@ -3701,10 +3701,16 @@ function resetDashboardFilters() {
     const ys = document.getElementById('dashboardYearSelect');
     const ps = document.getElementById('dashboardPeriodSelect');
     const tcs = document.getElementById('chartTrajetClientSelect');
+    const customDates = document.getElementById('dashboardCustomDates');
+    const dateFrom = document.getElementById('dashboardDateFrom');
+    const dateTo = document.getElementById('dashboardDateTo');
     if (cs) cs.value = 'all';
     if (ys) ys.value = '2026';
     if (ps) ps.value = 'all';
     if (tcs) tcs.value = '';
+    if (dateFrom) dateFrom.value = '';
+    if (dateTo) dateTo.value = '';
+    if (customDates) customDates.style.display = 'none';
     // Reset HT/TTC toggles
     chartSettings = { revenue: 'TTC', clients: 'TTC', debt: 'TTC', forecast: 'TTC' };
     ['revTTC', 'cliTTC', 'debtTTC', 'fcTTC'].forEach(id => {
@@ -3714,7 +3720,31 @@ function resetDashboardFilters() {
     updateDashboard();
 }
 
-// ─── CORE: Filter invoices by Client + Year + Period ───
+// ─── Show/hide custom date pickers when period changes ───
+function onDashboardPeriodChange() {
+    const periodSel = document.getElementById('dashboardPeriodSelect');
+    const customDates = document.getElementById('dashboardCustomDates');
+    if (!periodSel || !customDates) return;
+
+    if (periodSel.value === 'custom') {
+        customDates.style.display = 'flex';
+        // Pre-fill with current year range if empty
+        const dateFrom = document.getElementById('dashboardDateFrom');
+        const dateTo = document.getElementById('dashboardDateTo');
+        const yearSel = document.getElementById('dashboardYearSelect');
+        const year = yearSel?.value || new Date().getFullYear();
+        if (dateFrom && !dateFrom.value) dateFrom.value = `${year}-01-01`;
+        if (dateTo && !dateTo.value) {
+            const today = new Date();
+            dateTo.value = today.toISOString().slice(0, 10);
+        }
+    } else {
+        customDates.style.display = 'none';
+    }
+    updateDashboard();
+}
+
+// ─── CORE: Filter invoices by Client + Year + Period (incl. Semesters & Custom) ───
 function getDashboardFilteredInvoices() {
     const clientSel = document.getElementById('dashboardClientSelect');
     const yearSel   = document.getElementById('dashboardYearSelect');
@@ -3724,22 +3754,47 @@ function getDashboardFilteredInvoices() {
     const yearVal   = yearSel ? yearSel.value : '';
     const periodVal = periodSel ? periodSel.value : 'all';
 
+    // Pre-parse custom dates once (outside the loop for performance)
+    let customFrom = null, customTo = null;
+    if (periodVal === 'custom') {
+        const fromEl = document.getElementById('dashboardDateFrom');
+        const toEl = document.getElementById('dashboardDateTo');
+        if (fromEl && fromEl.value) customFrom = new Date(fromEl.value + 'T00:00:00');
+        if (toEl && toEl.value) customTo = new Date(toEl.value + 'T23:59:59');
+    }
+
     return invoices.filter(inv => {
         // Client filter
         if (clientVal !== 'all' && String(inv.clientId) !== String(clientVal)) return false;
 
-        // Year filter
+        // Date of invoice
         const d = new Date(inv.date || inv.createdAt);
-        if (yearVal !== '' && d.getFullYear() !== parseInt(yearVal)) return false;
+
+        // Year filter (applies to all modes except custom which has its own dates)
+        if (periodVal !== 'custom' && yearVal !== '' && d.getFullYear() !== parseInt(yearVal)) return false;
 
         // Period filter
         if (periodVal !== 'all') {
             const m = d.getMonth();
+
+            // Semesters
+            if (periodVal === 'S1' && (m < 0 || m > 5)) return false;
+            if (periodVal === 'S2' && (m < 6 || m > 11)) return false;
+
+            // Trimesters
             if (periodVal === 'Q1' && (m < 0 || m > 2)) return false;
             if (periodVal === 'Q2' && (m < 3 || m > 5)) return false;
             if (periodVal === 'Q3' && (m < 6 || m > 8)) return false;
             if (periodVal === 'Q4' && (m < 9 || m > 11)) return false;
+
+            // Individual month
             if (!isNaN(periodVal) && m !== parseInt(periodVal)) return false;
+
+            // Custom date range
+            if (periodVal === 'custom') {
+                if (customFrom && d < customFrom) return false;
+                if (customTo && d > customTo) return false;
+            }
         }
         return true;
     });

@@ -354,25 +354,42 @@ th.sortable.sorted-desc .sort-icon::after {
                 </select>
             </div>
             <div>
-                <select id="dashboardPeriodSelect" class="form-select form-select-sm shadow-sm" style="width:150px; font-weight:bold; border: 2px solid var(--color-primary);" onchange="updateDashboard()">
+                <select id="dashboardPeriodSelect" class="form-select form-select-sm shadow-sm" style="width:170px; font-weight:bold; border: 2px solid var(--color-primary);" onchange="onDashboardPeriodChange()">
                     <option value="all" selected>📅 Toute l'année</option>
-                    <option value="Q1">T1 (Jan - Mar)</option>
-                    <option value="Q2">T2 (Avr - Juin)</option>
-                    <option value="Q3">T3 (Juil - Sep)</option>
-                    <option value="Q4">T4 (Oct - Déc)</option>
-                    <option value="0">Janvier</option>
-                    <option value="1">Février</option>
-                    <option value="2">Mars</option>
-                    <option value="3">Avril</option>
-                    <option value="4">Mai</option>
-                    <option value="5">Juin</option>
-                    <option value="6">Juillet</option>
-                    <option value="7">Août</option>
-                    <option value="8">Septembre</option>
-                    <option value="9">Octobre</option>
-                    <option value="10">Novembre</option>
-                    <option value="11">Décembre</option>
+                    <optgroup label="── Semestres ──">
+                        <option value="S1">S1 (Jan - Juin)</option>
+                        <option value="S2">S2 (Juil - Déc)</option>
+                    </optgroup>
+                    <optgroup label="── Trimestres ──">
+                        <option value="Q1">T1 (Jan - Mar)</option>
+                        <option value="Q2">T2 (Avr - Juin)</option>
+                        <option value="Q3">T3 (Juil - Sep)</option>
+                        <option value="Q4">T4 (Oct - Déc)</option>
+                    </optgroup>
+                    <optgroup label="── Mois ──">
+                        <option value="0">Janvier</option>
+                        <option value="1">Février</option>
+                        <option value="2">Mars</option>
+                        <option value="3">Avril</option>
+                        <option value="4">Mai</option>
+                        <option value="5">Juin</option>
+                        <option value="6">Juillet</option>
+                        <option value="7">Août</option>
+                        <option value="8">Septembre</option>
+                        <option value="9">Octobre</option>
+                        <option value="10">Novembre</option>
+                        <option value="11">Décembre</option>
+                    </optgroup>
+                    <optgroup label="── Personnalisé ──">
+                        <option value="custom">🔧 Période personnalisée</option>
+                    </optgroup>
                 </select>
+            </div>
+            <div id="dashboardCustomDates" class="d-flex align-items-center gap-1" style="display:none !important;">
+                <label class="text-muted small fw-bold mb-0">Du</label>
+                <input type="date" id="dashboardDateFrom" class="form-control form-control-sm shadow-sm" style="width:140px; font-weight:bold; border: 2px solid var(--color-primary);" onchange="updateDashboard()">
+                <label class="text-muted small fw-bold mb-0">Au</label>
+                <input type="date" id="dashboardDateTo" class="form-control form-control-sm shadow-sm" style="width:140px; font-weight:bold; border: 2px solid var(--color-primary);" onchange="updateDashboard()">
             </div>
             <button class="btn btn-outline-secondary btn-sm" onclick="resetDashboardFilters()" title="Réinitialiser tous les filtres">
                 <i class="fa fa-undo"></i>
