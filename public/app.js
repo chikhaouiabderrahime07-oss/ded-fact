@@ -7,7 +7,13 @@ let dashboardCharts = {
     topClients: null,
     debtStatus: null,
     forecast: null,
-    trajets: null // NEW
+    trajets: null,
+    immoClients: null,
+    immoMonths: null,
+    immoStages: null,
+    immoReasons: null,
+    immoRates: null,
+    immoTrucks: null
 };
 
 let clients = [];
@@ -34,7 +40,9 @@ let settings = {
     fax: '+213 560 785 014',
     rib: '', // ✅ New RIB field
     logoLeft: '',
-    logoRight: ''
+    logoRight: '',
+    defaultImmoRate: 2500,
+    pricingTypes: 'Transport, Transfert, Immobilisation'
 };
 
 
@@ -718,6 +726,7 @@ function showView(viewName) {
         if (viewName === 'reports') populateReportFilters();
         if (viewName === 'settings') loadSettings();
 		if (viewName === 'wilaya-prices') setupWilayaPriceManagement();
+        if (viewName === 'immobilisation') updateImmobilisationView();
 
     } catch (error) {
         console.error('Error showing view:', error);
@@ -978,36 +987,81 @@ function renderClients() {
 
 
 // Invoice Management
-function openInvoiceWizard() {
-// ✅ Around line 600 - in openInvoiceWizard function
-currentInvoice = {
-  contratRef : '',
-  bdcRef     : '',
-articles: [{
-  no: 1,
-  designation: '<b>Prestation de transport routier</b><br>-WILAYA DEPART : <br>-DESTINATION : <br>-Nombre de palettes : 0',
-  qte: 1,
-  prixUHT: 0,
-  montantHT: 0,
-  wilayaDepart: '',    // ✅ No default, user chooses it
-  wilayaDestination: '',
-  selectedDestination: ''
-}],
+function openInvoiceWizard(initialType = 'transport') {
+  const isImmo = initialType === 'immobilisation';
+  const immoRate = settings.defaultImmoRate || 2500;
+  
+  currentInvoice = {
+    contratRef : '',
+    bdcRef     : '',
+    invoiceType: initialType,
+    articles: [
+      isImmo ? {
+        no: 1,
+        isImmobilisation: true,
+        pricingType: 'Immobilisation',
+        immoTitle: "Frais d'attente et d'immobilisation",
+        immoStage: 'dechargement',
+        immoTruckCount: 1,
+        matricule: '',
+        immoDriver: '',
+        immoPeriod: '',
+        immoLocation: '',
+        immoSiteChargement: '',
+        immoSiteDechargement: '',
+        immoReason: 'Attente déchargement chez client',
+        designation: "<b>Frais d'attente et d'immobilisation au Déchargement</b><br>-Motif : Attente déchargement chez client<br>-Total Heures Facturées : <b>8 Heures</b>",
+        qte: 8,
+        prixUHT: immoRate,
+        montantHT: immoRate * 8,
+        wilayaDepart: '',
+        wilayaDestination: '',
+        selectedDestination: ''
+      } : {
+        no: 1,
+        isImmobilisation: false,
+        pricingType: 'Transport',
+        designation: '<b>Prestation de transport routier</b><br>-WILAYA DEPART : <br>-DESTINATION : <br>-Nombre de palettes : 0',
+        qte: 1,
+        prixUHT: 0,
+        montantHT: 0,
+        wilayaDepart: '',    // ✅ No default, user chooses it
+        wilayaDestination: '',
+        selectedDestination: ''
+      }
+    ],
 
-  blReferences: '',
-palettes: 26, // ✅ Default set to 26
-refFeuilleRoute: '', // ✅ New Field
-refBonTransfert: '', // ✅ New Field
-  showDestinationInDoitA: false,
-  remise: { enabled: false, type: 'percentage', value: 0 },
-  totals: { ht: 0, remise:0, htRemise:0, tva:0, ttc:0, netAPayer:0 }
-};
+    blReferences: '',
+    palettes: isImmo ? 0 : 26,
+    refFeuilleRoute: '',
+    refBonTransfert: '',
+    showDestinationInDoitA: false,
+    remise: { enabled: false, type: 'percentage', value: 0 },
+    totals: { ht: isImmo ? (immoRate * 8) : 0, remise:0, htRemise: isImmo ? (immoRate * 8) : 0, tva: isImmo ? (immoRate * 8 * 0.19) : 0, ttc: isImmo ? (immoRate * 8 * 1.19) : 0, netAPayer: isImmo ? (immoRate * 8 * 1.19) : 0 }
+  };
 
   currentStep = 1;
   const modal = new bootstrap.Modal(document.getElementById('modalInvoice'));
   renderWizardStep();
   modal.show();
 }
+
+window.goToWizardStep = function(targetStep) {
+  if (targetStep === currentStep) return;
+  if (targetStep > currentStep) {
+    while (currentStep < targetStep) {
+      if (typeof validateCurrentStep === 'function' && !validateCurrentStep()) return;
+      currentStep++;
+    }
+  } else {
+    currentStep = targetStep;
+  }
+  renderWizardStep();
+};
+
+window.openInvoiceWizardWithImmobilisation = function() {
+  openInvoiceWizard('immobilisation');
+};
 
 
 
@@ -1067,6 +1121,29 @@ function renderWizardStep() {
         if (prevBtn) prevBtn.classList.toggle('d-none', currentStep === 1);
         if (nextBtn) nextBtn.classList.toggle('d-none', currentStep === 5);
         if (saveBtn) saveBtn.classList.toggle('d-none', currentStep !== 5);
+
+        // Update top stepper tabs
+        for (let s = 1; s <= 5; s++) {
+            const tab = document.getElementById(`stepTab${s}`);
+            if (tab) {
+                tab.classList.toggle('active', s === currentStep);
+                tab.classList.toggle('completed', s < currentStep);
+            }
+        }
+
+        // Update card header title & counter
+        const stepTitles = [
+            '<i class="fa fa-user me-1 text-primary"></i>1. Sélection Client & Type de Facture',
+            '<i class="fa fa-calendar-alt me-1 text-primary"></i>2. Dates & Numérotation',
+            '<i class="fa fa-credit-card me-1 text-primary"></i>3. Modalités de Paiement & Expédition',
+            '<i class="fa fa-layer-group me-1 text-primary"></i>4. Lignes & Frais Facturés',
+            '<i class="fa fa-percent me-1 text-primary"></i>5. Remise & Validation Finale'
+        ];
+        const stepTitleEl = document.getElementById('wizardStepTitle');
+        if (stepTitleEl) stepTitleEl.innerHTML = stepTitles[currentStep - 1] || 'Paramètres';
+
+        const stepCounterEl = document.getElementById('wizardStepCounter');
+        if (stepCounterEl) stepCounterEl.textContent = `Étape ${currentStep}/5`;
         
         switch(currentStep) {
             case 1:
@@ -1105,8 +1182,30 @@ function renderStep1() {
             if (found) currentClientName = found.nom;
         }
 
+        const isImmo = currentInvoice.invoiceType === 'immobilisation' || 
+            (currentInvoice.articles && currentInvoice.articles.length > 0 && currentInvoice.articles[0].isImmobilisation);
+
         container.innerHTML = `
-            <h6>Étape 1/5 - Sélection client</h6>
+            <h6>Étape 1/5 - Sélection client & Prestation</h6>
+            
+            <div class="mb-3 p-2 bg-light border rounded">
+                <label class="form-label fw-bold mb-2 small text-uppercase text-muted"><i class="fa fa-tag me-1 text-primary"></i>Nature principale de la facture :</label>
+                <div class="d-flex gap-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="wizardInvoiceType" id="typeTransport" value="transport" ${!isImmo ? 'checked' : ''}>
+                        <label class="form-check-label fw-semibold" for="typeTransport" style="cursor:pointer;">
+                            <i class="fa fa-truck text-primary me-1"></i> Prestation de Transport
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="wizardInvoiceType" id="typeImmobilisation" value="immobilisation" ${isImmo ? 'checked' : ''}>
+                        <label class="form-check-label fw-semibold" for="typeImmobilisation" style="color: var(--immo-primary); cursor:pointer;">
+                            <i class="fa fa-stopwatch me-1" style="color: var(--immo-primary);"></i> Frais d'Immobilisation / Attente
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             <div class="mb-3">
                 <label class="form-label" style="font-weight:bold;">Client (Recherche) *</label>
                 <input list="clientDataList" id="wizardClientInput" class="form-control" 
@@ -1134,6 +1233,22 @@ function renderStep1() {
         `;
         
         // --- Event Listeners Logic (Same as before) ---
+        const typeRadios = container.querySelectorAll('input[name="wizardInvoiceType"]');
+        typeRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                const picked = this.value;
+                currentInvoice.invoiceType = picked;
+                if (currentInvoice.articles && currentInvoice.articles.length === 1) {
+                    if (picked === 'immobilisation') {
+                        if (typeof setArticleType === 'function') setArticleType(0, 'immobilisation');
+                    } else {
+                        if (typeof setArticleType === 'function') setArticleType(0, 'transport');
+                    }
+                }
+                updateInvoicePreview();
+            });
+        });
+
         const clientInput = document.getElementById('wizardClientInput');
         const clientIdHidden = document.getElementById('wizardClientId');
         const showDestinationCheckbox = document.getElementById('showDestinationInDoitA');
@@ -1340,16 +1455,45 @@ function renderStep4() {
         const container = document.getElementById('wizardForms');
         if (!container) return;
         
-container.innerHTML = `
-    <h6>Étape 4/5 - Articles</h6>
-    <div id="articlesContainer"></div>
-    <div class="d-flex gap-2">
-        <button type="button" class="btn btn--sm btn--secondary" onclick="addArticle()">
-            <i class="fa fa-plus me-1"></i>Ajouter article
+        const count = currentInvoice.articles ? currentInvoice.articles.length : 0;
 
-    </div>
-`;
+        container.innerHTML = `
+            <!-- Top Action Header -->
+            <div class="p-3 mb-3 rounded-3 border bg-white d-flex justify-content-between align-items-center flex-wrap gap-2 shadow-sm">
+                <div>
+                    <div class="fw-bold text-dark d-flex align-items-center gap-2">
+                        <i class="fa fa-layer-group text-primary"></i>
+                        <span class="fs-6">Lignes & Frais Facturés</span>
+                        <span class="badge bg-light text-dark border font-monospace" id="articleCountBadge">${count} ligne${count > 1 ? 's' : ''}</span>
+                    </div>
+                    <div class="text-muted small">Ajoutez du transport routier ou des frais d'attente et d'immobilisation.</div>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button type="button" class="btn btn-primary btn-sm px-3 shadow-sm fw-semibold" onclick="addArticle()">
+                        <i class="fa fa-plus-circle me-1"></i> + Ligne Transport
+                    </button>
+                    <button type="button" class="btn btn-immo btn-sm px-3 shadow-sm fw-semibold" onclick="addImmobilisationArticle()">
+                        <i class="fa fa-stopwatch me-1"></i> + Frais d'Immobilisation / Attente
+                    </button>
+                </div>
+            </div>
 
+            <!-- Articles List -->
+            <div id="articlesContainer"></div>
+
+            <!-- Bottom Action Footer (Accessible without scrolling back up) -->
+            <div class="p-3 mt-3 rounded-3 text-center border border-2 border-dashed bg-white shadow-sm">
+                <div class="text-muted small fw-semibold mb-2">Ajouter une ligne supplémentaire à cette facture :</div>
+                <div class="d-flex justify-content-center gap-2 flex-wrap">
+                    <button type="button" class="btn btn-outline-primary btn-sm px-3 fw-semibold" onclick="addArticle()">
+                        <i class="fa fa-plus-circle me-1"></i> + Ajouter Ligne Transport
+                    </button>
+                    <button type="button" class="btn btn-outline-immo btn-sm px-3 fw-semibold" onclick="addImmobilisationArticle()">
+                        <i class="fa fa-stopwatch me-1"></i> + Ajouter Frais d'Immobilisation / Attente
+                    </button>
+                </div>
+            </div>
+        `;
         
         renderArticles();
     } catch (error) {
@@ -1436,6 +1580,8 @@ function addArticle() {
 
         currentInvoice.articles.push({
             no: newNo,
+            isImmobilisation: false,
+            pricingType: 'Transport',
             designation: defaultDesignation,
             qte: 1,
             prixUHT: 0,
@@ -1451,15 +1597,201 @@ function addArticle() {
     }
 }
 
+window.addImmobilisationArticle = function() {
+    try {
+        if (!currentInvoice.articles) {
+            currentInvoice.articles = [];
+        }
+        const newNo = currentInvoice.articles.length + 1;
+        const rate = settings.defaultImmoRate || 2500;
+
+        const newArt = {
+            no: newNo,
+            isImmobilisation: true,
+            pricingType: 'Immobilisation',
+            immoTitle: "Frais d'attente et d'immobilisation",
+            immoStage: 'dechargement',
+            immoTruckCount: 1,
+            matricule: '',
+            immoDriver: '',
+            immoPeriod: '',
+            immoLocation: '',
+            immoSiteChargement: '',
+            immoSiteDechargement: '',
+            immoReason: 'Attente déchargement chez client',
+            designation: '',
+            qte: 8,
+            prixUHT: rate,
+            montantHT: rate * 8,
+            wilayaDepart: '',
+            wilayaDestination: '',
+            selectedDestination: ''
+        };
+        currentInvoice.articles.push(newArt);
+        updateImmobilisationDesignation(currentInvoice.articles.length - 1);
+        renderArticles();
+        const badge = document.getElementById('articleCountBadge');
+        if (badge) badge.textContent = `${currentInvoice.articles.length} ligne${currentInvoice.articles.length > 1 ? 's' : ''}`;
+        updateInvoicePreview();
+    } catch (error) {
+        console.error('Error adding immobilisation article:', error);
+    }
+};
+
+window.duplicateArticle = function(index) {
+    try {
+        if (!currentInvoice.articles || !currentInvoice.articles[index]) return;
+        const orig = currentInvoice.articles[index];
+        const clone = JSON.parse(JSON.stringify(orig));
+        currentInvoice.articles.splice(index + 1, 0, clone);
+        currentInvoice.articles.forEach((a, i) => a.no = i + 1);
+        renderArticles();
+        const badge = document.getElementById('articleCountBadge');
+        if (badge) badge.textContent = `${currentInvoice.articles.length} ligne${currentInvoice.articles.length > 1 ? 's' : ''}`;
+        updateInvoicePreview();
+    } catch (error) {
+        console.error('Error duplicating article:', error);
+    }
+};
+
+window.setArticleStage = function(index, stage) {
+    if (!currentInvoice.articles || !currentInvoice.articles[index]) return;
+    const art = currentInvoice.articles[index];
+    art.immoStage = stage;
+    if (stage === 'chargement') {
+        art.immoReason = 'Attente chargement usine / fournisseur';
+    } else if (stage === 'dechargement') {
+        art.immoReason = 'Attente déchargement chez client';
+    } else if (stage === 'both') {
+        art.immoReason = 'Attente chargement et déchargement';
+    }
+    updateImmobilisationDesignation(index);
+    renderArticles();
+    updateInvoicePreview();
+};
+
+window.setArticleType = function(index, type) {
+    if (!currentInvoice.articles || !currentInvoice.articles[index]) return;
+    const article = currentInvoice.articles[index];
+    if (type === 'immobilisation') {
+        article.isImmobilisation = true;
+        article.pricingType = 'Immobilisation';
+        if (!article.immoTitle) article.immoTitle = "Frais d'attente et d'immobilisation";
+        if (!article.immoStage) article.immoStage = 'dechargement';
+        if (!article.immoTruckCount) article.immoTruckCount = 1;
+        if (!article.qte || article.qte < 1) article.qte = 8;
+        if (!article.prixUHT || article.prixUHT === 0) article.prixUHT = settings.defaultImmoRate || 2500;
+        if (!article.immoReason) article.immoReason = 'Attente déchargement chez client';
+        article.montantHT = (parseFloat(article.qte) || 0) * (parseFloat(article.prixUHT) || 0);
+        updateImmobilisationDesignation(index);
+    } else {
+        article.isImmobilisation = false;
+        article.pricingType = 'Transport';
+        updateArticleDesignation(index);
+    }
+    renderArticles();
+    updateInvoicePreview();
+};
+
+window.setArticleHours = function(index, hours) {
+    if (!currentInvoice.articles || !currentInvoice.articles[index]) return;
+    const article = currentInvoice.articles[index];
+    article.qte = parseFloat(hours) || 1;
+    article.montantHT = article.qte * (parseFloat(article.prixUHT) || 0);
+    
+    const qteInput = document.querySelector(`input[data-field="qte"][data-index="${index}"]`);
+    if (qteInput) qteInput.value = article.qte;
+    const montantInput = document.querySelector(`input[data-field="montantHT"][data-index="${index}"]`);
+    if (montantInput) montantInput.value = article.montantHT;
+    
+    updateImmobilisationDesignation(index);
+    updateInvoicePreview();
+};
+
+window.updateImmobilisationDesignation = function(index) {
+    if (!currentInvoice.articles || !currentInvoice.articles[index]) return;
+    const art = currentInvoice.articles[index];
+    
+    const immoTitle = (art.immoTitle && art.immoTitle.trim()) ? art.immoTitle.trim() : "Frais d'attente et d'immobilisation";
+
+    let stageTitle = "au Déchargement";
+    if (art.immoStage === 'chargement') stageTitle = "au Chargement";
+    else if (art.immoStage === 'both') stageTitle = "au Chargement & Déchargement";
+    else if (art.immoStage === 'autre') stageTitle = "";
+
+    let headerLine = stageTitle ? `<b>${immoTitle} ${stageTitle}</b>` : `<b>${immoTitle}</b>`;
+    let des = headerLine.trim() + `<br>`;
+
+    // Sites / Lieu
+    if (art.immoStage === 'chargement' && art.immoSiteChargement && art.immoSiteChargement.trim()) {
+        des += `-Lieu / Site de chargement : <b>${art.immoSiteChargement.trim()}</b><br>`;
+    } else if (art.immoStage === 'dechargement' && art.immoSiteDechargement && art.immoSiteDechargement.trim()) {
+        des += `-Lieu / Site de déchargement : <b>${art.immoSiteDechargement.trim()}</b><br>`;
+    } else if (art.immoStage === 'both') {
+        if (art.immoSiteChargement && art.immoSiteChargement.trim()) {
+            des += `-Site chargement : <b>${art.immoSiteChargement.trim()}</b><br>`;
+        }
+        if (art.immoSiteDechargement && art.immoSiteDechargement.trim()) {
+            des += `-Site déchargement : <b>${art.immoSiteDechargement.trim()}</b><br>`;
+        }
+    } else if (art.immoLocation && art.immoLocation.trim()) {
+        des += `-Lieu / Site : ${art.immoLocation.trim()}<br>`;
+    }
+
+    // Camion(s) / Flotte - Chaque camion va sur sa propre ligne !
+    const rawTrucks = (art.matricule || '').split(/[\r\n,;/]+/).map(t => t.trim()).filter(Boolean);
+    const truckCount = Math.max(rawTrucks.length, parseInt(art.immoTruckCount, 10) || 1);
+
+    if (rawTrucks.length > 1) {
+        des += `-Véhicules immobilisés (${rawTrucks.length} camions) :<br>`;
+        rawTrucks.forEach((trk, idx) => {
+            des += `&nbsp;&nbsp;&nbsp;&nbsp;• Camion N°${idx + 1} : <b>${trk}</b><br>`;
+        });
+    } else if (rawTrucks.length === 1) {
+        des += `-Camion / Remorque : <b>${rawTrucks[0]}</b><br>`;
+    } else if (truckCount > 1) {
+        des += `-Flotte mobilisée : <b>${truckCount} camions</b><br>`;
+    }
+
+    if (art.immoDriver && art.immoDriver.trim()) {
+        des += `-Chauffeur / Réf : ${art.immoDriver.trim()}<br>`;
+    }
+    if (art.immoPeriod && art.immoPeriod.trim()) {
+        des += `-Période : ${art.immoPeriod.trim()}<br>`;
+    }
+    if (art.immoReason && art.immoReason.trim()) {
+        des += `-Motif : ${art.immoReason.trim()}<br>`;
+    }
+    const h = parseFloat(art.qte) || 0;
+    if (h > 0) {
+        des += `-Total Heures Facturées : <b>${h} Heure${h > 1 ? 's' : ''}</b>`;
+    }
+
+    art.designation = des;
+    const textarea = document.querySelector(`textarea[data-field="designation"][data-index="${index}"]`);
+    if (textarea) textarea.value = des;
+};
+
+window.saveImmoRateFromArticle = function(index) {
+    const article = currentInvoice.articles[index];
+    if (!article) return;
+    const rate = parseFloat(article.prixUHT) || 2500;
+    settings.defaultImmoRate = rate;
+    saveDataToLocalStorage();
+    alert(`✅ Tarif horaire par défaut mis à jour : ${rate.toLocaleString('fr-DZ')} DA / heure`);
+};
+
 function removeArticle(index) {
     try {
         if (currentInvoice.articles && currentInvoice.articles.length > 1) {
             currentInvoice.articles.splice(index, 1);
-            // Renumber articles
             currentInvoice.articles.forEach((article, idx) => {
                 article.no = idx + 1;
             });
             renderArticles();
+            const badge = document.getElementById('articleCountBadge');
+            if (badge) badge.textContent = `${currentInvoice.articles.length} ligne${currentInvoice.articles.length > 1 ? 's' : ''}`;
+            updateInvoicePreview();
         }
     } catch (error) {
         console.error('Error removing article:', error);
@@ -1473,93 +1805,294 @@ function renderArticles() {
         
         container.innerHTML = '';
         
+        const countBadge = document.getElementById('articleCountBadge');
+        if (countBadge) {
+            countBadge.textContent = `${currentInvoice.articles.length} ligne${currentInvoice.articles.length > 1 ? 's' : ''}`;
+        }
+        
         currentInvoice.articles.forEach((article, index) => {
-            // Get client destinations for dropdown
+            const isImmo = !!article.isImmobilisation || (article.pricingType && article.pricingType.toLowerCase().includes('immobilis'));
+            
+            // Client destinations
             const client = clients.find(c => c.id === currentInvoice.clientId);
             const destinationOptions = client && client.destinations ? 
                 client.destinations.map(dest => `<option value="${dest}" ${article.selectedDestination === dest ? 'selected' : ''}>${dest}</option>`).join('') : 
                 '<option value="">Aucune destination disponible</option>';
             
             const div = document.createElement('div');
-            div.className = 'border rounded p-3 mb-3';
-            div.innerHTML = `
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="mb-0">Article ${article.no}</h6>
-                    <div class="d-flex gap-2">
-                        <button type="button" class="btn btn--sm btn--outline" onclick="removeArticle(${index})" ${currentInvoice.articles.length <= 1 ? 'disabled' : ''} style="color: var(--color-error);">
+            div.className = isImmo ? 'article-card-base article-card-immo' : 'article-card-base article-card-transport';
+            
+            const typeBar = `
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="${isImmo ? 'badge-immo' : 'badge bg-primary'} fs-6 px-2 py-1 shadow-sm">
+                            ${isImmo ? '<i class="fa fa-stopwatch me-1"></i>Ligne ' + article.no + ' • Frais d\'Attente / Immobilisation' : '<i class="fa fa-truck me-1"></i>Ligne ' + article.no + ' • Transport'}
+                        </span>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn ${!isImmo ? 'btn-primary' : 'btn-outline-secondary'}" onclick="setArticleType(${index}, 'transport')">
+                                <i class="fa fa-truck me-1"></i>Transport
+                            </button>
+                            <button type="button" class="btn ${isImmo ? 'btn-immo' : 'btn-outline-secondary'}" onclick="setArticleType(${index}, 'immobilisation')">
+                                <i class="fa fa-stopwatch me-1"></i>Immobilisation
+                            </button>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        <button type="button" class="btn btn--sm btn--outline text-secondary" onclick="duplicateArticle(${index})" title="Dupliquer cette ligne">
+                            <i class="fa fa-copy me-1"></i>Dupliquer
+                        </button>
+                        <button type="button" class="btn btn--sm btn--outline text-danger" onclick="removeArticle(${index})" ${currentInvoice.articles.length <= 1 ? 'disabled' : ''} title="Supprimer cette ligne">
                             <i class="fa fa-trash"></i>
                         </button>
                     </div>
                 </div>
-                
-                <div class="row g-2 mb-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Wilaya de départ *</label>
-                        <select class="form-control wilaya-depart-select" data-field="wilayaDepart" data-index="${index}" required>
-                            <option value="">Sélectionner départ</option>
-                            ${wilayas.map(w => `<option value="${w}" ${w===article.wilayaDepart?'selected':''}>${w}</option>`).join('')}
-                        </select>
+            `;
+            
+            let articleFieldsHtml = '';
+            
+            if (isImmo) {
+                const stage = article.immoStage || 'dechargement';
+                const currentTitle = article.immoTitle || "Frais d'attente et d'immobilisation";
+
+                // Dynamic location fields depending on stage
+                let locationInputsHtml = '';
+                if (stage === 'both') {
+                    locationInputsHtml = `
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-warehouse text-primary me-1"></i>Site de Chargement (Usine/Port/Dépôt)</label>
+                            <input type="text" class="form-control form-control-sm" data-field="immoSiteChargement" data-index="${index}" placeholder="Ex: Usine El Eulma / Port..." value="${article.immoSiteChargement || ''}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-boxes-packing text-primary me-1"></i>Site de Déchargement (Client/Chantier)</label>
+                            <input type="text" class="form-control form-control-sm" data-field="immoSiteDechargement" data-index="${index}" placeholder="Ex: Dépôt Client Oran / Chantier..." value="${article.immoSiteDechargement || ''}">
+                        </div>
+                    `;
+                } else if (stage === 'chargement') {
+                    locationInputsHtml = `
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-warehouse text-primary me-1"></i>Lieu / Site de Chargement</label>
+                            <input type="text" class="form-control form-control-sm" data-field="immoSiteChargement" data-index="${index}" placeholder="Ex: Usine Sétif / Quai chargement..." value="${article.immoSiteChargement || ''}">
+                        </div>
+                    `;
+                } else if (stage === 'autre') {
+                    locationInputsHtml = `
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-map-marker-alt text-primary me-1"></i>Lieu / Emplacement d'Immobilisation</label>
+                            <input type="text" class="form-control form-control-sm" data-field="immoLocation" data-index="${index}" placeholder="Ex: Poste frontalier / Douane / Route..." value="${article.immoLocation || ''}">
+                        </div>
+                    `;
+                } else {
+                    locationInputsHtml = `
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-boxes-packing text-primary me-1"></i>Lieu / Site de Déchargement (Client / Chantier)</label>
+                            <input type="text" class="form-control form-control-sm" data-field="immoSiteDechargement" data-index="${index}" placeholder="Ex: Entrepôt Client Biskra / Chantier..." value="${article.immoSiteDechargement || article.immoLocation || ''}">
+                        </div>
+                    `;
+                }
+
+                // Parse trucks for badges display
+                const rawTrucks = (article.matricule || '').split(/[\r\n,;/]+/).map(t => t.trim()).filter(Boolean);
+                let truckBadgesHtml = '';
+                if (rawTrucks.length > 0) {
+                    truckBadgesHtml = `
+                        <div class="d-flex flex-wrap gap-1 mt-1 align-items-center" id="truckBadges_${index}">
+                            <span class="small text-muted me-1" style="font-size:0.75rem;"><i class="fa fa-check-circle text-success me-1"></i>${rawTrucks.length} camion${rawTrucks.length > 1 ? 's' : ''} détecté${rawTrucks.length > 1 ? 's' : ''} :</span>
+                            ${rawTrucks.map(t => `<span class="truck-tag-badge">${t}</span>`).join('')}
+                        </div>
+                    `;
+                } else {
+                    truckBadgesHtml = `<div class="d-flex flex-wrap gap-1 mt-1 align-items-center" id="truckBadges_${index}"></div>`;
+                }
+
+                articleFieldsHtml = `
+                    <!-- 1. Intitulé & Étape -->
+                    <div class="row g-2 mb-2 align-items-center">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted mb-1">
+                                <i class="fa fa-heading text-primary me-1"></i>Intitulé commercial sur facture *
+                            </label>
+                            <select class="form-select form-select-sm fw-semibold" data-field="immoTitle" data-index="${index}">
+                                <option value="Frais d'attente et d'immobilisation" ${currentTitle === "Frais d'attente et d'immobilisation" ? 'selected' : ''}>Frais d'attente et d'immobilisation (Recommandé)</option>
+                                <option value="Frais d'immobilisation de matériel roulant" ${currentTitle === "Frais d'immobilisation de matériel roulant" ? 'selected' : ''}>Frais d'immobilisation de matériel roulant</option>
+                                <option value="Indemnité d'attente et d'immobilisation" ${currentTitle === "Indemnité d'attente et d'immobilisation" ? 'selected' : ''}>Indemnité d'attente et d'immobilisation</option>
+                                <option value="Frais de détention / surestaries" ${currentTitle === "Frais de détention / surestaries" ? 'selected' : ''}>Frais de détention / surestaries</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted mb-1">
+                                <i class="fa fa-layer-group text-primary me-1"></i>Étape d'immobilisation
+                            </label>
+                            <div class="d-flex flex-wrap gap-1">
+                                <button type="button" class="immo-stage-pill ${stage === 'dechargement' ? 'active' : ''}" onclick="setArticleStage(${index}, 'dechargement')">
+                                    <i class="fa fa-boxes-packing"></i> Au Déchargement
+                                </button>
+                                <button type="button" class="immo-stage-pill ${stage === 'chargement' ? 'active' : ''}" onclick="setArticleStage(${index}, 'chargement')">
+                                    <i class="fa fa-warehouse"></i> Au Chargement
+                                </button>
+                                <button type="button" class="immo-stage-pill ${stage === 'both' ? 'active' : ''}" onclick="setArticleStage(${index}, 'both')">
+                                    <i class="fa fa-rotate"></i> Les deux
+                                </button>
+                                <button type="button" class="immo-stage-pill ${stage === 'autre' ? 'active' : ''}" onclick="setArticleStage(${index}, 'autre')">
+                                    <i class="fa fa-ellipsis"></i> Autre / Transit
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Wilaya de destination *</label>
-                        <select class="form-control wilaya-dest-select" data-field="wilayaDestination" data-index="${index}" required>
-                            <option value="">Sélectionner destination</option>
-                            ${wilayas.map(w => `<option value="${w}" ${w===article.wilayaDestination?'selected':''}>${w}</option>`).join('')}
-                        </select>
+
+                    <!-- 2. Sites / Locations Row -->
+                    <div class="row g-2 mb-2">
+                        ${locationInputsHtml}
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Destination client</label>
-                        <select class="form-control" data-field="selectedDestination" data-index="${index}">
-                            <option value="">Aucune destination</option>
-                            ${destinationOptions}
-                        </select>
+
+                    <!-- 3. Flotte / Camions (Multi-lignes supporté !) -->
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted mb-1 d-flex justify-content-between align-items-center">
+                                <span><i class="fa fa-truck me-1" style="color: var(--immo-primary);"></i>Camion(s) / Matricule(s) <span class="badge bg-light text-secondary border font-monospace">Un par ligne</span></span>
+                                <small class="text-muted">Chacun ira à la ligne sur la facture</small>
+                            </label>
+                            <textarea class="form-control form-control-sm font-monospace" rows="2" data-field="matricule" data-index="${index}" placeholder="Ex:&#10;01234-116-16&#10;05678-116-16">${article.matricule || ''}</textarea>
+                            ${truckBadgesHtml}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calendar-alt me-1 text-muted"></i>Période d'attente</label>
+                            <input type="text" class="form-control form-control-sm" data-field="immoPeriod" data-index="${index}" placeholder="Ex: Du 12/06 au 14/06" value="${article.immoPeriod || ''}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-user me-1 text-muted"></i>Chauffeur / Réf BL</label>
+                            <input type="text" class="form-control form-control-sm" data-field="immoDriver" data-index="${index}" placeholder="Ex: Chauffeur ou Réf dossier..." value="${article.immoDriver || ''}">
+                        </div>
+                    </div>
+
+                    <!-- 4. Motif -->
+                    <div class="row g-2 mb-2">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-exclamation-circle text-primary me-1"></i>Motif d'attente / Immobilisation *</label>
+                            <input type="text" class="form-control form-control-sm" data-field="immoReason" data-index="${index}" list="datalistImmoMotif" placeholder="Sélectionnez ou tapez le motif..." value="${article.immoReason || 'Attente déchargement chez client'}">
+                        </div>
+                    </div>
+
+                    <!-- 5. Désignation facturée -->
+                    <div class="row g-2 mb-2">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label small fw-bold text-muted mb-0">Désignation générée pour la facture *</label>
+                                <button type="button" class="btn btn-link btn-xs p-0 text-decoration-none fw-semibold" onclick="updateImmobilisationDesignation(${index})">
+                                    <i class="fa fa-sync-alt me-1"></i>Régénérer automatiquement
+                                </button>
+                            </div>
+                            <textarea class="form-control" rows="3" data-field="designation" data-index="${index}" required>${article.designation || ''}</textarea>
+                        </div>
+                    </div>
+
+                    <!-- 6. Durée, Taux et Montant -->
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-5">
+                            <label class="form-label small fw-bold mb-1" style="color: var(--immo-primary);"><i class="fa fa-clock me-1"></i>Durée totale en Heures *</label>
+                            <input type="number" class="form-control fw-bold" style="border-color: var(--immo-primary);" data-field="qte" data-index="${index}" value="${article.qte || 8}" min="0.5" step="0.5" required>
+                            <div class="d-flex gap-1 mt-1 flex-wrap">
+                                <button type="button" class="hour-preset-btn" onclick="setArticleHours(${index}, 4)">+4h</button>
+                                <button type="button" class="hour-preset-btn" onclick="setArticleHours(${index}, 8)">+8h (1j)</button>
+                                <button type="button" class="hour-preset-btn" onclick="setArticleHours(${index}, 12)">+12h</button>
+                                <button type="button" class="hour-preset-btn" onclick="setArticleHours(${index}, 24)">+24h (1j)</button>
+                                <button type="button" class="hour-preset-btn" onclick="setArticleHours(${index}, 48)">+48h (2j)</button>
+                                <button type="button" class="hour-preset-btn" onclick="setArticleHours(${index}, 72)">+72h (3j)</button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted mb-1">Taux Horaire HT (DA/h) *</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control fw-bold" data-field="prixUHT" data-index="${index}" value="${article.prixUHT || settings.defaultImmoRate || 2500}" min="0" step="50" required>
+                                <button class="btn btn-success" type="button" onclick="saveImmoRateFromArticle(${index})" title="Mémoriser ce tarif horaire par défaut">
+                                    <i class="fa fa-save"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted" style="font-size:0.75rem;">Base système: ${(settings.defaultImmoRate || 2500).toLocaleString('fr-DZ')} DA/h</small>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold text-muted mb-1">Montant Ligne HT (DA)</label>
+                            <input type="number" class="form-control fw-bold bg-light" data-field="montantHT" data-index="${index}" value="${article.montantHT || 0}" readonly>
+                        </div>
+                    </div>
+                `;
+            } else {
+                articleFieldsHtml = `
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted mb-1">Wilaya de départ *</label>
+                            <select class="form-select form-select-sm wilaya-depart-select" data-field="wilayaDepart" data-index="${index}" required>
+                                <option value="">Sélectionner départ</option>
+                                ${wilayas.map(w => `<option value="${w}" ${w===article.wilayaDepart?'selected':''}>${w}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted mb-1">Wilaya de destination *</label>
+                            <select class="form-select form-select-sm wilaya-dest-select" data-field="wilayaDestination" data-index="${index}" required>
+                                <option value="">Sélectionner destination</option>
+                                ${wilayas.map(w => `<option value="${w}" ${w===article.wilayaDestination?'selected':''}>${w}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted mb-1">Destination client</label>
+                            <select class="form-select form-select-sm" data-field="selectedDestination" data-index="${index}">
+                                <option value="">Aucune destination</option>
+                                ${destinationOptions}
+                            </select>
+                        </div>
                     </div>
                     
-                    <div class="col-md-4 mt-2">
-                        <label class="form-label text-primary">Tarification *</label>
-                        <select class="form-control type-tarification-select" data-field="pricingType" data-index="${index}" required>
-                            <option value="">Sélectionner un type</option>
-                            ${(settings.pricingTypes || 'Transport').split(',').map(t => `<option value="${t.trim()}" ${t.trim() === article.pricingType ? 'selected' : ''}>${t.trim()}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="col-md-8 mt-2 d-flex align-items-end">
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" data-field="showTypeInDesignation" data-index="${index}" id="showType_${index}" ${article.showTypeInDesignation ? 'checked' : ''}>
-                            <label class="form-check-label text-muted" for="showType_${index}">
-                                Afficher le type dans la désignation (ex: Prestation... (Transfert))
-                            </label>
+                    <div class="row g-2 mb-2 align-items-center">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-primary mb-1">Tarification *</label>
+                            <select class="form-select form-select-sm type-tarification-select" data-field="pricingType" data-index="${index}" required>
+                                <option value="">Sélectionner un type</option>
+                                ${(settings.pricingTypes || 'Transport').split(',').map(t => `<option value="${t.trim()}" ${t.trim() === article.pricingType ? 'selected' : ''}>${t.trim()}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="col-md-8 pt-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" data-field="showTypeInDesignation" data-index="${index}" id="showType_${index}" ${article.showTypeInDesignation ? 'checked' : ''}>
+                                <label class="form-check-label small text-muted" for="showType_${index}">
+                                    Afficher le type dans la désignation (ex: Prestation... (Transfert))
+                                </label>
+                            </div>
                         </div>
                     </div>
-                </div>
-                
-                <div class="row g-2 mt-2">
-                    <div class="col-12">
-                        <label class="form-label">Désignation *</label>
-                        <textarea class="form-control" rows="3" data-field="designation" data-index="${index}" required>${article.designation || ''}</textarea>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Quantité *</label>
-                        <input type="number" class="form-control" data-field="qte" data-index="${index}" value="${article.qte || 1}" min="1" required>
-                    </div>
-                    <div class="col-md-5">
-                        <label class="form-label">Prix U HT *</label>
-                        <div class="input-group">
-                            <input type="number" class="form-control" data-field="prixUHT" data-index="${index}" value="${article.prixUHT || 0}" min="0" step="0.01" required>
-                            <button class="btn btn-success" type="button" onclick="savePriceFromArticle(${index})" title="Mémoriser ce prix">
-                                <i class="fa fa-save"></i>
-                            </button>
+                    
+                    <div class="row g-2 mb-2">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted mb-1">Désignation sur facture *</label>
+                            <textarea class="form-control form-control-sm" rows="3" data-field="designation" data-index="${index}" required>${article.designation || ''}</textarea>
                         </div>
                     </div>
-                    <div class="col-md-5">
-                        <label class="form-label">Montant HT</label>
-                        <input type="number" class="form-control" data-field="montantHT" data-index="${index}" value="${article.montantHT || 0}" readonly>
+                    
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold text-muted mb-1">Quantité *</label>
+                            <input type="number" class="form-control form-control-sm" data-field="qte" data-index="${index}" value="${article.qte || 1}" min="1" required>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label small fw-bold text-muted mb-1">Prix U HT *</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" class="form-control" data-field="prixUHT" data-index="${index}" value="${article.prixUHT || 0}" min="0" step="0.01" required>
+                                <button class="btn btn-success" type="button" onclick="savePriceFromArticle(${index})" title="Mémoriser ce prix">
+                                    <i class="fa fa-save"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted mb-1">Montant HT</label>
+                            <input type="number" class="form-control form-control-sm fw-bold bg-light" data-field="montantHT" data-index="${index}" value="${article.montantHT || 0}" readonly>
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
+            }
+            
+            div.innerHTML = typeBar + articleFieldsHtml;
             container.appendChild(div);
         });
         
-        // Listeners pour les listes déroulantes (ET AUTO-REMPLISSAGE DU PRIX)
+        // Listeners selects
         container.querySelectorAll('select[data-field]').forEach(select => {
             select.addEventListener('change', function() {
                 const index = parseInt(this.dataset.index);
@@ -1568,11 +2101,11 @@ function renderArticles() {
                 if (currentInvoice.articles && currentInvoice.articles[index]) {
                     currentInvoice.articles[index][field] = this.value;
                     
-                    // MàJ désignation
-                    if (['wilayaDepart', 'wilayaDestination', 'selectedDestination', 'pricingType'].includes(field)) {
+                    if (field === 'immoTitle') {
+                        updateImmobilisationDesignation(index);
+                    } else if (['wilayaDepart', 'wilayaDestination', 'selectedDestination', 'pricingType'].includes(field)) {
                         updateArticleDesignation(index);
                     }
-                    // Auto-remplissage Magique du prix
                     if (['wilayaDepart', 'wilayaDestination', 'pricingType'].includes(field)) {
                         autoFillArticlePrice(index);
                     }
@@ -1581,7 +2114,7 @@ function renderArticles() {
             });
         });
 
-        // Listener pour la checkbox de la désignation
+        // Listeners checkbox
         container.querySelectorAll('input[type="checkbox"][data-field]').forEach(checkbox => {
             checkbox.addEventListener('change', function() {
                 const index = parseInt(this.dataset.index);
@@ -1593,7 +2126,7 @@ function renderArticles() {
             });
         });
         
-        // Listeners inputs (Calcul en temps réel)
+        // Listeners inputs & textareas
         container.querySelectorAll('input[data-field]:not([type="checkbox"]), textarea[data-field]').forEach(input => {
             input.addEventListener('input', function() {
                 const index = parseInt(this.dataset.index);
@@ -1601,24 +2134,49 @@ function renderArticles() {
                 const value = this.type === 'number' ? parseFloat(this.value) || 0 : this.value;
                 
                 if (currentInvoice.articles && currentInvoice.articles[index]) {
-                    currentInvoice.articles[index][field] = value;
+                    const article = currentInvoice.articles[index];
+                    article[field] = value;
                     
                     if (field === 'qte' || field === 'prixUHT') {
-                        const article = currentInvoice.articles[index];
-                        article.montantHT = article.qte * article.prixUHT;
-                        
+                        article.montantHT = (parseFloat(article.qte) || 0) * (parseFloat(article.prixUHT) || 0);
                         const montantInput = container.querySelector(`[data-field="montantHT"][data-index="${index}"]`);
                         if (montantInput) montantInput.value = article.montantHT;
                     }
+
+                    if (article.isImmobilisation) {
+                        if (field === 'matricule') {
+                            const rawTrucks = (article.matricule || '').split(/[\r\n,;/]+/).map(t => t.trim()).filter(Boolean);
+                            article.immoTruckCount = Math.max(rawTrucks.length, 1);
+                            
+                            // Update live truck badges in UI without full re-render
+                            const badgeContainer = document.getElementById(`truckBadges_${index}`);
+                            if (badgeContainer) {
+                                if (rawTrucks.length > 0) {
+                                    badgeContainer.innerHTML = `
+                                        <span class="small text-muted me-1" style="font-size:0.75rem;"><i class="fa fa-check-circle text-success me-1"></i>${rawTrucks.length} camion${rawTrucks.length > 1 ? 's' : ''} détecté${rawTrucks.length > 1 ? 's' : ''} :</span>
+                                        ${rawTrucks.map(t => `<span class="truck-tag-badge">${t}</span>`).join('')}
+                                    `;
+                                } else {
+                                    badgeContainer.innerHTML = '';
+                                }
+                            }
+                        }
+
+                        if (['matricule', 'immoTruckCount', 'immoTitle', 'immoDriver', 'immoLocation', 'immoSiteChargement', 'immoSiteDechargement', 'immoPeriod', 'immoReason', 'qte'].includes(field)) {
+                            updateImmobilisationDesignation(index);
+                        }
+                    }
+                    
                     updateInvoicePreview();
                 }
             });
 
-            // SMART SAVE PRIX ON BLUR (When user finishes typing)
+            // Smart save prix on blur
             if (input.dataset.field === 'prixUHT') {
                 input.addEventListener('blur', function() {
                     const index = parseInt(this.dataset.index);
                     const article = currentInvoice.articles[index];
+                    if (article.isImmobilisation) return;
                     const value = parseFloat(this.value) || 0;
 
                     if (value > 0 && currentInvoice.clientId && article.wilayaDepart && article.wilayaDestination) {
@@ -1632,7 +2190,6 @@ function renderArticles() {
                         const trackerKey = `${cid}|${key}|${value}`;
                         settings.smartMemory.priceTracker[trackerKey] = (settings.smartMemory.priceTracker[trackerKey] || 0) + 1;
                         
-                        // Si tapé 2 fois, on sauvegarde auto
                         if (settings.smartMemory.priceTracker[trackerKey] >= 2) {
                             if (!clientWilayaPairPrices[cid]) clientWilayaPairPrices[cid] = {};
                             clientWilayaPairPrices[cid][key] = value;
@@ -1921,6 +2478,11 @@ function updateInvoicePreview() {
         const preview = document.getElementById('wizardPreview');
         if (preview) {
             preview.innerHTML = generateInvoiceHTML(currentInvoice);
+        }
+        const badge = document.getElementById('previewTotalBadge');
+        if (badge && currentInvoice.totals) {
+            const net = currentInvoice.totals.netAPayer ?? currentInvoice.totals.ttc ?? 0;
+            badge.textContent = `Net : ${formatCurrency(net)}`;
         }
     } catch (error) {
         console.error('Error updating invoice preview:', error);
@@ -2260,6 +2822,7 @@ window.populateSmartMemoryDatalists = function() {
     fillDatalist('feuilleroute', 'datalistFeuilleRoute');
     fillDatalist('bontransfert', 'datalistBonTransfert');
     fillDatalist('payref', 'datalistPayRef');
+    fillDatalist('matricule', 'datalistMatricule');
 };
 
 /**
@@ -2297,6 +2860,11 @@ function saveInvoice() {
             recordSmartMemory('bdc', currentInvoice.bdcRef);
             recordSmartMemory('feuilleroute', currentInvoice.refFeuilleRoute);
             recordSmartMemory('bontransfert', currentInvoice.refBonTransfert);
+            if (currentInvoice.articles) {
+                currentInvoice.articles.forEach(art => {
+                    if (art.matricule) recordSmartMemory('matricule', art.matricule);
+                });
+            }
         }
 
         if (currentInvoice.id) {
@@ -2437,6 +3005,10 @@ function renderInvoices() {
       
       if (!displayDest) displayDest = '—';
 
+      // Check for immobilisation
+      const hasImmo = inv.invoiceType === 'immobilisation' || (inv.articles && inv.articles.some(a => a.isImmobilisation || (a.pricingType && a.pricingType.toLowerCase().includes('immobilis')) || (a.designation && a.designation.toLowerCase().includes('immobilis'))));
+      const immoBadgeHtml = hasImmo ? `<span class="badge badge-immo me-1" title="Contient des frais d'attente / immobilisation"><i class="fa fa-stopwatch me-1"></i>Immo</span>` : '';
+
       // BUTTONS
       let actionButtons = '';
       if (isPaid) {
@@ -2459,7 +3031,7 @@ function renderInvoices() {
         
         <td>
             <small class="text-muted text-truncate d-block" style="max-width: 200px;" title="${displayDest}">
-                ${displayDest}
+                ${immoBadgeHtml}${displayDest}
             </small>
         </td>
         
@@ -3820,6 +4392,7 @@ function updateDashboard(targetChart, mode) {
 
         // Populate dropdowns
         populateDashboardClientSelect();
+        if (typeof updateSidebarImmoBadge === 'function') updateSidebarImmoBadge();
 
         // 1. FILTER DATA
         const filtered = getDashboardFilteredInvoices();
@@ -4939,6 +5512,8 @@ function loadSettings() {
     const elOdd = document.getElementById('excelColorOdd');
     if (elEven) elEven.value = settings.excelColorEven || '#dbe9ff';
     if (elOdd) elOdd.value = settings.excelColorOdd || '#ffffff';
+    const elImmoRate = document.getElementById('defaultImmoRate');
+    if (elImmoRate) elImmoRate.value = settings.defaultImmoRate !== undefined ? settings.defaultImmoRate : 2500;
 
     // ✅ Load left logo
     const logoLeftDisplay = document.getElementById('logoLeftDisplay');
@@ -4976,6 +5551,8 @@ function saveSettings() {
     const elOdd = document.getElementById('excelColorOdd');
     if (elEven) settings.excelColorEven = elEven.value;
     if (elOdd) settings.excelColorOdd = elOdd.value;
+    const elImmoRate = document.getElementById('defaultImmoRate');
+    if (elImmoRate) settings.defaultImmoRate = parseFloat(elImmoRate.value) || 2500;
 
     saveDataToLocalStorage();
     alert('✅ Paramètres sauvegardés !');
@@ -6673,3 +7250,1100 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check initial
     updateClearButtonVisibility();
 });
+
+// ════════════════════════════════════════════════════════════════════════════════
+// 🚛 MODULE IMMOBILISATION & RENTABILITÉ FLOTTE
+// ════════════════════════════════════════════════════════════════════════════════
+
+function isImmobilisationArticle(art) {
+    if (!art) return false;
+    if (art.isImmobilisation === true) return true;
+    if (art.pricingType && typeof art.pricingType === 'string' && art.pricingType.toLowerCase().includes('immobilis')) return true;
+    if (art.designation && typeof art.designation === 'string' && art.designation.toLowerCase().includes('immobilisation')) return true;
+    return false;
+}
+
+function isImmobilisationInvoice(inv) {
+    if (!inv) return false;
+    if (inv.invoiceType === 'immobilisation') return true;
+    return inv.articles && inv.articles.some(a => isImmobilisationArticle(a));
+}
+
+function populateImmoClientFilter() {
+    const sel = document.getElementById('immoFilterClient');
+    if (!sel) return;
+    const currentVal = sel.value || 'all';
+    let html = '<option value="all">👑 Tous les clients</option>';
+    clients.forEach(c => {
+        html += `<option value="${c.id}" ${String(c.id) === String(currentVal) ? 'selected' : ''}>${c.nom}</option>`;
+    });
+    sel.innerHTML = html;
+}
+
+window.onImmoPeriodChange = function() {
+    const periodSel = document.getElementById('immoFilterPeriod');
+    const customDiv = document.getElementById('immoCustomDates');
+    if (periodSel && customDiv) {
+        if (periodSel.value === 'custom') {
+            customDiv.style.setProperty('display', 'flex', 'important');
+        } else {
+            customDiv.style.setProperty('display', 'none', 'important');
+        }
+    }
+    updateImmobilisationView();
+};
+
+window.resetImmoFilters = function() {
+    const clientSel = document.getElementById('immoFilterClient');
+    const yearSel = document.getElementById('immoFilterYear');
+    const periodSel = document.getElementById('immoFilterPeriod');
+    const customDiv = document.getElementById('immoCustomDates');
+    const matInput = document.getElementById('immoFilterMatricule');
+    const searchInput = document.getElementById('immoTableSearch');
+    const dFrom = document.getElementById('immoDateFrom');
+    const dTo = document.getElementById('immoDateTo');
+    
+    if (clientSel) clientSel.value = 'all';
+    if (yearSel) yearSel.value = '2026';
+    if (periodSel) periodSel.value = 'all';
+    if (customDiv) customDiv.style.setProperty('display', 'none', 'important');
+    if (dFrom) dFrom.value = '';
+    if (dTo) dTo.value = '';
+    if (matInput) matInput.value = '';
+    if (searchInput) searchInput.value = '';
+    
+    updateImmobilisationView();
+};
+
+function getFilteredImmoData() {
+    const clientVal = document.getElementById('immoFilterClient')?.value || 'all';
+    const yearVal = document.getElementById('immoFilterYear')?.value || '';
+    const periodVal = document.getElementById('immoFilterPeriod')?.value || 'all';
+    const dateFrom = document.getElementById('immoDateFrom')?.value || '';
+    const dateTo = document.getElementById('immoDateTo')?.value || '';
+    const matriculeVal = (document.getElementById('immoFilterMatricule')?.value || '').trim().toLowerCase();
+
+    const results = [];
+
+    invoices.forEach(inv => {
+        if (!inv.articles || inv.articles.length === 0) return;
+
+        // Year & Period filters
+        if (inv.date) {
+            const d = new Date(inv.date);
+            const invYear = d.getFullYear();
+            if (yearVal && invYear !== parseInt(yearVal, 10)) return;
+
+            const m = d.getMonth(); // 0..11
+            if (periodVal === 'S1' && (m < 0 || m > 5)) return;
+            if (periodVal === 'S2' && (m < 6 || m > 11)) return;
+            if (periodVal === 'Q1' && (m < 0 || m > 2)) return;
+            if (periodVal === 'Q2' && (m < 3 || m > 5)) return;
+            if (periodVal === 'Q3' && (m < 6 || m > 8)) return;
+            if (periodVal === 'Q4' && (m < 9 || m > 11)) return;
+            if (['0','1','2','3','4','5','6','7','8','9','10','11'].includes(periodVal) && m !== parseInt(periodVal, 10)) return;
+            if (periodVal === 'custom') {
+                const invDateStr = inv.date;
+                if (dateFrom && invDateStr < dateFrom) return;
+                if (dateTo && invDateStr > dateTo) return;
+            }
+        }
+
+        // Client filter
+        if (clientVal !== 'all' && String(inv.clientId) !== String(clientVal)) return;
+
+        const clientObj = clients.find(c => c.id === inv.clientId) || { nom: 'Inconnu' };
+
+        inv.articles.forEach((art, idx) => {
+            if (!isImmobilisationArticle(art)) return;
+
+            const mat = (art.matricule || '').trim();
+            if (matriculeVal) {
+                const searchIn = (mat + ' ' + (art.designation || '') + ' ' + (art.immoDriver || '') + ' ' + (art.immoLocation || '')).toLowerCase();
+                if (!searchIn.includes(matriculeVal)) return;
+            }
+
+            const hours = parseFloat(art.qte) || 0;
+            const rate = parseFloat(art.prixUHT) || 0;
+            const ht = parseFloat(art.montantHT) || (hours * rate) || 0;
+            const ttc = ht * 1.19;
+
+            // Determine stage
+            let stage = art.immoStage || 'dechargement';
+            if (!art.immoStage) {
+                const combined = ((art.designation || '') + ' ' + (art.immoReason || '')).toLowerCase();
+                if (combined.includes('chargement &') || combined.includes('chargement et')) stage = 'both';
+                else if (combined.includes('chargement') && !combined.includes('déchargement')) stage = 'chargement';
+                else if (combined.includes('autre') || combined.includes('douane')) stage = 'autre';
+                else stage = 'dechargement';
+            }
+
+            const location = art.immoLocation || art.immoSiteDechargement || art.immoSiteChargement || '';
+
+            results.push({
+                invoiceId: inv.id,
+                invoiceNumber: inv.number,
+                invoiceDate: inv.date,
+                client: clientObj,
+                clientId: inv.clientId,
+                clientName: clientObj.nom,
+                articleIndex: idx,
+                article: art,
+                stage: stage,
+                siteChargement: art.immoSiteChargement || '',
+                siteDechargement: art.immoSiteDechargement || '',
+                truckCount: parseInt(art.immoTruckCount, 10) || 1,
+                matricule: mat,
+                driver: art.immoDriver || '',
+                period: art.immoPeriod || '',
+                location: location,
+                reason: art.immoReason || 'Attente déchargement chez client',
+                hours: hours,
+                rate: rate,
+                montantHT: ht,
+                montantTTC: ttc,
+                paid: inv.paid || inv.paymentStatus === 'encaissee',
+                invoice: inv
+            });
+        });
+    });
+
+    return results;
+}
+
+function renderImmoKPICards(data) {
+    const container = document.getElementById('immoKpiContainer');
+    if (!container) return;
+
+    let totalHours = 0;
+    let totalHT = 0;
+    let totalTTC = 0;
+    const distinctTrucks = new Set();
+    const distinctClients = new Set();
+
+    data.forEach(item => {
+        totalHours += item.hours;
+        totalHT += item.montantHT;
+        totalTTC += item.montantTTC;
+        if (item.matricule) distinctTrucks.add(item.matricule);
+        if (item.clientId) distinctClients.add(item.clientId);
+    });
+
+    const avgRate = totalHours > 0 ? (totalHT / totalHours) : (settings.defaultImmoRate || 2500);
+    const daysBlocked = (totalHours / 24).toFixed(1);
+
+    container.innerHTML = `
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm border-start border-4 h-100" style="border-left-color: #6366f1 !important;">
+                <div class="card__body p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted small fw-bold text-uppercase">Heures Immobilisées</span>
+                            <h3 class="mb-0 mt-1 fw-bold" style="color: #6366f1;">${totalHours.toLocaleString('fr-DZ')} h</h3>
+                            <small class="text-muted"><i class="fa fa-clock me-1"></i>~${daysBlocked} jours de blocage flotte</small>
+                        </div>
+                        <div class="p-3 rounded-circle" style="background-color: var(--immo-light-bg); color: var(--immo-primary);">
+                            <i class="fa fa-stopwatch fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm border-start border-4 border-success h-100">
+                <div class="card__body p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted small fw-bold text-uppercase">C.A. Immobilisation (HT)</span>
+                            <h3 class="mb-0 mt-1 fw-bold text-success">${formatCurrency(totalHT)}</h3>
+                            <small class="text-muted"><i class="fa fa-calculator me-1"></i>TTC : ${formatCurrency(totalTTC)}</small>
+                        </div>
+                        <div class="p-3 bg-success-subtle text-success rounded-circle">
+                            <i class="fa fa-coins fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm border-start border-4 border-primary h-100">
+                <div class="card__body p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted small fw-bold text-uppercase">Taux Horaire Moyen</span>
+                            <h3 class="mb-0 mt-1 fw-bold text-primary">${formatCurrency(avgRate)} / h</h3>
+                            <small class="text-muted"><i class="fa fa-sliders me-1"></i>Tarif base : ${formatCurrency(settings.defaultImmoRate || 2500)} / h</small>
+                        </div>
+                        <div class="p-3 bg-primary-subtle text-primary rounded-circle">
+                            <i class="fa fa-chart-pie fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm border-start border-4 border-info h-100">
+                <div class="card__body p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted small fw-bold text-uppercase">Impact Flotte</span>
+                            <h3 class="mb-0 mt-1 fw-bold text-info">${distinctTrucks.size > 0 ? distinctTrucks.size + ' Camion(s)' : data.length + ' Ligne(s)'}</h3>
+                            <small class="text-muted"><i class="fa fa-users me-1"></i>Sur ${distinctClients.size} client(s) facturé(s)</small>
+                        </div>
+                        <div class="p-3 bg-info-subtle text-info rounded-circle">
+                            <i class="fa fa-truck-ramp-box fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderImmoAdvisor(data) {
+    const card = document.getElementById('immoAdvisorCard');
+    const content = document.getElementById('immoAdvisorContent');
+    if (!card || !content) return;
+
+    if (!data || data.length === 0) {
+        card.style.display = 'block';
+        content.innerHTML = `
+            <div class="alert alert-info w-100 mb-0 d-flex align-items-center">
+                <i class="fa fa-info-circle fa-2x me-3 text-info"></i>
+                <div>
+                    <h6 class="fw-bold mb-1">Aucune heure d'immobilisation enregistrée</h6>
+                    <div class="small text-muted">Vos camions circulent sans temps d'attente facturé sur la sélection courante.</div>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    let totalH = 0;
+    const clientMap = {};
+    data.forEach(item => {
+        totalH += item.hours;
+        if (!clientMap[item.clientName]) {
+            clientMap[item.clientName] = { hours: 0, ht: 0, count: 0 };
+        }
+        clientMap[item.clientName].hours += item.hours;
+        clientMap[item.clientName].ht += item.montantHT;
+        clientMap[item.clientName].count += 1;
+    });
+
+    const sortedClients = Object.entries(clientMap).sort((a,b) => b[1].hours - a[1].hours);
+    const topClient = sortedClients[0];
+    const topName = topClient[0];
+    const topStats = topClient[1];
+    const pct = totalH > 0 ? ((topStats.hours / totalH) * 100) : 0;
+    const avgRateTop = topStats.hours > 0 ? (topStats.ht / topStats.hours) : 0;
+
+    card.style.display = 'block';
+
+    if (pct >= 35 || topStats.hours >= 16) {
+        content.innerHTML = `
+            <div class="immo-advisor-box immo-advisor-warning w-100">
+                <div class="d-flex align-items-start gap-3">
+                    <i class="fa-solid fa-triangle-exclamation fa-2x mt-1" style="color: var(--immo-primary);"></i>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                            <h6 class="fw-bold mb-0 text-dark">
+                                ⚠️ ALERTE RENTABILITÉ FLOTTE : Monopolisation par "${topName}"
+                            </h6>
+                            <span class="badge-immo px-2 py-1 fs-7">
+                                ${topStats.hours}h / ${pct.toFixed(1)}% du temps total
+                            </span>
+                        </div>
+                        <p class="mb-2 text-dark" style="font-size:0.9rem;">
+                            Le client <strong>${topName}</strong> accapare à lui seul <strong>${topStats.hours} heures</strong> d'immobilisation 
+                            (soit <strong>${pct.toFixed(1)}%</strong> du temps mort total de votre flotte) pour un C.A. facturé de <strong>${formatCurrency(topStats.ht)}</strong> 
+                            (taux moyen appliqué : <strong>${formatCurrency(avgRateTop)}/h</strong>).
+                        </p>
+                        <div class="p-3 bg-white rounded border small shadow-xs">
+                            <div class="fw-bold text-dark mb-1"><i class="fa fa-lightbulb text-primary me-1"></i> Recommandations Décisionnelles Stratégiques :</div>
+                            <div class="text-muted mb-2">Si vos camions passent trop de temps à l'arrêt chez ce client, ce temps immobilisé vous prive de rotations de transport à forte rentabilité :</div>
+                            <ul class="mb-0 ps-3 text-dark">
+                                <li><strong>Option 1 - Augmentation du tarif horaire :</strong> Revaloriser le taux d'immobilisation au-delà de 4h d'attente (ex: passer de ${formatCurrency(avgRateTop)} à 3 500 DA/h) pour compenser la perte d'exploitation.</li>
+                                <li><strong>Option 2 - Arbitrage et réaffectation :</strong> Réorienter vos véhicules prioritaires vers des clients avec chargement/déchargement fluide (&lt; 2h).</li>
+                                <li><strong>Option 3 - Fin de collaboration ciblée :</strong> Si les retards excessifs persistent sans rentabilité satisfaisante, privilégier des missions de transport actif plus profitables.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else {
+        content.innerHTML = `
+            <div class="immo-advisor-box immo-advisor-success w-100">
+                <div class="d-flex align-items-start gap-3">
+                    <i class="fa-solid fa-circle-check fa-2x text-success mt-1"></i>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-1">
+                            <h6 class="fw-bold mb-0 text-success-emphasis">
+                                ✅ RENTABILITÉ FLOTTE ÉQUILIBRÉE
+                            </h6>
+                            <span class="badge bg-success px-2 py-1 fs-7">Rotation Flotte Saine</span>
+                        </div>
+                        <p class="mb-0 text-dark" style="font-size:0.9rem;">
+                            Le temps d'attente est bien réparti entre vos différents partenaires (premier compte : <strong>${topName}</strong> avec ${topStats.hours}h, soit ${pct.toFixed(1)}% du total). Aucun client ne bloque abusivement la rotation productive de vos camions.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+}
+
+function renderImmoCharts(data) {
+    const destroyChart = (key) => {
+        if (dashboardCharts[key]) {
+            dashboardCharts[key].destroy();
+            dashboardCharts[key] = null;
+        }
+    };
+
+    // 1. Chart Clients (Top Chronophages)
+    destroyChart('immoClients');
+    const ctxCli = document.getElementById('chartImmoClients');
+    const emptyCli = document.getElementById('immoClientsEmptyState');
+
+    if (ctxCli) {
+        const clientHoursMap = {};
+        data.forEach(item => {
+            clientHoursMap[item.clientName] = (clientHoursMap[item.clientName] || 0) + item.hours;
+        });
+
+        const sorted = Object.entries(clientHoursMap).sort((a,b) => b[1] - a[1]).slice(0, 8);
+
+        if (sorted.length === 0) {
+            ctxCli.classList.add('d-none');
+            if (emptyCli) emptyCli.classList.remove('d-none');
+        } else {
+            ctxCli.classList.remove('d-none');
+            if (emptyCli) emptyCli.classList.add('d-none');
+
+            dashboardCharts.immoClients = new Chart(ctxCli, {
+                type: 'bar',
+                data: {
+                    labels: sorted.map(i => i[0]),
+                    datasets: [{
+                        label: 'Heures d\'immobilisation (h)',
+                        data: sorted.map(i => i[1]),
+                        backgroundColor: 'rgba(99, 102, 241, 0.85)',
+                        borderColor: '#6366f1',
+                        borderWidth: 1.5,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (c) => ` ${c.raw} heures d'attente (~${(c.raw/24).toFixed(1)} j)`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Heures' },
+                            grid: { color: 'rgba(0,0,0,0.05)' }
+                        },
+                        y: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // 2. Chart Months (Heures vs CA HT)
+    destroyChart('immoMonths');
+    const ctxMon = document.getElementById('chartImmoMonths');
+    const emptyMon = document.getElementById('immoMonthsEmptyState');
+
+    if (ctxMon) {
+        const monthHours = Array(12).fill(0);
+        const monthHT = Array(12).fill(0);
+
+        data.forEach(item => {
+            if (item.invoiceDate) {
+                const m = new Date(item.invoiceDate).getMonth();
+                if (m >= 0 && m <= 11) {
+                    monthHours[m] += item.hours;
+                    monthHT[m] += item.montantHT;
+                }
+            }
+        });
+
+        const hasAnyData = monthHours.some(h => h > 0);
+
+        if (!hasAnyData) {
+            ctxMon.classList.add('d-none');
+            if (emptyMon) emptyMon.classList.remove('d-none');
+        } else {
+            ctxMon.classList.remove('d-none');
+            if (emptyMon) emptyMon.classList.add('d-none');
+
+            dashboardCharts.immoMonths = new Chart(ctxMon, {
+                type: 'bar',
+                data: {
+                    labels: ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'],
+                    datasets: [
+                        {
+                            type: 'bar',
+                            label: 'Heures d\'attente (h)',
+                            data: monthHours,
+                            backgroundColor: 'rgba(99, 102, 241, 0.7)',
+                            borderColor: '#6366f1',
+                            borderWidth: 1,
+                            borderRadius: 4,
+                            yAxisID: 'y'
+                        },
+                        {
+                            type: 'line',
+                            label: 'C.A. Facturé HT (DA)',
+                            data: monthHT,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                            borderWidth: 2.5,
+                            tension: 0.3,
+                            fill: true,
+                            pointRadius: 4,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: (c) => c.datasetIndex === 0 ? ` Heures: ${c.raw} h` : ` C.A. HT: ${formatCurrency(c.raw)}`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: { display: true, text: 'Heures' },
+                            grid: { color: 'rgba(0,0,0,0.05)' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: { display: true, text: 'C.A. HT (DA)' },
+                            grid: { drawOnChartArea: false }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // 3. Chart Stages (Déchargement vs Chargement vs Mixte vs Autre)
+    destroyChart('immoStages');
+    const ctxStg = document.getElementById('chartImmoStages');
+    const emptyStg = document.getElementById('immoStagesEmptyState');
+
+    if (ctxStg) {
+        let dechH = 0, chgH = 0, bothH = 0, autreH = 0;
+        data.forEach(item => {
+            if (item.stage === 'chargement') chgH += item.hours;
+            else if (item.stage === 'both') bothH += item.hours;
+            else if (item.stage === 'autre') autreH += item.hours;
+            else dechH += item.hours;
+        });
+
+        const totalStgH = dechH + chgH + bothH + autreH;
+
+        if (totalStgH === 0) {
+            ctxStg.classList.add('d-none');
+            if (emptyStg) emptyStg.classList.remove('d-none');
+        } else {
+            ctxStg.classList.remove('d-none');
+            if (emptyStg) emptyStg.classList.add('d-none');
+
+            dashboardCharts.immoStages = new Chart(ctxStg, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Déchargement', 'Chargement', 'Mixte (Chg & Déchg)', 'Autre / Transit'],
+                    datasets: [{
+                        data: [dechH, chgH, bothH, autreH],
+                        backgroundColor: ['#6366f1', '#06b6d4', '#8b5cf6', '#94a3b8'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '65%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+                        tooltip: {
+                            callbacks: {
+                                label: (c) => {
+                                    const val = c.raw;
+                                    const p = totalStgH > 0 ? ((val / totalStgH) * 100).toFixed(1) : 0;
+                                    return ` ${c.label}: ${val} h (${p}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // 4. Chart Reasons (Causes & Motifs d'attente)
+    destroyChart('immoReasons');
+    const ctxRsn = document.getElementById('chartImmoReasons');
+    const emptyRsn = document.getElementById('immoReasonsEmptyState');
+
+    if (ctxRsn) {
+        const reasonMap = {};
+        data.forEach(item => {
+            const r = (item.reason || 'Attente non spécifiée').trim();
+            reasonMap[r] = (reasonMap[r] || 0) + item.hours;
+        });
+
+        const sortedReasons = Object.entries(reasonMap).sort((a,b) => b[1] - a[1]).slice(0, 6);
+
+        if (sortedReasons.length === 0) {
+            ctxRsn.classList.add('d-none');
+            if (emptyRsn) emptyRsn.classList.remove('d-none');
+        } else {
+            ctxRsn.classList.remove('d-none');
+            if (emptyRsn) emptyRsn.classList.add('d-none');
+
+            dashboardCharts.immoReasons = new Chart(ctxRsn, {
+                type: 'bar',
+                data: {
+                    labels: sortedReasons.map(r => r[0].length > 25 ? r[0].substring(0, 22) + '...' : r[0]),
+                    datasets: [{
+                        label: 'Heures d\'attente',
+                        data: sortedReasons.map(r => r[1]),
+                        backgroundColor: 'rgba(2, 132, 199, 0.75)',
+                        borderColor: '#0284c7',
+                        borderWidth: 1.5,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                title: (c) => sortedReasons[c[0].dataIndex][0],
+                                label: (c) => ` ${c.raw} heures immobilisées`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { color: 'rgba(0,0,0,0.05)' } },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+    }
+
+    // 5. Chart Rates (Taux Moyen Facturé par Client DA / h)
+    destroyChart('immoRates');
+    const ctxRat = document.getElementById('chartImmoRates');
+    const emptyRat = document.getElementById('immoRatesEmptyState');
+
+    if (ctxRat) {
+        const clientRateAgg = {};
+        data.forEach(item => {
+            if (!clientRateAgg[item.clientName]) {
+                clientRateAgg[item.clientName] = { hours: 0, ht: 0 };
+            }
+            clientRateAgg[item.clientName].hours += item.hours;
+            clientRateAgg[item.clientName].ht += item.montantHT;
+        });
+
+        const rateList = Object.entries(clientRateAgg)
+            .filter(([_, stats]) => stats.hours > 0)
+            .map(([name, stats]) => ({ name, rate: Math.round(stats.ht / stats.hours) }))
+            .sort((a,b) => b.rate - a.rate)
+            .slice(0, 8);
+
+        if (rateList.length === 0) {
+            ctxRat.classList.add('d-none');
+            if (emptyRat) emptyRat.classList.remove('d-none');
+        } else {
+            ctxRat.classList.remove('d-none');
+            if (emptyRat) emptyRat.classList.add('d-none');
+
+            dashboardCharts.immoRates = new Chart(ctxRat, {
+                type: 'bar',
+                data: {
+                    labels: rateList.map(r => r.name),
+                    datasets: [{
+                        label: 'Taux moyen appliqué (DA/h)',
+                        data: rateList.map(r => r.rate),
+                        backgroundColor: 'rgba(16, 185, 129, 0.75)',
+                        borderColor: '#10b981',
+                        borderWidth: 1.5,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (c) => ` Taux facturé: ${formatCurrency(c.raw)} / heure`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'DA / Heure' },
+                            grid: { color: 'rgba(0,0,0,0.05)' }
+                        },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+    }
+
+    // 6. Chart Trucks (Heures Perdues par Camion / Tracteur)
+    destroyChart('immoTrucks');
+    const ctxTrk = document.getElementById('chartImmoTrucks');
+    const emptyTrk = document.getElementById('immoTrucksEmptyState');
+
+    if (ctxTrk) {
+        const truckMap = {};
+        data.forEach(item => {
+            const m = (item.matricule || '').trim();
+            if (m) {
+                const parts = m.split(',').map(p => p.trim()).filter(Boolean);
+                const share = parts.length > 0 ? (item.hours / parts.length) : item.hours;
+                parts.forEach(p => {
+                    truckMap[p] = (truckMap[p] || 0) + share;
+                });
+            }
+        });
+
+        const sortedTrucks = Object.entries(truckMap).sort((a,b) => b[1] - a[1]).slice(0, 10);
+
+        if (sortedTrucks.length === 0) {
+            ctxTrk.classList.add('d-none');
+            if (emptyTrk) emptyTrk.classList.remove('d-none');
+        } else {
+            ctxTrk.classList.remove('d-none');
+            if (emptyTrk) emptyTrk.classList.add('d-none');
+
+            dashboardCharts.immoTrucks = new Chart(ctxTrk, {
+                type: 'bar',
+                data: {
+                    labels: sortedTrucks.map(t => t[0]),
+                    datasets: [{
+                        label: 'Heures perdues (h)',
+                        data: sortedTrucks.map(t => Math.round(t[1] * 10) / 10),
+                        backgroundColor: 'rgba(71, 85, 105, 0.75)',
+                        borderColor: '#475569',
+                        borderWidth: 1.5,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (c) => ` ${c.raw} heures d'arrêt (${(c.raw/24).toFixed(1)} j)`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            title: { display: true, text: 'Heures' },
+                            grid: { color: 'rgba(0,0,0,0.05)' }
+                        },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+    }
+}
+
+let currentImmoDataCache = [];
+
+window.renderImmoTable = function(data) {
+    if (data) currentImmoDataCache = data;
+    const list = currentImmoDataCache || [];
+    const tbody = document.getElementById('tableImmoBody');
+    const tfoot = document.getElementById('tableImmoFoot');
+    if (!tbody) return;
+
+    const searchVal = (document.getElementById('immoTableSearch')?.value || '').trim().toLowerCase();
+    
+    let displayList = list;
+    if (searchVal) {
+        displayList = list.filter(item => {
+            return (item.invoiceNumber || '').toLowerCase().includes(searchVal) ||
+                   (item.clientName || '').toLowerCase().includes(searchVal) ||
+                   (item.matricule || '').toLowerCase().includes(searchVal) ||
+                   (item.driver || '').toLowerCase().includes(searchVal) ||
+                   (item.location || '').toLowerCase().includes(searchVal) ||
+                   (item.siteChargement || '').toLowerCase().includes(searchVal) ||
+                   (item.siteDechargement || '').toLowerCase().includes(searchVal) ||
+                   (item.reason || '').toLowerCase().includes(searchVal);
+        });
+    }
+
+    if (displayList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="12" class="text-center text-muted py-4"><i class="fa fa-info-circle me-1"></i>Aucune facture d'immobilisation trouvée sur cette sélection.</td></tr>`;
+        if (tfoot) tfoot.innerHTML = '';
+        return;
+    }
+
+    let tHours = 0, tHT = 0, tTTC = 0;
+
+    tbody.innerHTML = displayList.map(item => {
+        tHours += item.hours;
+        tHT += item.montantHT;
+        tTTC += item.montantTTC;
+
+        const badgeHtml = item.paid ? 
+            '<span class="badge bg-success rounded-pill"><i class="fa fa-check me-1"></i>Payée</span>' :
+            '<span class="badge rounded-pill" style="background:#fef3c7; color:#92400e;">En attente</span>';
+
+        let stageBadge = '';
+        if (item.stage === 'chargement') {
+            stageBadge = '<span class="badge" style="background:#e0f2fe; color:#0369a1;"><i class="fa fa-warehouse me-1"></i>Chargement</span>';
+        } else if (item.stage === 'both') {
+            stageBadge = '<span class="badge" style="background:#f3e8ff; color:#7e22ce;"><i class="fa fa-rotate me-1"></i>Mixte</span>';
+        } else if (item.stage === 'autre') {
+            stageBadge = '<span class="badge bg-secondary-subtle text-secondary"><i class="fa fa-ellipsis me-1"></i>Autre</span>';
+        } else {
+            stageBadge = '<span class="badge" style="background:#eef2ff; color:#4338ca;"><i class="fa fa-boxes-packing me-1"></i>Déchargement</span>';
+        }
+
+        let siteInfo = '';
+        if (item.stage === 'both') {
+            if (item.siteChargement) siteInfo += `<div class="small text-muted">Chg: ${item.siteChargement}</div>`;
+            if (item.siteDechargement) siteInfo += `<div class="small text-muted">Déch: ${item.siteDechargement}</div>`;
+        } else if (item.location) {
+            siteInfo = `<div class="small text-muted">${item.location}</div>`;
+        }
+
+        let truckInfo = '';
+        if (item.matricule) {
+            truckInfo += `<span class="badge bg-dark text-white font-monospace">${item.matricule}</span>`;
+        }
+        if (item.truckCount > 1) {
+            truckInfo += `<span class="badge bg-secondary ms-1">${item.truckCount} camions</span>`;
+        }
+        if (!item.matricule && item.truckCount <= 1) {
+            truckInfo = `<span class="text-muted small">Non spécifié</span>`;
+        }
+        if (item.driver) {
+            truckInfo += `<div class="small text-muted">${item.driver}</div>`;
+        }
+
+        return `
+            <tr class="text-center">
+                <td class="text-nowrap small">${item.invoiceDate ? formatDate(item.invoiceDate) : '—'}</td>
+                <td class="fw-bold text-primary text-nowrap">
+                    <a href="javascript:void(0)" onclick="viewInvoiceFromReport(${item.invoiceId})" class="text-decoration-none fw-bold">
+                        ${item.invoiceNumber || '—'}
+                    </a>
+                </td>
+                <td class="text-start fw-semibold text-truncate" style="max-width: 170px;" title="${item.clientName}">
+                    ${item.clientName}
+                </td>
+                <td class="text-start" style="max-width: 160px;">
+                    ${stageBadge}
+                    ${siteInfo}
+                </td>
+                <td style="max-width: 160px;">
+                    ${truckInfo}
+                </td>
+                <td class="small text-truncate" style="max-width: 180px;" title="${item.reason}">
+                    ${item.reason}
+                </td>
+                <td style="background-color: var(--immo-light-bg); color: var(--immo-text); font-weight: 800; font-size: 0.95rem;">
+                    ${item.hours} h
+                </td>
+                <td class="text-end small">${formatCurrency(item.rate)}</td>
+                <td class="text-end fw-bold">${formatCurrency(item.montantHT)}</td>
+                <td class="text-end fw-semibold text-muted small">${formatCurrency(item.montantTTC)}</td>
+                <td>${badgeHtml}</td>
+                <td class="text-nowrap">
+                    <button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="viewInvoiceFromReport(${item.invoiceId})" title="Voir la facture">
+                        <i class="fa fa-eye"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary py-0 px-2 ms-1" onclick="editInvoice(${item.invoiceId})" title="Modifier">
+                        <i class="fa fa-pencil-alt"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    if (tfoot) {
+        tfoot.innerHTML = `
+            <tr class="table-dark fw-bold text-center">
+                <td colspan="6" class="text-end text-uppercase">TOTAL GÉNÉRAL :</td>
+                <td style="background-color: #4f46e5; color: #ffffff; font-size: 1rem;">${tHours.toLocaleString('fr-DZ')} h</td>
+                <td>—</td>
+                <td class="text-end text-white fs-6">${formatCurrency(tHT)}</td>
+                <td class="text-end fs-6" style="color: #cbd5e1;">${formatCurrency(tTTC)}</td>
+                <td colspan="2"></td>
+            </tr>
+        `;
+    }
+};
+
+function updateSidebarImmoBadge() {
+    const badge = document.getElementById('sidebarImmoBadge');
+    if (!badge) return;
+    let totalH = 0;
+    invoices.forEach(inv => {
+        if (inv.articles) {
+            inv.articles.forEach(art => {
+                if (isImmobilisationArticle(art)) {
+                    totalH += parseFloat(art.qte) || 0;
+                }
+            });
+        }
+    });
+    if (totalH > 0) {
+        badge.textContent = `${totalH}h`;
+        badge.classList.remove('d-none');
+    } else {
+        badge.classList.add('d-none');
+    }
+}
+
+window.updateImmobilisationView = function() {
+    try {
+        populateImmoClientFilter();
+        const data = getFilteredImmoData();
+        renderImmoKPICards(data);
+        renderImmoAdvisor(data);
+        renderImmoCharts(data);
+        renderImmoTable(data);
+        updateSidebarImmoBadge();
+    } catch (err) {
+        console.error('Error updating immobilisation view:', err);
+    }
+};
+
+window.exportImmobilisationToExcel = function() {
+    try {
+        const data = getFilteredImmoData();
+        if (data.length === 0) {
+            alert("Aucune donnée d'immobilisation à exporter avec les filtres sélectionnés.");
+            return;
+        }
+
+        const wb = XLSX.utils.book_new();
+
+        // Colors
+        const colorHdr = '003366';
+        const colorSubHdr = '1a5276';
+        const colorEven = settings.excelColorEven?.replace('#','') || 'dbe9ff';
+        const colorOdd = settings.excelColorOdd?.replace('#','') || 'ffffff';
+        const colorTotal = '2D3748';
+
+        // ════ SHEET 1: DETAIL IMMOBILISATION ════
+        const wsDetail = {};
+        const headers = [
+            'DATE', 'N° FACTURE', 'CLIENT', 'ÉTAPE', 'LIEU / SITE', 
+            'CAMION(S) / FLOTTE', 'CHAUFFEUR / RÉF', 'PÉRIODE', 
+            'MOTIF D\'ATTENTE', 'HEURES (H)', 'TAUX HORAIRE (DA)', 
+            'MONTANT HT (DA)', 'MONTANT TTC (DA)', 'STATUT'
+        ];
+
+        headers.forEach((h, ci) => {
+            wsDetail[XLSX.utils.encode_cell({ r: 0, c: ci })] = {
+                v: h, t: 's',
+                s: {
+                    fill: { fgColor: { rgb: colorHdr } },
+                    font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 10, name: 'Calibri' },
+                    alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
+                }
+            };
+        });
+
+        let tHours = 0, tHT = 0, tTTC = 0;
+        data.forEach((item, idx) => {
+            const r = idx + 1;
+            const bg = idx % 2 === 0 ? colorEven : colorOdd;
+            const rowStyle = (align = 'center', bold = false, numFmt = undefined) => ({
+                fill: { fgColor: { rgb: bg } },
+                font: { sz: 10, name: 'Calibri', bold },
+                alignment: { horizontal: align, vertical: 'center' },
+                border: { top: {style:'thin',color:{rgb:'D0D0D0'}}, bottom: {style:'thin',color:{rgb:'D0D0D0'}} },
+                numFmt
+            });
+
+            let stageLabel = 'Au Déchargement';
+            if (item.stage === 'chargement') stageLabel = 'Au Chargement';
+            else if (item.stage === 'both') stageLabel = 'Mixte (Chg & Déchg)';
+            else if (item.stage === 'autre') stageLabel = 'Autre / Transit';
+
+            let truckLabel = item.matricule || '—';
+            if (item.truckCount > 1) {
+                truckLabel = item.matricule ? `${item.matricule} (${item.truckCount} camions)` : `${item.truckCount} camions`;
+            }
+
+            const cells = [
+                { v: item.invoiceDate ? formatDate(item.invoiceDate) : '', s: rowStyle('center') },
+                { v: item.invoiceNumber || '', s: rowStyle('center', true) },
+                { v: item.clientName || '', s: rowStyle('left') },
+                { v: stageLabel, s: rowStyle('center') },
+                { v: item.location || '—', s: rowStyle('left') },
+                { v: truckLabel, s: rowStyle('center', true) },
+                { v: item.driver || '—', s: rowStyle('left') },
+                { v: item.period || '—', s: rowStyle('center') },
+                { v: item.reason || '', s: rowStyle('left') },
+                { v: item.hours, t: 'n', s: rowStyle('center', true, '#,##0.0') },
+                { v: item.rate, t: 'n', s: rowStyle('right', false, '#,##0.00 "DA"') },
+                { v: item.montantHT, t: 'n', s: rowStyle('right', true, '#,##0.00 "DA"') },
+                { v: item.montantTTC, t: 'n', s: rowStyle('right', false, '#,##0.00 "DA"') },
+                { v: item.paid ? 'PAYÉE' : 'EN ATTENTE', s: rowStyle('center', true) }
+            ];
+
+            cells.forEach((c, ci) => {
+                wsDetail[XLSX.utils.encode_cell({ r, c: ci })] = c;
+            });
+
+            tHours += item.hours;
+            tHT += item.montantHT;
+            tTTC += item.montantTTC;
+        });
+
+        // Totals Row
+        const totR = data.length + 1;
+        const totStyle = (align = 'center', numFmt = undefined) => ({
+            fill: { fgColor: { rgb: colorTotal } },
+            font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 10, name: 'Calibri' },
+            alignment: { horizontal: align, vertical: 'center' },
+            border: { top: {style:'medium',color:{rgb:'000000'}}, bottom: {style:'medium',color:{rgb:'000000'}} },
+            numFmt
+        });
+
+        const totCells = [
+            { v: 'TOTAL GÉNÉRAL', s: totStyle('center') },
+            { v: '', s: totStyle('center') },
+            { v: '', s: totStyle('center') },
+            { v: '', s: totStyle('center') },
+            { v: '', s: totStyle('center') },
+            { v: '', s: totStyle('center') },
+            { v: '', s: totStyle('center') },
+            { v: '', s: totStyle('center') },
+            { v: '', s: totStyle('center') },
+            { v: tHours, t: 'n', s: totStyle('center', '#,##0.0 "h"') },
+            { v: '', s: totStyle('center') },
+            { v: tHT, t: 'n', s: totStyle('right', '#,##0.00 "DA"') },
+            { v: tTTC, t: 'n', s: totStyle('right', '#,##0.00 "DA"') },
+            { v: '', s: totStyle('center') }
+        ];
+        totCells.forEach((c, ci) => {
+            wsDetail[XLSX.utils.encode_cell({ r: totR, c: ci })] = c;
+        });
+
+        wsDetail['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: totR, c: headers.length - 1 } });
+        wsDetail['!cols'] = [
+            { wch: 12 }, { wch: 14 }, { wch: 28 }, { wch: 18 }, { wch: 20 },
+            { wch: 20 }, { wch: 18 }, { wch: 18 }, { wch: 30 }, { wch: 12 }, 
+            { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 14 }
+        ];
+        wsDetail['!rows'] = [{ hpt: 26 }, ...Array(data.length + 1).fill({ hpt: 20 })];
+
+        XLSX.utils.book_append_sheet(wb, wsDetail, 'Detail_Immobilisation');
+
+        // ════ SHEET 2: SYNTHÈSE RENTABILITÉ PAR CLIENT ════
+        const wsClients = {};
+        const clientHeaders = ['CLIENT', 'HEURES D\'ATTENTE (H)', '% TEMPS TOTAL', 'C.A. FACTURÉ HT (DA)', 'TAUX MOYEN / H', 'NOMBRE DE FACTURES'];
+        clientHeaders.forEach((h, ci) => {
+            wsClients[XLSX.utils.encode_cell({ r: 0, c: ci })] = {
+                v: h, t: 's',
+                s: {
+                    fill: { fgColor: { rgb: colorSubHdr } },
+                    font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 10, name: 'Calibri' },
+                    alignment: { horizontal: 'center', vertical: 'center' }
+                }
+            };
+        });
+
+        const clientAgg = {};
+        data.forEach(item => {
+            if (!clientAgg[item.clientName]) {
+                clientAgg[item.clientName] = { hours: 0, ht: 0, count: 0 };
+            }
+            clientAgg[item.clientName].hours += item.hours;
+            clientAgg[item.clientName].ht += item.montantHT;
+            clientAgg[item.clientName].count += 1;
+        });
+
+        const sortedCliList = Object.entries(clientAgg).sort((a,b) => b[1].hours - a[1].hours);
+        sortedCliList.forEach(([cName, stats], idx) => {
+            const r = idx + 1;
+            const bg = idx % 2 === 0 ? colorEven : colorOdd;
+            const rowStyle = (align = 'center', bold = false, numFmt = undefined) => ({
+                fill: { fgColor: { rgb: bg } },
+                font: { sz: 10, name: 'Calibri', bold },
+                alignment: { horizontal: align, vertical: 'center' },
+                border: { top: {style:'thin',color:{rgb:'D0D0D0'}}, bottom: {style:'thin',color:{rgb:'D0D0D0'}} },
+                numFmt
+            });
+
+            const pct = tHours > 0 ? (stats.hours / tHours) * 100 : 0;
+            const avgR = stats.hours > 0 ? (stats.ht / stats.hours) : 0;
+
+            const cells = [
+                { v: cName, s: rowStyle('left', true) },
+                { v: stats.hours, t: 'n', s: rowStyle('center', true, '#,##0.0 "h"') },
+                { v: (pct / 100), t: 'n', s: rowStyle('center', false, '0.0%') },
+                { v: stats.ht, t: 'n', s: rowStyle('right', true, '#,##0.00 "DA"') },
+                { v: avgR, t: 'n', s: rowStyle('right', false, '#,##0.00 "DA"') },
+                { v: stats.count, t: 'n', s: rowStyle('center', false, '#,##0') }
+            ];
+            cells.forEach((c, ci) => {
+                wsClients[XLSX.utils.encode_cell({ r, c: ci })] = c;
+            });
+        });
+
+        wsClients['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: sortedCliList.length, c: clientHeaders.length - 1 } });
+        wsClients['!cols'] = [{ wch: 30 }, { wch: 22 }, { wch: 16 }, { wch: 22 }, { wch: 18 }, { wch: 20 }];
+        wsClients['!rows'] = [{ hpt: 26 }, ...Array(sortedCliList.length).fill({ hpt: 20 })];
+
+        XLSX.utils.book_append_sheet(wb, wsClients, 'Rentabilite_Par_Client');
+
+        const yr = document.getElementById('immoFilterYear')?.value || '2026';
+        const fileName = `Rapport_Immobilisation_Flotte_${yr}_${new Date().toISOString().slice(0,10)}.xlsx`;
+        XLSX.writeFile(wb, fileName, { cellStyles: true });
+
+    } catch (err) {
+        console.error('Erreur export immobilisation:', err);
+        alert('Erreur lors de l\'export Excel : ' + err.message);
+    }
+};

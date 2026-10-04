@@ -305,6 +305,11 @@ th.sortable.sorted-desc .sort-icon::after {
         <i class="fa-solid fa-chart-column"></i> 
         <span>Rapports</span>
     </a>
+    <a class="nav-link d-flex align-items-center gap-2" data-view="immobilisation" href="#">
+        <i class="fa-solid fa-truck-ramp-box" style="color:#6366f1;"></i> 
+        <span>Immobilisation</span>
+        <span class="badge badge-immo ms-auto font-monospace" id="sidebarImmoBadge" style="font-size:0.7rem;">0h</span>
+    </a>
     <a class="nav-link d-flex align-items-center gap-2" data-view="wilaya-prices" href="#">
         <i class="fa-solid fa-coins"></i> 
         <span>Prix par Wilaya</span>
@@ -713,8 +718,13 @@ th.sortable.sorted-desc .sort-icon::after {
 
 <!-- REPORTS VIEW -->
 <section id="view-reports" class="app-view d-none">
-  <header class="d-flex justify-content-between align-items-center mb-4">
+  <header class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <h2 class="mb-0">Rapports</h2>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-immo btn-sm shadow-sm" onclick="showView('immobilisation')">
+            <i class="fa fa-truck-ramp-box me-1"></i> Voir Rapport Immobilisation Flotte →
+        </button>
+    </div>
   </header>
 
   <div class="card mb-4">
@@ -876,6 +886,267 @@ th.sortable.sorted-desc .sort-icon::after {
   </div>
 </section>
 
+<!-- IMMOBILISATION & RENTABILITE VIEW -->
+<section id="view-immobilisation" class="app-view d-none">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h2 class="mb-0 fw-bold" style="color:var(--text-main);"><i class="fa-solid fa-truck-ramp-box me-2" style="color:#6366f1;"></i>Immobilisation & Rentabilité Flotte</h2>
+            <div class="text-muted small">Analyse approfondie du temps d'immobilisation des camions (chargement & déchargement) par client et par mois pour optimiser la rentabilité de votre flotte.</div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-immo shadow-sm" onclick="openInvoiceWizardWithImmobilisation()">
+                <i class="fa fa-plus me-1"></i> Nouvelle Facture Immobilisation
+            </button>
+            <button class="btn btn-success shadow-sm" onclick="exportImmobilisationToExcel()">
+                <i class="fa fa-file-excel me-1"></i> Export Excel
+            </button>
+        </div>
+    </div>
+
+    <!-- FILTER PANEL -->
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card__body py-3">
+            <div class="row g-2 align-items-center">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-user me-1 text-primary"></i>Client</label>
+                    <select id="immoFilterClient" class="form-select form-select-sm" onchange="updateImmobilisationView()">
+                        <option value="all">👑 Tous les clients</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calendar me-1 text-primary"></i>Année</label>
+                    <select id="immoFilterYear" class="form-select form-select-sm" onchange="updateImmobilisationView()">
+                        <option value="">Toutes années</option>
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                        <option value="2026" selected>2026</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calendar-alt me-1 text-primary"></i>Période</label>
+                    <select id="immoFilterPeriod" class="form-select form-select-sm" onchange="onImmoPeriodChange()">
+                        <option value="all" selected>📅 Toute l'année</option>
+                        <optgroup label="── Semestres ──">
+                            <option value="S1">S1 (Jan - Juin)</option>
+                            <option value="S2">S2 (Juil - Déc)</option>
+                        </optgroup>
+                        <optgroup label="── Trimestres ──">
+                            <option value="Q1">T1 (Jan - Mar)</option>
+                            <option value="Q2">T2 (Avr - Juin)</option>
+                            <option value="Q3">T3 (Juil - Sep)</option>
+                            <option value="Q4">T4 (Oct - Déc)</option>
+                        </optgroup>
+                        <optgroup label="── Mois ──">
+                            <option value="0">Janvier</option>
+                            <option value="1">Février</option>
+                            <option value="2">Mars</option>
+                            <option value="3">Avril</option>
+                            <option value="4">Mai</option>
+                            <option value="5">Juin</option>
+                            <option value="6">Juillet</option>
+                            <option value="7">Août</option>
+                            <option value="8">Septembre</option>
+                            <option value="9">Octobre</option>
+                            <option value="10">Novembre</option>
+                            <option value="11">Décembre</option>
+                        </optgroup>
+                        <optgroup label="── Personnalisé ──">
+                            <option value="custom">🔧 Période personnalisée</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-truck me-1 text-primary"></i>Camion / Matricule (Optionnel)</label>
+                    <input type="text" id="immoFilterMatricule" class="form-control form-control-sm" placeholder="Filtrer camion..." oninput="updateImmobilisationView()">
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button class="btn btn-outline-secondary btn-sm w-100" onclick="resetImmoFilters()" title="Réinitialiser les filtres">
+                        <i class="fa fa-undo"></i>
+                    </button>
+                </div>
+            </div>
+            <!-- Custom Dates Row -->
+            <div id="immoCustomDates" class="row g-2 mt-2 align-items-center" style="display:none !important;">
+                <div class="col-md-3">
+                    <label class="text-muted small fw-bold mb-0">Du :</label>
+                    <input type="date" id="immoDateFrom" class="form-control form-control-sm" onchange="updateImmobilisationView()">
+                </div>
+                <div class="col-md-3">
+                    <label class="text-muted small fw-bold mb-0">Au :</label>
+                    <input type="date" id="immoDateTo" class="form-control form-control-sm" onchange="updateImmobilisationView()">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI CARDS -->
+    <div class="row g-3 mb-4" id="immoKpiContainer"></div>
+
+    <!-- STRATEGIC RENTABILITE ADVISOR -->
+    <div class="card mb-4 border-0 shadow-sm" id="immoAdvisorCard" style="display: none;">
+        <div class="card__body p-3">
+            <div class="d-flex align-items-start gap-3" id="immoAdvisorContent"></div>
+        </div>
+    </div>
+
+    <!-- 6 CHARTS SUITE (ANALYSE MULTIDIMENSIONNELLE) -->
+    <div class="row g-3 mb-4">
+        <!-- Chart 1: Top Clients Chronophages -->
+        <div class="col-lg-6">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0"><i class="fa fa-hourglass-half me-2" style="color:#6366f1;"></i>1. Heures Perdues par Client (Top Chronophages)</h6>
+                </div>
+                <div class="text-muted small px-4 pb-2 border-bottom" style="font-size:0.75rem;">
+                    Volume d'heures perdues par client pour identifier ceux qui monopolisent vos camions.
+                </div>
+                <div class="card__body pt-3">
+                    <div style="height: 270px;">
+                        <canvas id="chartImmoClients"></canvas>
+                    </div>
+                    <div id="immoClientsEmptyState" class="text-center text-muted mt-5 d-none">
+                        <small>Aucune heure d'immobilisation trouvée sur cette sélection.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart 2: Évolution Mensuelle -->
+        <div class="col-lg-6">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0"><i class="fa fa-chart-line me-2 text-primary"></i>2. Évolution Mensuelle : Heures vs C.A. Facturé</h6>
+                </div>
+                <div class="text-muted small px-4 pb-2 border-bottom" style="font-size:0.75rem;">
+                    Comparaison du volume d'heures et du chiffre d'affaires facturé (HT) mois par mois.
+                </div>
+                <div class="card__body pt-3">
+                    <div style="height: 270px;">
+                        <canvas id="chartImmoMonths"></canvas>
+                    </div>
+                    <div id="immoMonthsEmptyState" class="text-center text-muted mt-5 d-none">
+                        <small>Aucune donnée mensuelle disponible sur cette sélection.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart 3: Répartition par Étape (Déchargement vs Chargement vs Autre) -->
+        <div class="col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0"><i class="fa fa-boxes-packing me-2 text-info"></i>3. Déchargement vs Chargement</h6>
+                </div>
+                <div class="text-muted small px-4 pb-2 border-bottom" style="font-size:0.75rem;">
+                    Où se produit la majorité du temps d'attente de vos camions ?
+                </div>
+                <div class="card__body pt-3">
+                    <div style="height: 250px;">
+                        <canvas id="chartImmoStages"></canvas>
+                    </div>
+                    <div id="immoStagesEmptyState" class="text-center text-muted mt-5 d-none">
+                        <small>Aucune donnée d'étape disponible.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart 4: Motifs Principaux d'Immobilisation -->
+        <div class="col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0"><i class="fa fa-list-check me-2" style="color:#0284c7;"></i>4. Causes & Motifs d'Attente</h6>
+                </div>
+                <div class="text-muted small px-4 pb-2 border-bottom" style="font-size:0.75rem;">
+                    Principaux motifs déclarés d'immobilisation de la flotte.
+                </div>
+                <div class="card__body pt-3">
+                    <div style="height: 250px;">
+                        <canvas id="chartImmoReasons"></canvas>
+                    </div>
+                    <div id="immoReasonsEmptyState" class="text-center text-muted mt-5 d-none">
+                        <small>Aucun motif enregistré.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart 5: Taux Moyen Facturé par Client (Rentabilité horaire) -->
+        <div class="col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0"><i class="fa fa-coins me-2 text-success"></i>5. Taux Moyen Facturé (DA / h)</h6>
+                </div>
+                <div class="text-muted small px-4 pb-2 border-bottom" style="font-size:0.75rem;">
+                    Rémunération horaire moyenne payée par chaque client pour l'attente.
+                </div>
+                <div class="card__body pt-3">
+                    <div style="height: 250px;">
+                        <canvas id="chartImmoRates"></canvas>
+                    </div>
+                    <div id="immoRatesEmptyState" class="text-center text-muted mt-5 d-none">
+                        <small>Données de taux indisponibles.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart 6: Top Camions / Véhicules les Plus Bloqués -->
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0"><i class="fa fa-truck me-2 text-secondary"></i>6. Heures Perdues par Camion / Tracteur</h6>
+                </div>
+                <div class="text-muted small px-4 pb-2 border-bottom" style="font-size:0.75rem;">
+                    Identifie les immatriculations ou véhicules subissant le plus de temps d'arrêt.
+                </div>
+                <div class="card__body pt-3">
+                    <div style="height: 230px;">
+                        <canvas id="chartImmoTrucks"></canvas>
+                    </div>
+                    <div id="immoTrucksEmptyState" class="text-center text-muted mt-4 d-none">
+                        <small>Aucun matricule spécifique renseigné sur cette sélection.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="card shadow-sm border-0">
+        <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h6 class="fw-bold mb-0"><i class="fa fa-table me-2 text-secondary"></i>Détail des Factures d'Immobilisation</h6>
+            <div class="d-flex align-items-center gap-2">
+                <input type="text" id="immoTableSearch" class="form-control form-control-sm" placeholder="Recherche (client, n°, camion, motif...)" style="width: 250px;" oninput="renderImmoTable()">
+            </div>
+        </div>
+        <div class="card__body p-0">
+            <div class="table-responsive" style="max-height: 60vh; overflow-y: auto;">
+                <table class="table table-hover align-middle mb-0" id="tableImmobilisation">
+                    <thead class="table-light sticky-top shadow-sm">
+                        <tr class="text-uppercase small text-center" style="font-size: 0.75rem;">
+                            <th>Date</th>
+                            <th>N° Facture</th>
+                            <th style="text-align: left;">Client</th>
+                            <th>Étape / Site</th>
+                            <th>Camion(s) / Réf</th>
+                            <th>Motif</th>
+                            <th style="background-color: var(--immo-light-bg); color: var(--immo-text); font-weight: 800;">Heures</th>
+                            <th>Taux / h</th>
+                            <th>Montant HT</th>
+                            <th>Montant TTC</th>
+                            <th>Statut</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableImmoBody"></tbody>
+                    <tfoot id="tableImmoFoot"></tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- WILAYA PRICES VIEW -->
 <section id="view-wilaya-prices" class="app-view d-none">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -997,9 +1268,16 @@ th.sortable.sorted-desc .sort-icon::after {
                                 <label for="companyAddress" class="form-label">Adresse</label>
                                 <textarea id="companyAddress" class="form-control" rows="2"></textarea>
                             </div>
-                            <div class="col-12 mt-3">
+                            <div class="col-md-6 mt-3">
                                 <label for="companyPricingTypes" class="form-label text-primary fw-bold">Types de Tarification (séparés par une virgule)</label>
-                                <input type="text" id="companyPricingTypes" class="form-control" placeholder="Ex: Transport, Transfert, Manutention">
+                                <input type="text" id="companyPricingTypes" class="form-control" placeholder="Ex: Transport, Transfert, Manutention, Immobilisation">
+                            </div>
+                            <div class="col-md-6 mt-3">
+                                <label for="defaultImmoRate" class="form-label fw-bold" style="color: var(--immo-primary);"><i class="fa fa-clock me-1"></i>Taux horaire d'Immobilisation par défaut</label>
+                                <div class="input-group">
+                                    <input type="number" id="defaultImmoRate" class="form-control" placeholder="Ex: 2500" value="2500" min="0" step="100">
+                                    <span class="input-group-text">DA / h</span>
+                                </div>
                             </div>
                             
                             <!-- ✅ LEFT LOGO SECTION -->
@@ -1173,45 +1451,73 @@ th.sortable.sorted-desc .sort-icon::after {
 <div class="modal fade" id="modalInvoice" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Assistant de création de facture</h5>
+            <div class="modal-header d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <h5 class="modal-title fw-bold mb-0 text-dark">
+                        <i class="fa fa-file-invoice text-primary me-2"></i>Assistant de Création de Facture
+                    </h5>
+                    <!-- Step Progress Tabs -->
+                    <div class="wizard-stepper d-none d-md-flex" id="wizardStepper">
+                        <button type="button" class="wizard-step-item active" onclick="goToWizardStep(1)" id="stepTab1">
+                            <span class="wizard-step-badge">1</span> Client
+                        </button>
+                        <button type="button" class="wizard-step-item" onclick="goToWizardStep(2)" id="stepTab2">
+                            <span class="wizard-step-badge">2</span> Dates & Réf
+                        </button>
+                        <button type="button" class="wizard-step-item" onclick="goToWizardStep(3)" id="stepTab3">
+                            <span class="wizard-step-badge">3</span> Paiement
+                        </button>
+                        <button type="button" class="wizard-step-item" onclick="goToWizardStep(4)" id="stepTab4">
+                            <span class="wizard-step-badge">4</span> Articles / Lignes
+                        </button>
+                        <button type="button" class="wizard-step-item" onclick="goToWizardStep(5)" id="stepTab5">
+                            <span class="wizard-step-badge">5</span> Remise & Fin
+                        </button>
+                    </div>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="btnCloseInvoiceWizard"></button>
             </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-lg-6">
-                        <div class="card">
-                            <div class="card__header">
-                                <h6 class="mb-0">Étapes de création</h6>
+            <div class="modal-body p-3">
+                <div class="row g-3 h-100">
+                    <div class="col-xl-6 col-lg-6 d-flex flex-column h-100">
+                        <div class="wizard-form-card">
+                            <div class="card__header py-2 px-3 border-bottom d-flex justify-content-between align-items-center bg-white">
+                                <h6 class="mb-0 fw-bold small text-muted text-uppercase" id="wizardStepTitle">
+                                    <i class="fa fa-sliders me-1 text-primary"></i>Paramètres de la facture
+                                </h6>
+                                <span class="badge bg-light text-dark border font-monospace" id="wizardStepCounter">Étape 1/5</span>
                             </div>
-                            <div class="card__body" id="wizardForms">
+                            <div class="card__body p-3" id="wizardForms">
                                 <!-- Step content inserted via JS -->
                             </div>
                         </div>
                     </div>
-                    <div class="col-lg-6">
-                        <div class="card">
-                            <div class="card__header">
-                                <h6 class="mb-0">Aperçu de la facture</h6>
+                    <div class="col-xl-6 col-lg-6 d-flex flex-column h-100">
+                        <div class="wizard-preview-card">
+                            <div class="card__header py-2 px-3 border-bottom d-flex justify-content-between align-items-center bg-light">
+                                <h6 class="mb-0 fw-bold small text-dark">
+                                    <i class="fa fa-eye me-1 text-primary"></i>Aperçu Direct du Document
+                                </h6>
+                                <span class="badge bg-primary text-white" id="previewTotalBadge">Net : 0,00 DA</span>
                             </div>
-                            <div class="card__body">
+                            <div class="card__body p-2">
                                 <div id="wizardPreview" class="invoice-container"></div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer justify-content-between">
+            <div class="modal-footer justify-content-between py-2">
                 <button class="btn btn--outline" id="btnPrevStep">
                     <i class="fa fa-arrow-left me-2"></i>Précédent
                 </button>
-                <div>
-                    <button class="btn btn--secondary me-2" data-bs-dismiss="modal">Annuler</button>
+                <div class="d-flex gap-2">
+                    <button class="btn btn--secondary" data-bs-dismiss="modal">Annuler</button>
                     <button class="btn btn--primary" id="btnNextStep">
                         Suivant<i class="fa fa-arrow-right ms-2"></i>
                     </button>
-                    <button class="btn btn--primary d-none" id="btnSaveInvoice">
-                        <i class="fa fa-save me-2"></i>Enregistrer la facture
+                    <button class="btn btn-success text-white fw-bold d-none shadow-sm" id="btnSaveInvoice">
+                        <i class="fa fa-check me-2"></i>Valider & Enregistrer
                     </button>
                 </div>
             </div>
@@ -1422,6 +1728,16 @@ document.addEventListener('DOMContentLoaded', function() {
 <datalist id="datalistFeuilleRoute"></datalist>
 <datalist id="datalistBonTransfert"></datalist>
 <datalist id="datalistPayRef"></datalist>
+<datalist id="datalistMatricule"></datalist>
+<datalist id="datalistImmoMotif">
+    <option value="Attente déchargement chez client">
+    <option value="Attente bon de réception / dépotage">
+    <option value="Attente chargement usine">
+    <option value="Blocage accès / Retard réception client">
+    <option value="Arrêt douane / Contrôle">
+    <option value="Attente documents / Bon de livraison">
+    <option value="Panne / Réparation sur site client">
+</datalist>
 
 </body>
 </html>
