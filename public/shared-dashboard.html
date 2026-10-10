@@ -674,24 +674,26 @@
 
         // Initialization
         document.addEventListener('DOMContentLoaded', async () => {
-            // First check if token is valid via GET
-            try {
-                const res = await fetch(`/api/shared/verify/${token}`);
-                if (!res.ok) {
-                    document.getElementById('loading').style.display = 'none';
-                    document.getElementById('auth-error').innerText = "Lien invalide ou expiré.";
-                    document.getElementById('auth-error').style.display = 'block';
-                    return;
-                }
-                const resData = await res.json();
-                if(resData.expiresAt) {
-                    setupExpiryTimer(resData.expiresAt);
-                }
-            } catch (err) {
-                console.error("Verification error", err);
-            }
+    try {
+        const res = await fetch(`/api/shared/verify/${token}`);
+        const resData = await res.json();
+        if (!resData.valid) {
             document.getElementById('loading').style.display = 'none';
-        });
+            document.getElementById('auth-error').innerText = resData.expired ? "Ce lien a expiré. Demandez un nouveau lien." : "Lien invalide.";
+            document.getElementById('auth-error').style.display = 'block';
+            document.getElementById('auth-screen').style.display = 'flex';
+            document.querySelector('.auth-btn').disabled = true;
+            return;
+        }
+        if(resData.expiresAt) setupExpiryTimer(resData.expiresAt);
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('auth-screen').style.display = 'flex';
+    } catch (err) {
+        console.error('Verification error', err);
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('auth-screen').style.display = 'flex';
+    }
+});
 
         function setupExpiryTimer(expiresAtIso) {
             const expiryTimeEl = document.getElementById('expiry-time');

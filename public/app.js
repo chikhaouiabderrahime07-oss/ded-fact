@@ -24,6 +24,7 @@ let dashboardCharts = {
 let clients = [];
 let invoices = [];
 let invoiceCounter = 1;
+let proformaCounter = 1;
 let currentInvoice = {};
 let currentStep = 1;
 let selectedInvoices = [];
@@ -306,6 +307,7 @@ async function loadDataFromServer() {
         invoices = data.invoices || [];
         settings = { ...settings, ...(data.settings || {}) };
         invoiceCounter = data.invoiceCounter || 1;
+        proformaCounter = data.proformaCounter || 1;
         clientWilayaPairPrices = data.clientWilayaPairPrices || {};
 
         initializeApp();
@@ -329,7 +331,7 @@ async function saveDataToLocalStorage() {
 
     const payload = {
         key: CURRENT_ACCESS_KEY,
-        clients, invoices, settings, invoiceCounter, clientWilayaPairPrices
+        clients, invoices, settings, invoiceCounter, proformaCounter, clientWilayaPairPrices
     };
 
     // Send to server in background
@@ -736,6 +738,7 @@ function showView(viewName) {
 		if (viewName === 'wilaya-prices') setupWilayaPriceManagement();
         if (viewName === 'immobilisation') updateImmobilisationView();
         if (viewName === 'location') { populateLocClientFilter(); populateLocEquipmentFilter(); updateLocationView(); }
+        if (viewName === 'proformas') { renderProformasView(); }
 
     } catch (error) {
         console.error('Error showing view:', error);
@@ -1586,6 +1589,7 @@ function renderStep5() {
                     </div>
                 </div>
             </div>
+            ${typeof renderProformaConditions === 'function' ? renderProformaConditions() : ''}
         `;
         
         const enableRemise = document.getElementById('enableRemise');
@@ -2879,6 +2883,14 @@ function generateInvoiceHTML(invoice, options = {}) {
                     </div>
                     ${refsHTML.length > 0 ? `<div class="references-list">${refsHTML}</div>` : ''}
                 </div>
+                ${invoice.documentType === 'proforma' && invoice.proformaConditions ? `
+                <div style="margin-top:15px; padding:10px; border:1px solid #d97706; border-radius:6px; font-size:0.85em;">
+                    <div style="font-weight:bold; text-decoration:underline; margin-bottom:8px;">Conditions Générales de Location :</div>
+                    <div style="margin-bottom:5px;"><b>Durée et Tarification :</b><br>${invoice.proformaConditions.duree || ''}</div>
+                    <div style="margin-bottom:5px;"><b>Modalités de Paiement :</b><br>${invoice.proformaConditions.paiement || ''}</div>
+                    <div style="margin-bottom:5px;"><b>Délai de paiement :</b><br>${invoice.proformaConditions.delai || ''}</div>
+                    <div style="margin-bottom:5px;"><b>Validité de l'Offre :</b><br>${invoice.proformaConditions.validite || ''}</div>
+                </div>` : ''}
             </div>
         `;
     } catch (e) {
@@ -3022,11 +3034,21 @@ function saveInvoice() {
                 paymentStatus: 'pending',
                 createdAt: new Date().toISOString()
             };
-            invoices.push(newInv);
+            
+            // Handle proforma conditions
+            if (typeof saveProformaConditions === 'function') saveProformaConditions();
 
-            // Update counter for next invoice
-            const base = parseInt(currentInvoice.number.split('/')[0], 10);
-            invoiceCounter = Number.isNaN(base) ? invoiceCounter + 1 : (base + 1);
+            if (currentInvoice.documentType === 'proforma') {
+                const year = new Date().getFullYear();
+                newInv.number = `FP-${String(proformaCounter).padStart(3, '0')}/${year}`;
+                proformaCounter++;
+            } else {
+                // Update counter for next invoice
+                const base = parseInt(currentInvoice.number.split('/')[0], 10);
+                invoiceCounter = Number.isNaN(base) ? invoiceCounter + 1 : (base + 1);
+            }
+            
+            invoices.push(newInv);
         }
 
         saveDataToLocalStorage();
@@ -8561,14 +8583,23 @@ window.convertProformaToFacture = function(invoiceId) {
     const inv = invoices.find(i => i.id === invoiceId);
     if (!inv || inv.documentType !== 'proforma') return;
     if (!confirm('Convertir cette proforma en facture définitive ?')) return;
-    inv.documentType = 'facture';
+    
+    // Create a new facture from the proforma
     const year = new Date().getFullYear();
-    inv.number = `${String(invoiceCounter).padStart(3, '0')}/${year}`;
+    const newFacture = JSON.parse(JSON.stringify(inv));
+    newFacture.id = Date.now();
+    newFacture.documentType = 'facture';
+    newFacture.number = `${String(invoiceCounter).padStart(3, '0')}/${year}`;
+    newFacture.convertedFromProforma = invoiceId;
+    newFacture.createdAt = new Date().toISOString();
     invoiceCounter++;
+    invoices.push(newFacture);
+    
     saveDataToLocalStorage();
     renderInvoices();
+    if (typeof renderProformasView === 'function') renderProformasView();
     updateDashboard();
-    alert('\u2705 Proforma convertie en Facture N\u00b0 ' + inv.number);
+    alert('\u2705 Facture N° ' + newFacture.number + ' créée à partir de la Proforma ' + inv.number);
 };
 
 // --- Location Analytics ---
@@ -8813,14 +8844,27 @@ async function loadShareLinks() {
         container.innerHTML = links.map(l => {
             const exp = new Date(l.expiresAt);
             const isExp = exp < new Date();
-            return `<div class="d-flex justify-content-between align-items-center p-2 mb-2 rounded border ${isExp?'bg-light text-muted':'bg-white'}">
-                <div><div class="fw-bold small">${l.label||'Dashboard'}</div>
-                <div class="text-muted" style="font-size:0.7rem;">Expire: ${exp.toLocaleDateString('fr-FR')} ${isExp?'<span class="badge bg-danger">Expiré</span>':'<span class="badge bg-success">Actif</span>'}</div></div>
-                <div class="d-flex gap-1">
-                    <button class="btn btn-outline-primary btn-sm" onclick="copyShareLink('${l.token}')" title="Copier"><i class="fa fa-copy"></i></button>
-                    <button class="btn btn-outline-warning btn-sm" onclick="extendShareLink('${l.token}')" title="Prolonger"><i class="fa fa-calendar-plus"></i></button>
-                    <button class="btn btn-outline-danger btn-sm" onclick="deleteShareLink('${l.token}')" title="Supprimer"><i class="fa fa-trash"></i></button>
-                </div></div>`;
+            const lastAcc = l.lastAccessedAt ? new Date(l.lastAccessedAt).toLocaleString('fr-FR') : 'Jamais';
+            return `<div class="p-2 mb-2 rounded border ${isExp?'bg-light text-muted':'bg-white shadow-sm'}">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <div class="fw-bold small"><i class="fa fa-link me-1"></i>${l.label||'Dashboard'}</div>
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-outline-primary btn-sm" onclick="copyShareLink('${l.token}')" title="Copier"><i class="fa fa-copy"></i></button>
+                        <button class="btn btn-outline-warning btn-sm" onclick="extendShareLink('${l.token}')" title="Prolonger"><i class="fa fa-calendar-plus"></i></button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="deleteShareLink('${l.token}')" title="Supprimer"><i class="fa fa-trash"></i></button>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between align-items-end" style="font-size:0.7rem;">
+                    <div>
+                        <div class="text-muted">Expire : ${exp.toLocaleDateString('fr-FR')} ${isExp?'<span class="badge bg-danger">Expiré</span>':'<span class="badge bg-success">Actif</span>'}</div>
+                    </div>
+                    <div class="text-end text-muted">
+                        <div>Vues : <b class="text-dark">${l.accessCount || 0}</b></div>
+                        <div>Dernier accès : <b class="text-dark">${lastAcc}</b></div>
+                        ${l.lastIP ? `<div>IP : <b class="text-dark">${l.lastIP}</b></div>` : ''}
+                    </div>
+                </div>
+            </div>`;
         }).join('');
     } catch(e) { console.error(e); }
 }
@@ -8840,3 +8884,251 @@ window.deleteShareLink = async function(token) {
     if (!confirm('Supprimer ce lien partagé ?')) return;
     try { await fetch(API_URL + '/api/share-links/' + token, { method:'DELETE' }); loadShareLinks(); } catch(e) { alert('Erreur'); }
 };
+
+
+// ════════════════════════════════════════════════════════════════════════════════
+// 📄 MODULE PROFORMA
+// ════════════════════════════════════════════════════════════════════════════════
+
+function openProformaWizard(initialType = null) {
+    // If no type specified, show type selector first
+    currentInvoice = {
+        documentType: 'proforma',
+        invoiceType: initialType || 'transport',
+        contratRef: '', bdcRef: '', blReferences: '', palettes: 0,
+        refFeuilleRoute: '', refBonTransfert: '',
+        showDestinationInDoitA: false,
+        remise: { enabled: false, type: 'percentage', value: 0 },
+        articles: [],
+        totals: { ht: 0, remise: 0, htRemise: 0, tva: 0, ttc: 0, netAPayer: 0 },
+        proformaConditions: {
+            duree: 'Location minimum de 4 heures avec tolérance de 30 minutes. Au-delà de 4h30, facturation automatique de 4 heures supplémentaires (total 8 heures).',
+            paiement: 'Chèque bancaire',
+            delai: '15 jours après réception de notre facture',
+            validite: 'Cette proforma est valable 15 jours à compter de sa date d\'émission.'
+        }
+    };
+    
+    // Set proforma number
+    const year = new Date().getFullYear();
+    currentInvoice.number = `FP-${String(proformaCounter).padStart(3, '0')}/${year}`;
+    currentInvoice.date = new Date().toISOString().split('T')[0];
+    
+    if (!initialType) {
+        // Show type selector modal
+        showProformaTypeSelector();
+    } else {
+        // Add default article based on type
+        addDefaultArticleForType(initialType);
+        currentStep = 1;
+        const modal = new bootstrap.Modal(document.getElementById('modalInvoice'));
+        renderWizardStep();
+        modal.show();
+    }
+}
+
+function showProformaTypeSelector() {
+    const html = `
+    <div class="modal fade" id="modalProformaType" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header border-0" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                    <h5 class="modal-title text-white fw-bold"><i class="fa fa-file-alt me-2"></i>Nouvelle Proforma — Type de Service</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-muted mb-4">Sélectionnez le type de service pour cette proforma :</p>
+                    <div class="d-grid gap-3">
+                        <button class="btn btn-lg btn-outline-primary text-start p-3 d-flex align-items-center gap-3" onclick="selectProformaType('transport')">
+                            <i class="fa fa-truck fa-2x" style="width:40px;"></i>
+                            <div><div class="fw-bold">Transport</div><div class="small text-muted">Prestation de transport routier de marchandises</div></div>
+                        </button>
+                        <button class="btn btn-lg text-start p-3 d-flex align-items-center gap-3" style="border:2px solid #dc3545;color:#dc3545;" onclick="selectProformaType('immobilisation')">
+                            <i class="fa fa-stopwatch fa-2x" style="width:40px;"></i>
+                            <div><div class="fw-bold">Immobilisation / Attente</div><div class="small text-muted">Frais d'attente et d'immobilisation de matériel roulant</div></div>
+                        </button>
+                        <button class="btn btn-lg text-start p-3 d-flex align-items-center gap-3" style="border:2px solid #f59e0b;color:#d97706;" onclick="selectProformaType('location')">
+                            <i class="fa fa-crane fa-2x" style="width:40px;"></i>
+                            <div><div class="fw-bold">Location / Engin</div><div class="small text-muted">Location de grue ou engin (25T, 50T, 75T...)</div></div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>`;
+    let existingModal = document.getElementById('modalProformaType');
+    if (existingModal) existingModal.remove();
+    document.body.insertAdjacentHTML('beforeend', html);
+    const modal = new bootstrap.Modal(document.getElementById('modalProformaType'));
+    modal.show();
+}
+
+window.selectProformaType = function(type) {
+    const typeModal = bootstrap.Modal.getInstance(document.getElementById('modalProformaType'));
+    if (typeModal) typeModal.hide();
+    currentInvoice.invoiceType = type;
+    addDefaultArticleForType(type);
+    setTimeout(() => {
+        currentStep = 1;
+        const modal = new bootstrap.Modal(document.getElementById('modalInvoice'));
+        renderWizardStep();
+        modal.show();
+    }, 300);
+};
+
+function addDefaultArticleForType(type) {
+    const immoRate = settings.defaultImmoRate || 2500;
+    const locRate = settings.defaultLocationRate || 150000;
+    const defaultEquip = (settings.locationEquipmentTypes || 'Grue 25T').split(',')[0].trim();
+    let art;
+    if (type === 'immobilisation') {
+        art = { no:1, isImmobilisation:true, isLocation:false, pricingType:'Immobilisation', immoTitle:"Frais d'attente et d'immobilisation", immoStage:'dechargement', immoTruckCount:1, matricule:'', immoDriver:'', immoPeriod:'', immoLocation:'', immoSiteChargement:'', immoSiteDechargement:'', immoReason:'Attente déchargement chez client', designation:"<b>Frais d'attente et d'immobilisation au Déchargement</b><br>-Motif : Attente déchargement chez client<br>-Total Heures Facturées : <b>8 Heures</b>", qte:8, prixUHT:immoRate, montantHT:immoRate*8, wilayaDepart:'', wilayaDestination:'', selectedDestination:'' };
+    } else if (type === 'location') {
+        art = { no:1, isLocation:true, isImmobilisation:false, pricingType:'Location', locEquipment:defaultEquip, locTonnage:'', locPeriodStart:'', locPeriodEnd:'', locSite:'', locDriver:'', designation:`<b>Location de ${defaultEquip}</b><br>-Site : <br>-Période : `, qte:1, prixUHT:locRate, montantHT:locRate, wilayaDepart:'', wilayaDestination:'', selectedDestination:'' };
+    } else {
+        art = { no:1, isImmobilisation:false, isLocation:false, pricingType:'Transport', designation:'<b>Prestation de transport routier</b><br>-WILAYA DEPART : <br>-DESTINATION : <br>-Nombre de palettes : 0', qte:1, prixUHT:0, montantHT:0, wilayaDepart:'', wilayaDestination:'', selectedDestination:'' };
+    }
+    currentInvoice.articles = [art];
+    currentInvoice.totals = { ht: art.montantHT, remise:0, htRemise: art.montantHT, tva: art.montantHT * 0.19, ttc: art.montantHT * 1.19, netAPayer: art.montantHT * 1.19 };
+}
+
+// Also modify openInvoiceWizard to show a type selector for facture too
+function openFactureTypeSelector() {
+    const html = `
+    <div class="modal fade" id="modalFactureType" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header border-0" style="background: linear-gradient(135deg, #007B7C, #005a5a);">
+                    <h5 class="modal-title text-white fw-bold"><i class="fa fa-file-invoice me-2"></i>Nouvelle Facture — Type de Service</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-muted mb-4">Sélectionnez le type de service pour cette facture :</p>
+                    <div class="d-grid gap-3">
+                        <button class="btn btn-lg btn-outline-primary text-start p-3 d-flex align-items-center gap-3" onclick="selectFactureType('transport')">
+                            <i class="fa fa-truck fa-2x" style="width:40px;"></i>
+                            <div><div class="fw-bold">Transport</div><div class="small text-muted">Prestation de transport routier de marchandises</div></div>
+                        </button>
+                        <button class="btn btn-lg text-start p-3 d-flex align-items-center gap-3" style="border:2px solid #dc3545;color:#dc3545;" onclick="selectFactureType('immobilisation')">
+                            <i class="fa fa-stopwatch fa-2x" style="width:40px;"></i>
+                            <div><div class="fw-bold">Immobilisation / Attente</div><div class="small text-muted">Frais d'attente et d'immobilisation de matériel roulant</div></div>
+                        </button>
+                        <button class="btn btn-lg text-start p-3 d-flex align-items-center gap-3" style="border:2px solid #f59e0b;color:#d97706;" onclick="selectFactureType('location')">
+                            <i class="fa fa-crane fa-2x" style="width:40px;"></i>
+                            <div><div class="fw-bold">Location / Engin</div><div class="small text-muted">Location de grue ou engin (25T, 50T, 75T...)</div></div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>`;
+    let existingModal = document.getElementById('modalFactureType');
+    if (existingModal) existingModal.remove();
+    document.body.insertAdjacentHTML('beforeend', html);
+    const modal = new bootstrap.Modal(document.getElementById('modalFactureType'));
+    modal.show();
+}
+window.selectFactureType = function(type) {
+    const typeModal = bootstrap.Modal.getInstance(document.getElementById('modalFactureType'));
+    if (typeModal) typeModal.hide();
+    setTimeout(() => openInvoiceWizard(type), 300);
+};
+
+// Proforma conditions step in the wizard - add to Step 5
+function renderProformaConditions() {
+    if (currentInvoice.documentType !== 'proforma') return '';
+    const conds = currentInvoice.proformaConditions || {};
+    return `
+    <div class="card border-warning mt-3">
+        <div class="card__header" style="background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e;">
+            <h6 class="mb-0 fw-bold"><i class="fa fa-gavel me-2"></i>Conditions Générales de Location</h6>
+        </div>
+        <div class="card__body">
+            <div class="mb-3">
+                <label class="form-label small fw-bold">Durée et Tarification :</label>
+                <textarea class="form-control form-control-sm" rows="2" id="condDuree">${conds.duree || ''}</textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label small fw-bold">Modalités de Paiement :</label>
+                <input type="text" class="form-control form-control-sm" id="condPaiement" value="${conds.paiement || 'Chèque bancaire'}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label small fw-bold">Délai de paiement :</label>
+                <input type="text" class="form-control form-control-sm" id="condDelai" value="${conds.delai || '15 jours après réception de notre facture'}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label small fw-bold">Validité de l'Offre :</label>
+                <input type="text" class="form-control form-control-sm" id="condValidite" value="${conds.validite || 'Cette proforma est valable 15 jours à compter de sa date d\\'émission.'}">
+            </div>
+        </div>
+    </div>`;
+}
+
+// Save proforma conditions from DOM
+function saveProformaConditions() {
+    if (currentInvoice.documentType !== 'proforma') return;
+    if (!currentInvoice.proformaConditions) currentInvoice.proformaConditions = {};
+    const d = document.getElementById('condDuree');
+    const p = document.getElementById('condPaiement');
+    const dl = document.getElementById('condDelai');
+    const v = document.getElementById('condValidite');
+    if (d) currentInvoice.proformaConditions.duree = d.value;
+    if (p) currentInvoice.proformaConditions.paiement = p.value;
+    if (dl) currentInvoice.proformaConditions.delai = dl.value;
+    if (v) currentInvoice.proformaConditions.validite = v.value;
+}
+
+// Proforma view functions
+function renderProformasView() {
+    const proformas = invoices.filter(i => i.documentType === 'proforma');
+    const converted = invoices.filter(i => i.convertedFromProforma);
+    const pending = proformas.filter(i => !converted.some(c => c.convertedFromProforma === i.id));
+    
+    // KPIs
+    const kpiTotal = document.getElementById('kpiProformaTotal');
+    const kpiConverted = document.getElementById('kpiProformaConverted');
+    const kpiRendement = document.getElementById('kpiProformaRendement');
+    const kpiPending = document.getElementById('kpiProformaPending');
+    if (kpiTotal) kpiTotal.textContent = proformas.length;
+    if (kpiConverted) kpiConverted.textContent = converted.length;
+    if (kpiRendement) kpiRendement.textContent = proformas.length ? ((converted.length / proformas.length) * 100).toFixed(0) + '%' : '0%';
+    if (kpiPending) kpiPending.textContent = pending.length;
+    
+    // Badge
+    const badge = document.getElementById('sidebarProformaBadge');
+    if (badge) badge.textContent = proformas.length;
+    
+    // Table
+    const tbody = document.getElementById('proformaTableBody');
+    if (!tbody) return;
+    if (!proformas.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Aucune proforma créée.</td></tr>'; return; }
+    tbody.innerHTML = proformas.sort((a,b) => new Date(b.date) - new Date(a.date)).map(fp => {
+        const client = clients.find(c => c.id === fp.clientId) || {};
+        const isConverted = converted.some(c => c.convertedFromProforma === fp.id);
+        const typeIcon = fp.invoiceType === 'location' ? '<i class="fa fa-crane" style="color:#f59e0b;"></i> Location' : fp.invoiceType === 'immobilisation' ? '<i class="fa fa-stopwatch text-danger"></i> Immo' : '<i class="fa fa-truck text-primary"></i> Transport';
+        const statusBadge = isConverted ? '<span class="badge bg-success"><i class="fa fa-check me-1"></i>Convertie</span>' : '<span class="badge bg-warning text-dark"><i class="fa fa-hourglass-half me-1"></i>En attente</span>';
+        const actions = isConverted ? `<button class="btn btn-sm btn-outline-secondary" disabled><i class="fa fa-check"></i></button>` : `<button class="btn btn-sm btn-success" onclick="convertProformaToFacture(${fp.id})" title="Convertir en Facture"><i class="fa fa-exchange-alt me-1"></i>Facture</button>`;
+        return `<tr class="text-center small">
+            <td class="fw-bold" style="color:#d97706;">${fp.number}</td>
+            <td>${new Date(fp.date).toLocaleDateString('fr-FR')}</td>
+            <td style="text-align:left;" class="fw-semibold">${client.nom || 'Inconnu'}</td>
+            <td>${typeIcon}</td>
+            <td class="fw-bold">${formatCurrency(fp.totals?.netAPayer || 0)}</td>
+            <td>${statusBadge}</td>
+            <td><div class="btn-group">
+                <button class="btn btn-sm btn-outline-primary" onclick="editInvoice(${fp.id})" title="Modifier"><i class="fa fa-edit"></i></button>
+                ${actions}
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteInvoice(${fp.id})" title="Supprimer"><i class="fa fa-trash"></i></button>
+            </div></td>
+        </tr>`;
+    }).join('');
+}
+
+// Password generator for share links
+function generateRandomPassword() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+    let pwd = '';
+    for (let i = 0; i < 15; i++) pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+    const el = document.getElementById('shareLinkPassword');
+    if (el) el.value = pwd;
+}

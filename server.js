@@ -73,7 +73,11 @@ if (DEV_MODE) {
         password: String, // bcrypt or plain (we'll use plain for simplicity)
         expiresAt: Date,
         createdAt: { type: Date, default: Date.now },
-        label: String
+        label: String,
+        accessCount: { type: Number, default: 0 },
+        lastAccessedAt: Date,
+        lastIP: String,
+        accessLog: [{ at: Date, ip: String }]
     });
     ShareLink = mongoose.model('ShareLink', shareLinkSchema);
 
@@ -228,7 +232,7 @@ app.post('/api/share-links', async (req, res) => {
         const token = crypto.randomBytes(32).toString('hex');
         
         if (DEV_MODE) {
-            devStore.shareLinks.push({ token, accessKey: key, password, expiresAt, label, createdAt: new Date() });
+            devStore.shareLinks.push({ token, accessKey: key, password, expiresAt, label, createdAt: new Date(), accessCount: 0, lastAccessedAt: null, lastIP: null, accessLog: [] });
             return res.json({ success: true, token, link: `/shared/${token}` });
         }
 
@@ -312,12 +316,23 @@ app.post('/api/shared/auth', async (req, res) => {
             data = await AppData.findOne({ accessKey: link.accessKey });
         }
 
-        if (!data) return res.status(404).json({ error: 'Aucune donnée trouvée' });
+        if (!data && !DEV_MODE) return res.status(404).json({ error: 'Aucune donnée trouvée' });
         
+        // Track access
+        if (DEV_MODE) {
+            const sl = devStore.shareLinks.find(l => l.token === token);
+            if (sl) { sl.accessCount = (sl.accessCount || 0) + 1; sl.lastAccessedAt = new Date(); sl.lastIP = req.ip || req.connection.remoteAddress || 'unknown'; if (!sl.accessLog) sl.accessLog = []; sl.accessLog.push({ at: new Date(), ip: req.ip || 'unknown' }); }
+        } else {
+            await ShareLink.updateOne({ token }, { $inc: { accessCount: 1 }, $set: { lastAccessedAt: new Date(), lastIP: req.ip || 'unknown' }, $push: { accessLog: { at: new Date(), ip: req.ip || 'unknown' } } });
+        }
+
         res.json({
-            clients: data.clients,
-            invoices: data.invoices,
-            settings: data.settings
+            success: true,
+            data: {
+                clients: data.clients,
+                invoices: data.invoices,
+                settings: data.settings
+            }
         });
     } catch (e) {
         res.status(500).json({ error: e.message });
