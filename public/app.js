@@ -722,15 +722,11 @@ function showView(viewName) {
         if (viewName === 'immobilisation') {
             showView('reports');
             if (typeof switchReportTab === 'function') switchReportTab('immo');
-            document.querySelectorAll('#mainNav .nav-link').forEach(link => link.classList.remove('active'));
-            document.querySelector(`[data-view="immobilisation"]`)?.classList.add('active');
             return;
         }
         if (viewName === 'location') {
             showView('reports');
             if (typeof switchReportTab === 'function') switchReportTab('loc');
-            document.querySelectorAll('#mainNav .nav-link').forEach(link => link.classList.remove('active'));
-            document.querySelector(`[data-view="location"]`)?.classList.add('active');
             return;
         }
 
