@@ -346,12 +346,12 @@
             margin: 0 auto;
         }
 
-        /* KPI CARDS (MIND-BLOWING DESIGN) */
+        /* KPI CARDS (PREMIUM GLASS DESIGN) */
         .kpi-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
-            gap: 0.75rem;
-            margin-bottom: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 0.65rem;
+            margin-bottom: 0.85rem;
         }
         @media (min-width: 1400px) {
             .kpi-grid {
@@ -360,20 +360,32 @@
         }
         .kpi-card {
             background: var(--bg-card);
-            border-radius: 1rem;
-            padding: 1rem 1rem;
+            border-radius: 0.85rem;
+            padding: 0.85rem 0.9rem;
             border: 1px solid var(--border);
             box-shadow: var(--shadow-sm);
-            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             position: relative;
             overflow: hidden;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            animation: kpiFadeIn 0.4s ease both;
+        }
+        .kpi-card:nth-child(1) { animation-delay: 0s; }
+        .kpi-card:nth-child(2) { animation-delay: 0.05s; }
+        .kpi-card:nth-child(3) { animation-delay: 0.1s; }
+        .kpi-card:nth-child(4) { animation-delay: 0.15s; }
+        .kpi-card:nth-child(5) { animation-delay: 0.2s; }
+        .kpi-card:nth-child(6) { animation-delay: 0.25s; }
+        .kpi-card:nth-child(7) { animation-delay: 0.3s; }
+        @keyframes kpiFadeIn {
+            from { opacity: 0; transform: translateY(8px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
         .kpi-card:hover {
             transform: translateY(-3px);
-            box-shadow: var(--shadow-lg);
+            box-shadow: 0 8px 24px -4px rgba(0,0,0,0.12), 0 0 0 1px var(--card-accent, var(--accent));
             border-color: var(--card-accent, var(--accent));
         }
         .kpi-card::before {
@@ -381,43 +393,54 @@
             position: absolute;
             top: 0; left: 0; right: 0;
             height: 3px;
-            background: var(--card-accent, var(--accent));
+            background: linear-gradient(90deg, var(--card-accent, var(--accent)), transparent);
+            border-radius: 3px 3px 0 0;
+        }
+        .kpi-card::after {
+            content: '';
+            position: absolute;
+            top: -30px; right: -30px;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--card-bg-subtle, rgba(37,99,235,0.06));
+            pointer-events: none;
         }
         .kpi-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.5rem;
         }
         .kpi-label {
-            font-size: 0.72rem;
-            font-weight: 700;
+            font-size: 0.65rem;
+            font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.06em;
             color: var(--text-secondary);
             margin: 0;
         }
         .kpi-icon-wrap {
-            width: 36px;
-            height: 36px;
-            border-radius: 0.65rem;
+            width: 32px;
+            height: 32px;
+            border-radius: 0.55rem;
             display: flex;
             align-items: center;
             justify-content: center;
             background: var(--card-bg-subtle, rgba(37, 99, 235, 0.1));
             color: var(--card-accent, var(--accent));
-            font-size: 0.95rem;
+            font-size: 0.85rem;
         }
         .kpi-value-block {
             display: flex;
             align-items: baseline;
             flex-wrap: wrap;
-            gap: 0.35rem;
-            margin-bottom: 0.5rem;
+            gap: 0.3rem;
+            margin-bottom: 0.4rem;
         }
         .kpi-num {
             font-family: 'Outfit', sans-serif;
-            font-size: 1.55rem;
+            font-size: 1.4rem;
             font-weight: 800;
             color: var(--text);
             line-height: 1.1;
@@ -425,28 +448,29 @@
             white-space: nowrap;
         }
         .kpi-unit {
-            font-size: 0.75rem;
+            font-size: 0.68rem;
             font-weight: 700;
             color: var(--text-secondary);
             text-transform: uppercase;
         }
         .kpi-footer {
-            font-size: 0.72rem;
+            font-size: 0.65rem;
             color: var(--text-secondary);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding-top: 0.5rem;
+            padding-top: 0.4rem;
             border-top: 1px dashed var(--border-subtle);
         }
         .kpi-badge {
-            font-size: 0.68rem;
+            font-size: 0.6rem;
             font-weight: 700;
-            padding: 0.15rem 0.45rem;
+            padding: 0.12rem 0.4rem;
             border-radius: 999px;
-            background: var(--border-subtle);
-            color: var(--text-secondary);
+            background: var(--card-bg-subtle, var(--border-subtle));
+            color: var(--card-accent, var(--text-secondary));
         }
+
 
         /* ADVANCED FILTER BAR */
         .filter-bar {
@@ -907,12 +931,13 @@
                         <option value="all">Tous les clients</option>
                     </select>
 
-                    <button class="btn-action" onclick="toggleTheme()" title="Basculer Mode Clair / Sombre">
-                        <i class="fas fa-moon" id="theme-icon"></i>
+                    <button class="btn-action" onclick="toggleTheme()" id="btn-theme-toggle" title="Passer en Mode Sombre" style="gap:6px;display:inline-flex;align-items:center;border-radius:999px;padding:0.38rem 0.85rem;background:var(--border-subtle);border:1px solid var(--border);">
+                        <i class="fas fa-moon text-primary" id="theme-icon" style="font-size:0.85rem;"></i>
+                        <span id="theme-label" style="font-size:0.72rem;font-weight:700;">Mode Sombre</span>
                     </button>
 
-                    <button class="btn-action btn-accent" onclick="downloadFullDashboard()" id="btn-export-full">
-                        <i class="fas fa-camera"></i> Exporter HD (PNG)
+                    <button class="btn-action btn-accent" onclick="exportChartsRecap()" id="btn-export-full" title="Exporter une capture HD des graphiques et du récapitulatif financier" style="gap:6px;border-radius:999px;padding:0.38rem 0.95rem;">
+                        <i class="fas fa-camera"></i> <span style="font-weight:700;font-size:0.72rem;">Exporter Récap HD (PNG)</span>
                     </button>
 
                     <button class="btn-action" onclick="logoutSession()" title="Verrouiller la session">
@@ -1002,7 +1027,7 @@
                 <!-- 1. CA TOTAL TTC -->
                 <div class="kpi-card" style="--card-accent:#2563eb; --card-bg-subtle:rgba(37,99,235,0.1);">
                     <div class="kpi-header">
-                        <span class="kpi-label">Chiffre d'Affaires Total</span>
+                        <span class="kpi-label">C.A. Global Facturé</span>
                         <div class="kpi-icon-wrap"><i class="fas fa-wallet"></i></div>
                     </div>
                     <div class="kpi-value-block">
@@ -1011,7 +1036,7 @@
                     </div>
                     <div class="kpi-footer">
                         <span>Montant HT : <b id="kpi-ca-ht">0 DA</b></span>
-                        <span class="kpi-badge" id="kpi-badge-ca">Année Globale</span>
+                        <span class="kpi-badge" id="kpi-badge-ca">Consolidé</span>
                     </div>
                 </div>
 
@@ -1033,7 +1058,7 @@
                 <!-- 3. BONS DE LIVRAISON -->
                 <div class="kpi-card" style="--card-accent:#f59e0b; --card-bg-subtle:rgba(245,158,11,0.1);">
                     <div class="kpi-header">
-                        <span class="kpi-label">Bons de Livraison (BL)</span>
+                        <span class="kpi-label">Volume Logistique (BL)</span>
                         <div class="kpi-icon-wrap"><i class="fas fa-boxes-stacked"></i></div>
                     </div>
                     <div class="kpi-value-block">
@@ -1041,7 +1066,7 @@
                         <span class="kpi-unit">BLs</span>
                     </div>
                     <div class="kpi-footer">
-                        <span>Rotations de transport</span>
+                        <span>Rotations transport</span>
                         <span class="kpi-badge" id="kpi-bl-ratio">0 BL / fact.</span>
                     </div>
                 </div>
@@ -1049,7 +1074,7 @@
                 <!-- 4. CRÉANCE TOTALE -->
                 <div class="kpi-card" style="--card-accent:#ef4444; --card-bg-subtle:rgba(239,68,68,0.1);">
                     <div class="kpi-header">
-                        <span class="kpi-label">Créances en Attente</span>
+                        <span class="kpi-label">Créances & Encours Débiteurs</span>
                         <div class="kpi-icon-wrap"><i class="fas fa-hand-holding-dollar"></i></div>
                     </div>
                     <div class="kpi-value-block">
@@ -1058,14 +1083,14 @@
                     </div>
                     <div class="kpi-footer">
                         <span>Encaissé : <b id="kpi-encaisse-val" class="text-success">0 DA</b></span>
-                        <span class="kpi-badge text-danger fw-bold" id="kpi-badge-creance">À percevoir</span>
+                        <span class="kpi-badge text-danger fw-bold" id="kpi-badge-creance">À recouvrer</span>
                     </div>
                 </div>
 
                 <!-- 5. TAUX DE CRÉANCE -->
                 <div class="kpi-card" style="--card-accent:#8b5cf6; --card-bg-subtle:rgba(139,92,246,0.1);">
                     <div class="kpi-header">
-                        <span class="kpi-label">Taux d'Impayés</span>
+                        <span class="kpi-label">Taux de Créance & Risque</span>
                         <div class="kpi-icon-wrap"><i class="fas fa-chart-pie"></i></div>
                     </div>
                     <div class="kpi-value-block">
@@ -1080,7 +1105,7 @@
                 <!-- 6. CA IMMOBILISATION -->
                 <div class="kpi-card" style="--card-accent:#dc2626; --card-bg-subtle:rgba(220,38,38,0.1);">
                     <div class="kpi-header">
-                        <span class="kpi-label">Frais Immobilisation</span>
+                        <span class="kpi-label">Immobilisation Flotte</span>
                         <div class="kpi-icon-wrap"><i class="fas fa-stopwatch"></i></div>
                     </div>
                     <div class="kpi-value-block">
@@ -1096,7 +1121,7 @@
                 <!-- 7. CA LOCATION D'ENGINS -->
                 <div class="kpi-card" style="--card-accent:#d97706; --card-bg-subtle:rgba(217,119,6,0.1);">
                     <div class="kpi-header">
-                        <span class="kpi-label">Location Grues & Engins</span>
+                        <span class="kpi-label">Location d'Engins & Levage</span>
                         <div class="kpi-icon-wrap"><i class="fa-solid fa-tractor"></i></div>
                     </div>
                     <div class="kpi-value-block">
@@ -1372,7 +1397,7 @@
         let filteredInvoices = [];
         let chartInstances = {};
         let modalChartInstance = null;
-        let dataLabelsEnabled = {}; // chartId -> boolean
+        let dataLabelsEnabled = {}; // chartId -> boolean (default: true)
 
         const palette = [
             '#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', 
@@ -2037,6 +2062,15 @@
             const eqLabels = Object.keys(equipCA);
             const eqData = Object.values(equipCA);
             buildDoughnutChart('chart-loc-equip', eqLabels, eqData, palette, 'empty-chart-loc-equip');
+
+            // Sync all datalabel toolbar buttons to active state by default
+            document.querySelectorAll(".btn-chart-tool[onclick*='toggleDataLabels']").forEach(btn => {
+                const match = btn.getAttribute('onclick').match(/toggleDataLabels\(['"]([^'"]+)['"]\)/);
+                if (match) {
+                    const id = match[1];
+                    btn.classList.toggle('active', dataLabelsEnabled[id] !== false);
+                }
+            });
         }
 
         // ════════════════════════════════════════════════════════════════
@@ -2057,7 +2091,7 @@
             if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
 
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            const showLabels = dataLabelsEnabled[canvasId] || false;
+            const showLabels = dataLabelsEnabled[canvasId] !== false;
 
             chartInstances[canvasId] = new Chart(ctx, {
                 type: 'bar',
@@ -2123,7 +2157,7 @@
             if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
 
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            const showLabels = dataLabelsEnabled[canvasId] || false;
+            const showLabels = dataLabelsEnabled[canvasId] !== false;
 
             chartInstances[canvasId] = new Chart(ctx, {
                 type: 'bar',
@@ -2194,6 +2228,7 @@
             if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
 
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const showLabels = dataLabelsEnabled[canvasId] !== false;
             const total = data.reduce((a,b) => a + b, 0);
 
             chartInstances[canvasId] = new Chart(ctx, {
@@ -2237,12 +2272,13 @@
                             }
                         },
                         datalabels: {
+                            display: showLabels,
                             color: '#ffffff',
                             font: { weight: 'bold', size: 11 },
                             formatter: (val) => {
                                 if (!val || total === 0) return '';
                                 const pct = (val / total) * 100;
-                                return pct >= 6 ? `${pct.toFixed(0)}%` : '';
+                                return pct >= 5 ? `${pct.toFixed(0)}%` : '';
                             }
                         }
                     },
@@ -2258,6 +2294,7 @@
             if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
 
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const showLabels = dataLabelsEnabled[canvasId] !== false;
 
             chartInstances[canvasId] = new Chart(ctx, {
                 type: 'line',
@@ -2270,7 +2307,7 @@
                         backgroundColor: color + '22',
                         borderWidth: 2.5,
                         pointBackgroundColor: color,
-                        pointRadius: 3.5,
+                        pointRadius: 4,
                         pointHoverRadius: 6,
                         fill: true,
                         tension: 0.35
@@ -2280,6 +2317,12 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: {
+                        padding: {
+                            top: 20,
+                            bottom: 5
+                        }
+                    },
                     plugins: {
                         legend: { display: false },
                         tooltip: {
@@ -2290,7 +2333,15 @@
                             borderWidth: 1,
                             callbacks: { label: (ctx) => ` ${ctx.raw} BLs livrés` }
                         },
-                        datalabels: { display: false }
+                        datalabels: {
+                            display: showLabels,
+                            align: 'top',
+                            anchor: 'center',
+                            offset: 4,
+                            color: isDark ? '#f8fafc' : '#334155',
+                            font: { weight: 'bold', size: 10 },
+                            formatter: (v) => v > 0 ? v : ''
+                        }
                     },
                     scales: {
                         x: {
@@ -2306,18 +2357,19 @@
             });
         }
 
-        // Toggle DataLabels per chart
+        // Toggle DataLabels per chart (default is ON)
         function toggleDataLabels(chartId) {
-            dataLabelsEnabled[chartId] = !dataLabelsEnabled[chartId];
+            const current = dataLabelsEnabled[chartId] !== false;
+            dataLabelsEnabled[chartId] = !current;
             const chart = chartInstances[chartId];
             if (chart) {
                 if (chart.options.plugins.datalabels) {
-                    chart.options.plugins.datalabels.display = dataLabelsEnabled[chartId];
+                    chart.options.plugins.datalabels.display = !current;
                 }
                 chart.update();
             }
             const btn = document.querySelector(`button[onclick*="'${chartId}'"]`);
-            if (btn) btn.classList.toggle('active', !!dataLabelsEnabled[chartId]);
+            if (btn) btn.classList.toggle('active', !current);
         }
 
         // ════════════════════════════════════════════════════════════════
@@ -2395,7 +2447,7 @@
             link.click();
         }
 
-        function downloadFullDashboard() {
+        function exportChartsRecap() {
             const targetEl = document.getElementById('dashboard-view');
             if (!targetEl) return;
             if (typeof html2canvas === 'undefined') {
@@ -2406,7 +2458,7 @@
             const btn = document.getElementById('btn-export-full');
             const originalHTML = btn ? btn.innerHTML : '';
             if (btn) {
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Génération HD...';
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Génération Récap HD...';
                 btn.disabled = true;
             }
 
@@ -2415,9 +2467,21 @@
             const prevPosition = topbar ? topbar.style.position : '';
             const scrollPos = window.scrollY;
 
-            // Scroll to absolute top and neutralize sticky positioning so header renders at top (never over charts)
+            // Elements to hide temporarily so the export captures an executive recap of charts + KPIs only
+            const tableCard = document.querySelector('.table-card');
+            const topbarActions = document.querySelector('.topbar-actions');
+            const filterBarInner = document.querySelector('.filter-bar-inner');
+
+            const prevTableDisplay = tableCard ? tableCard.style.display : '';
+            const prevActionsDisplay = topbarActions ? topbarActions.style.display : '';
+            const prevFilterInnerDisplay = filterBarInner ? filterBarInner.style.display : '';
+
+            // Neutralize scrolling and hide unnecessary elements
             window.scrollTo(0, 0);
             if (topbar) topbar.style.position = 'static';
+            if (tableCard) tableCard.style.display = 'none';
+            if (topbarActions) topbarActions.style.display = 'none';
+            if (filterBarInner) filterBarInner.style.display = 'none';
 
             setTimeout(() => {
                 html2canvas(targetEl, {
@@ -2429,13 +2493,16 @@
                     logging: false
                 }).then(canvas => {
                     const link = document.createElement('a');
-                    link.download = `Douroub_Dashboard_Executive_KPI_${new Date().toISOString().slice(0,10)}.png`;
+                    link.download = `SPA_Douroub_Recap_Graphiques_KPI_${new Date().toISOString().slice(0,10)}.png`;
                     link.href = canvas.toDataURL('image/png', 1.0);
                     link.click();
                 }).catch(err => {
                     alert("Erreur lors de la capture : " + err.message);
                 }).finally(() => {
                     if (topbar) topbar.style.position = prevPosition;
+                    if (tableCard) tableCard.style.display = prevTableDisplay;
+                    if (topbarActions) topbarActions.style.display = prevActionsDisplay;
+                    if (filterBarInner) filterBarInner.style.display = prevFilterInnerDisplay;
                     window.scrollTo(0, scrollPos);
                     if (btn) {
                         btn.innerHTML = originalHTML;
@@ -2443,6 +2510,10 @@
                     }
                 });
             }, 120);
+        }
+
+        function downloadFullDashboard() {
+            exportChartsRecap();
         }
 
         // ════════════════════════════════════════════════════════════════
@@ -2517,7 +2588,13 @@
             html.setAttribute('data-theme', next);
 
             const icon = document.getElementById('theme-icon');
-            if (icon) icon.className = next === 'dark' ? 'fas fa-sun text-warning' : 'fas fa-moon';
+            if (icon) icon.className = next === 'dark' ? 'fas fa-sun text-warning' : 'fas fa-moon text-primary';
+
+            const label = document.getElementById('theme-label');
+            if (label) label.textContent = next === 'dark' ? 'Mode Clair' : 'Mode Sombre';
+
+            const btn = document.getElementById('btn-theme-toggle');
+            if (btn) btn.title = next === 'dark' ? 'Passer en Mode Clair' : 'Passer en Mode Sombre';
 
             renderAllCharts();
         }
