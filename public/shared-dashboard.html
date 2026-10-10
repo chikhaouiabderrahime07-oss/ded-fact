@@ -448,56 +448,162 @@
             color: var(--text-secondary);
         }
 
-        /* CHARTS GRID */
-        .charts-grid {
-            display: grid;
-            grid-template-columns: repeat(12, 1fr);
-            gap: 0.75rem;
-            margin-bottom: 1.25rem;
-        }
-        .col-12 { grid-column: span 12; }
-        .col-8  { grid-column: span 8; }
-        .col-7  { grid-column: span 7; }
-        .col-6  { grid-column: span 6; }
-        .col-5  { grid-column: span 5; }
-        .col-4  { grid-column: span 4; }
-
-        @media (max-width: 1200px) {
-            .col-8, .col-7, .col-6, .col-5, .col-4 { grid-column: span 12; }
-        }
-
-        .chart-card {
+        /* ADVANCED FILTER BAR */
+        .filter-bar {
             background: var(--bg-card);
-            border-radius: 1rem;
             border: 1px solid var(--border);
+            border-radius: 0.85rem;
+            padding: 0.65rem 0.85rem;
+            margin-bottom: 0.85rem;
             box-shadow: var(--shadow-sm);
-            padding: 0.85rem 1rem;
+            animation: chartFadeIn 0.3s ease both;
+        }
+        .filter-bar-inner {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: flex-end;
+        }
+        .filter-group {
             display: flex;
             flex-direction: column;
-            height: 340px;
-            transition: box-shadow 0.2s, border-color 0.2s;
+            gap: 2px;
+            flex: 1 1 120px;
+            min-width: 100px;
+            max-width: 180px;
+        }
+        .filter-group label {
+            font-size: 0.62rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .filter-group label i {
+            font-size: 0.58rem;
+            color: var(--accent);
+        }
+        .filter-ctrl {
+            font-size: 0.72rem;
+            padding: 0.3rem 0.5rem;
+            border-radius: 0.45rem;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            outline: none;
+            transition: border-color 0.2s;
+            font-family: inherit;
+            height: 30px;
+        }
+        .filter-ctrl:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(37,99,235,0.12);
+        }
+        .filter-reset-group {
+            flex: 0 0 auto;
+            min-width: auto;
+            max-width: none;
+            justify-content: flex-end;
+        }
+        .filter-reset-btn {
+            background: var(--danger-bg);
+            color: var(--danger);
+            border: 1px solid rgba(239,68,68,0.3);
+            border-radius: 0.45rem;
+            width: 30px;
+            height: 30px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.7rem;
+            transition: all 0.2s;
+        }
+        .filter-reset-btn:hover {
+            background: var(--danger);
+            color: white;
+        }
+        .filter-active-count {
+            font-size: 0.65rem;
+            color: var(--accent);
+            font-weight: 600;
+            margin-top: 0.35rem;
+            min-height: 0.8rem;
+        }
+
+        /* CHARTS GRID */
+        .charts-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.65rem;
+            margin-bottom: 1rem;
+        }
+        .chart-card {
+            background: var(--bg-card);
+            border-radius: 0.85rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            padding: 0.75rem 0.85rem;
+            display: flex;
+            flex-direction: column;
+            height: 320px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             position: relative;
+            overflow: hidden;
+            animation: chartFadeIn 0.5s ease both;
+        }
+        .chart-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: var(--accent-gradient);
+            opacity: 0;
+            transition: opacity 0.3s;
         }
         .chart-card:hover {
-            box-shadow: var(--shadow-md);
-            border-color: rgba(37, 99, 235, 0.3);
+            box-shadow: var(--shadow-lg);
+            border-color: rgba(37, 99, 235, 0.35);
+            transform: translateY(-2px);
         }
+        .chart-card:hover::before { opacity: 1; }
+        .chart-card.col-6 { width: calc(50% - 0.35rem); min-width: 380px; }
+        .chart-card.col-12 { width: 100%; height: 280px; }
+        @media (max-width: 900px) {
+            .chart-card.col-6 { width: 100%; min-width: unset; }
+        }
+        @keyframes chartFadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .chart-card:nth-child(1) { animation-delay: 0s; }
+        .chart-card:nth-child(2) { animation-delay: 0.06s; }
+        .chart-card:nth-child(3) { animation-delay: 0.12s; }
+        .chart-card:nth-child(4) { animation-delay: 0.18s; }
+        .chart-card:nth-child(5) { animation-delay: 0.24s; }
+        .chart-card:nth-child(6) { animation-delay: 0.3s; }
+        .chart-card:nth-child(7) { animation-delay: 0.36s; }
+        .chart-card:nth-child(8) { animation-delay: 0.42s; }
+        .chart-card:nth-child(9) { animation-delay: 0.48s; }
         .chart-card-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 0.45rem;
-            gap: 0.4rem;
+            margin-bottom: 0.35rem;
+            gap: 0.35rem;
             flex-wrap: nowrap;
         }
         .chart-card-title {
-            font-size: 0.78rem;
+            font-size: 0.72rem;
             font-weight: 700;
             color: var(--text);
             margin: 0;
             display: flex;
             align-items: center;
-            gap: 0.4rem;
+            gap: 0.35rem;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -505,20 +611,20 @@
         .chart-toolbar {
             display: flex;
             align-items: center;
-            gap: 0.25rem;
+            gap: 0.2rem;
             flex-shrink: 0;
         }
         .btn-chart-tool {
             background: transparent;
             border: 1px solid var(--border);
             color: var(--text-secondary);
-            width: 26px;
-            height: 26px;
-            border-radius: 0.4rem;
+            width: 24px;
+            height: 24px;
+            border-radius: 0.35rem;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             cursor: pointer;
             transition: all 0.15s;
         }
@@ -536,7 +642,7 @@
         .chart-canvas-wrap {
             position: relative;
             flex: 1;
-            height: calc(100% - 36px);
+            min-height: 0;
             width: 100%;
         }
 
@@ -818,6 +924,78 @@
 
         <!-- DASHBOARD BODY -->
         <main class="dashboard-container" id="dashboard-content">
+            <!-- ADVANCED FILTER BAR -->
+            <div class="filter-bar" id="advanced-filters">
+                <div class="filter-bar-inner">
+                    <div class="filter-group">
+                        <label><i class="fas fa-calendar-alt"></i> Année</label>
+                        <select id="filter-year-adv" class="filter-ctrl" onchange="applyFilters()">
+                            <option value="all">Toutes</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label><i class="fas fa-calendar-day"></i> Mois</label>
+                        <select id="filter-month" class="filter-ctrl" onchange="applyFilters()">
+                            <option value="all">Tous</option>
+                            <option value="0">Janvier</option><option value="1">Février</option>
+                            <option value="2">Mars</option><option value="3">Avril</option>
+                            <option value="4">Mai</option><option value="5">Juin</option>
+                            <option value="6">Juillet</option><option value="7">Août</option>
+                            <option value="8">Septembre</option><option value="9">Octobre</option>
+                            <option value="10">Novembre</option><option value="11">Décembre</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label><i class="fas fa-calendar-week"></i> Période</label>
+                        <select id="filter-period" class="filter-ctrl" onchange="applyFilters()">
+                            <option value="all">Toute l'année</option>
+                            <optgroup label="Semestres"><option value="S1">S1 (Jan-Juin)</option><option value="S2">S2 (Juil-Déc)</option></optgroup>
+                            <optgroup label="Trimestres"><option value="Q1">T1 (Jan-Mar)</option><option value="Q2">T2 (Avr-Jun)</option><option value="Q3">T3 (Jul-Sep)</option><option value="Q4">T4 (Oct-Déc)</option></optgroup>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label><i class="fas fa-user-tie"></i> Client</label>
+                        <select id="filter-client-adv" class="filter-ctrl" onchange="applyFilters()">
+                            <option value="all">Tous les clients</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label><i class="fas fa-truck"></i> Prestation</label>
+                        <select id="filter-service" class="filter-ctrl" onchange="applyFilters()">
+                            <option value="all">Toutes</option>
+                            <option value="transport">🚛 Transport</option>
+                            <option value="immobilisation">⏱️ Immobilisation</option>
+                            <option value="location">🏗️ Location</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label><i class="fas fa-location-dot"></i> Destination</label>
+                        <select id="filter-destination" class="filter-ctrl" onchange="applyFilters()">
+                            <option value="all">Toutes wilayas</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label><i class="fas fa-circle-check"></i> Statut</label>
+                        <select id="filter-status" class="filter-ctrl" onchange="applyFilters()">
+                            <option value="all">Tous</option>
+                            <option value="paid">✅ Payée</option>
+                            <option value="unpaid">⚠️ Impayée</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label><i class="fas fa-calendar-minus"></i> Du</label>
+                        <input type="date" id="filter-date-start" class="filter-ctrl" onchange="applyFilters()">
+                    </div>
+                    <div class="filter-group">
+                        <label><i class="fas fa-calendar-plus"></i> Au</label>
+                        <input type="date" id="filter-date-end" class="filter-ctrl" onchange="applyFilters()">
+                    </div>
+                    <div class="filter-group filter-reset-group">
+                        <button class="filter-reset-btn" onclick="resetAllFilters()" title="Réinitialiser"><i class="fas fa-undo"></i></button>
+                    </div>
+                </div>
+                <div class="filter-active-count" id="filter-active-count"></div>
+            </div>
             
             <!-- SECTION 1: EXECUTIVE KPI CARDS -->
             <div class="kpi-grid">
@@ -1472,6 +1650,9 @@
         function populateFilters() {
             const ySel = document.getElementById('filter-year');
             const cSel = document.getElementById('filter-client');
+            const ySelAdv = document.getElementById('filter-year-adv');
+            const cSelAdv = document.getElementById('filter-client-adv');
+            const dSel = document.getElementById('filter-destination');
             
             const invoices = (globalData.invoices || []).filter(i => i.documentType !== 'proforma');
             
@@ -1484,50 +1665,158 @@
                 }
             });
 
-            ySel.innerHTML = '<option value="all">Toutes les années</option>';
-            Array.from(years).sort((a,b) => b - a).forEach(y => {
-                const opt = document.createElement('option');
-                opt.value = y;
-                opt.textContent = `Année ${y}`;
-                if (y === 2026) opt.selected = true; // default current active year
-                ySel.appendChild(opt);
-            });
+            const yearHtml = '<option value="all">Toutes</option>' + Array.from(years).sort((a,b) => b - a).map(y => 
+                `<option value="${y}" ${y === 2026 ? 'selected' : ''}>Année ${y}</option>`
+            ).join('');
+            if (ySel) ySel.innerHTML = yearHtml.replace('Toutes', 'Toutes les années');
+            if (ySelAdv) ySelAdv.innerHTML = yearHtml;
 
             // Clients
-            cSel.innerHTML = '<option value="all">Tous les clients</option>';
             const clients = globalData.clients || [];
-            clients.forEach(c => {
-                const opt = document.createElement('option');
-                opt.value = c.id || c._id;
-                opt.textContent = c.nom || c.name;
-                cSel.appendChild(opt);
-            });
+            const clientHtml = '<option value="all">Tous les clients</option>' + clients.map(c => 
+                `<option value="${c.id || c._id}">${c.nom || c.name}</option>`
+            ).join('');
+            if (cSel) cSel.innerHTML = clientHtml;
+            if (cSelAdv) cSelAdv.innerHTML = clientHtml;
+
+            // Destinations / Wilayas
+            if (dSel) {
+                const wilayas = new Set();
+                invoices.forEach(inv => {
+                    if (inv.articles && Array.isArray(inv.articles)) {
+                        inv.articles.forEach(art => {
+                            if (art.destination) wilayas.add(art.destination);
+                            if (art.wilaya) wilayas.add(art.wilaya);
+                        });
+                    }
+                    if (inv.destination) wilayas.add(inv.destination);
+                });
+                dSel.innerHTML = '<option value="all">Toutes wilayas</option>' + Array.from(wilayas).sort().map(w => 
+                    `<option value="${w}">${w}</option>`
+                ).join('');
+            }
         }
 
         function applyFilters() {
             const yearVal = document.getElementById('filter-year').value;
             const clientVal = document.getElementById('filter-client').value;
+            const monthVal = (document.getElementById('filter-month') || {}).value || 'all';
+            const periodVal = (document.getElementById('filter-period') || {}).value || 'all';
+            const serviceVal = (document.getElementById('filter-service') || {}).value || 'all';
+            const destVal = (document.getElementById('filter-destination') || {}).value || 'all';
+            const statusVal = (document.getElementById('filter-status') || {}).value || 'all';
+            const dateStart = (document.getElementById('filter-date-start') || {}).value || '';
+            const dateEnd = (document.getElementById('filter-date-end') || {}).value || '';
+
+            // Sync adv filters to topbar
+            const yAdv = document.getElementById('filter-year-adv');
+            const cAdv = document.getElementById('filter-client-adv');
+            if (yAdv && yAdv.value !== yearVal && document.activeElement !== yAdv) yAdv.value = yearVal;
+            if (cAdv && cAdv.value !== clientVal && document.activeElement !== cAdv) cAdv.value = clientVal;
+            // Sync topbar from adv
+            const yTop = document.getElementById('filter-year');
+            const cTop = document.getElementById('filter-client');
+            if (yAdv && document.activeElement === yAdv && yTop) yTop.value = yAdv.value;
+            if (cAdv && document.activeElement === cAdv && cTop) cTop.value = cAdv.value;
+
+            const finalYear = (yAdv && document.activeElement === yAdv) ? yAdv.value : yearVal;
+            const finalClient = (cAdv && document.activeElement === cAdv) ? cAdv.value : clientVal;
+
+            // Period month ranges
+            const periodMonths = {
+                'S1': [0,1,2,3,4,5], 'S2': [6,7,8,9,10,11],
+                'Q1': [0,1,2], 'Q2': [3,4,5], 'Q3': [6,7,8], 'Q4': [9,10,11]
+            };
 
             const allInvoices = (globalData.invoices || []).filter(i => i.documentType !== 'proforma');
 
             filteredInvoices = allInvoices.filter(inv => {
-                // Year filter
-                if (yearVal !== 'all' && inv.date) {
-                    const y = new Date(inv.date).getFullYear().toString();
-                    if (y !== yearVal) return false;
+                const invDate = inv.date ? new Date(inv.date) : null;
+                // Year
+                if (finalYear !== 'all' && invDate) {
+                    if (invDate.getFullYear().toString() !== finalYear) return false;
                 }
-                // Client filter
-                if (clientVal !== 'all') {
-                    const idMatch = String(inv.clientId) === String(clientVal);
-                    const objMatch = inv.client && String(inv.client._id || inv.client.id) === String(clientVal);
+                // Month
+                if (monthVal !== 'all' && invDate) {
+                    if (invDate.getMonth() !== parseInt(monthVal)) return false;
+                }
+                // Period
+                if (periodVal !== 'all' && invDate && periodMonths[periodVal]) {
+                    if (!periodMonths[periodVal].includes(invDate.getMonth())) return false;
+                }
+                // Client
+                if (finalClient !== 'all') {
+                    const idMatch = String(inv.clientId) === String(finalClient);
+                    const objMatch = inv.client && String(inv.client._id || inv.client.id) === String(finalClient);
                     if (!idMatch && !objMatch) return false;
+                }
+                // Service type
+                if (serviceVal !== 'all' && inv.articles && Array.isArray(inv.articles)) {
+                    if (serviceVal === 'transport') {
+                        const hasTransport = inv.articles.some(a => !a.isImmobilisation && !a.isLocation);
+                        if (!hasTransport) return false;
+                    } else if (serviceVal === 'immobilisation') {
+                        const hasImmo = inv.articles.some(a => a.isImmobilisation);
+                        if (!hasImmo) return false;
+                    } else if (serviceVal === 'location') {
+                        const hasLoc = inv.articles.some(a => a.isLocation);
+                        if (!hasLoc) return false;
+                    }
+                }
+                // Destination
+                if (destVal !== 'all') {
+                    const hasWilaya = (inv.articles || []).some(a => a.destination === destVal || a.wilaya === destVal) || inv.destination === destVal;
+                    if (!hasWilaya) return false;
+                }
+                // Status
+                if (statusVal !== 'all') {
+                    const isPaid = inv.paid || inv.paymentStatus === 'encaissee';
+                    if (statusVal === 'paid' && !isPaid) return false;
+                    if (statusVal === 'unpaid' && isPaid) return false;
+                }
+                // Custom date range
+                if (dateStart && invDate) {
+                    if (invDate < new Date(dateStart)) return false;
+                }
+                if (dateEnd && invDate) {
+                    if (invDate > new Date(dateEnd + 'T23:59:59')) return false;
                 }
                 return true;
             });
 
+            // Update active filter count
+            let activeCount = 0;
+            if (finalYear !== 'all') activeCount++;
+            if (monthVal !== 'all') activeCount++;
+            if (periodVal !== 'all') activeCount++;
+            if (finalClient !== 'all') activeCount++;
+            if (serviceVal !== 'all') activeCount++;
+            if (destVal !== 'all') activeCount++;
+            if (statusVal !== 'all') activeCount++;
+            if (dateStart) activeCount++;
+            if (dateEnd) activeCount++;
+            const countEl = document.getElementById('filter-active-count');
+            if (countEl) {
+                countEl.textContent = activeCount > 0 
+                    ? `🔍 ${activeCount} filtre(s) actif(s) — ${filteredInvoices.length} facture(s) trouvée(s)` 
+                    : `📊 ${filteredInvoices.length} facture(s) au total`;
+            }
+
             updateKPIs();
             renderAllCharts();
             renderTable();
+        }
+
+        function resetAllFilters() {
+            ['filter-year','filter-client','filter-year-adv','filter-client-adv','filter-month','filter-period','filter-service','filter-destination','filter-status'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = 'all';
+            });
+            ['filter-date-start','filter-date-end'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            applyFilters();
         }
 
         // ════════════════════════════════════════════════════════════════
