@@ -133,55 +133,82 @@
         .topbar {
             background: var(--bg-card);
             border-bottom: 1px solid var(--border);
-            position: sticky;
-            top: 0;
-            z-index: 100;
+            position: relative; /* Normal document flow! ALWAYS strictly at the top */
             box-shadow: var(--shadow-sm);
-            backdrop-filter: blur(12px);
-        }
-        .topbar-credit-strip {
-            background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(16, 185, 129, 0.06));
-            border-bottom: 1px solid var(--border);
-            padding: 0.45rem 1.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 1.25rem;
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            font-weight: 500;
-            flex-wrap: wrap;
-            text-align: center;
-        }
-        .credit-badge-author strong {
-            color: var(--accent);
-            font-weight: 700;
-            letter-spacing: 0.3px;
-        }
-        .credit-badge-license strong {
-            color: #059669;
-            font-weight: 700;
-        }
-        .credit-role {
-            font-size: 0.7rem;
-            opacity: 0.85;
-        }
-        .credit-badge-corp strong {
-            color: var(--text);
-            font-weight: 700;
-        }
-        .credit-sep {
-            color: var(--border);
-            user-select: none;
-            font-weight: bold;
         }
         .topbar-inner {
             padding: 0.85rem 1.5rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 1.5rem;
+            gap: 1.25rem;
             flex-wrap: wrap;
+        }
+
+        /* 🎖️ OFFICIAL LICENSE CARD (EXACT SAME AS MAIN APP) */
+        .license-card-badge {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(21, 128, 61, 0.18) 100%);
+            border: 1px solid rgba(34, 197, 94, 0.35);
+            border-radius: 10px;
+            padding: 8px 14px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-width: 260px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .license-card-badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.1);
+        }
+        .license-card-badge::after {
+            content: '';
+            position: absolute;
+            top: -15px;
+            right: -15px;
+            width: 45px;
+            height: 45px;
+            background: rgba(34, 197, 94, 0.15);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .license-dev-tag {
+            font-size: 0.62rem;
+            font-weight: 800;
+            color: #2563eb;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            margin-bottom: 3px;
+        }
+        [data-theme='dark'] .license-dev-tag {
+            color: #60a5fa;
+        }
+        .license-card-badge .license-header {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.68rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #15803d;
+            margin-bottom: 2px;
+        }
+        [data-theme='dark'] .license-card-badge .license-header {
+            color: #4ade80;
+        }
+        .license-card-badge .license-name {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--text);
+            line-height: 1.2;
+        }
+        .license-card-badge .license-role {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            font-weight: 500;
         }
         .company-brand-block {
             display: flex;
@@ -447,7 +474,7 @@
             padding: 1.25rem;
             display: flex;
             flex-direction: column;
-            min-height: 380px;
+            height: 400px;
             transition: box-shadow 0.2s, border-color 0.2s;
             position: relative;
         }
@@ -508,9 +535,8 @@
 
         .chart-canvas-wrap {
             position: relative;
-            flex-grow: 1;
-            min-height: 290px;
-            height: 290px;
+            flex: 1;
+            height: calc(100% - 45px);
             width: 100%;
         }
 
@@ -727,21 +753,6 @@
         
         <!-- TOPBAR WITH CORPORATE BRANDING & CREDITS -->
         <header class="topbar">
-            <!-- 🎖️ EXECUTIVE CREDITS RIBBON -->
-            <div class="topbar-credit-strip">
-                <div class="credit-badge-author">
-                    <i class="fas fa-laptop-code text-primary me-1"></i> DEVELOPED BY : <strong>CHIKHAOUI ABDERRAHIME</strong>
-                </div>
-                <div class="credit-sep">•</div>
-                <div class="credit-badge-license">
-                    <i class="fas fa-user-check text-success me-1"></i> APPLICATION DÉDIÉE À : <strong>M. GUETTAFI YOUNES</strong> <span class="credit-role">(Chef de section facturation et recouvrement)</span>
-                </div>
-                <div class="credit-sep">•</div>
-                <div class="credit-badge-corp">
-                    <i class="fas fa-shield-halved text-warning me-1"></i> SYSTÈME OFFICIEL FACTURATION & KPI • <strong>SPA DOUROUB EL DJAZAIR</strong>
-                </div>
-            </div>
-
             <div class="topbar-inner">
                 <!-- Left: Branding with 2 logos and legal info -->
                 <div class="company-brand-block">
@@ -767,6 +778,17 @@
                     </div>
 
                     <img src="/T.png" alt="Logo Secondaire" class="brand-logo-right" id="header-logo-right" onerror="this.style.display='none'">
+                </div>
+
+                <!-- Center: Exact License Card Badge from Main App -->
+                <div class="license-card-badge">
+                    <div class="license-dev-tag">DEVELOPED BY : CHIKHAOUI ABDERRAHIME</div>
+                    <div class="license-header">
+                        <i class="fa-solid fa-certificate"></i>
+                        <span>Licence Validée</span>
+                    </div>
+                    <div class="license-name">Mr. Guettafi Younes</div>
+                    <div class="license-role">Chef de section facturation et recouvrement</div>
                 </div>
 
                 <!-- Right: Filters & Action Buttons -->
@@ -913,15 +935,15 @@
             <!-- SECTION 2: CHARTS GRID WITH INDEPENDENT TOOLBARS -->
             <div class="charts-grid">
                 
-                <!-- ROW 1: CA MENSUEL & RÉPARTITION TYPE -->
+                <!-- ROW 1: CA MENSUEL CONSOLIDÉ & VENTILATION PAR PRESTATION -->
                 <!-- CHART 1: CA PAR MOIS (BAR) -->
-                <div class="chart-card col-7">
+                <div class="chart-card col-6">
                     <div class="chart-card-header">
-                        <h4 class="chart-card-title"><i class="fas fa-chart-column text-primary"></i> 1. Chiffre d'Affaires Mensuel (TTC)</h4>
+                        <h4 class="chart-card-title"><i class="fas fa-chart-column text-primary"></i> 1. Chiffre d'Affaires Mensuel Consolidé (TTC)</h4>
                         <div class="chart-toolbar">
                             <button class="btn-chart-tool" onclick="toggleDataLabels('chart-ca-mois')" title="Afficher/Masquer Chiffres"><i class="fas fa-tag"></i></button>
-                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-ca-mois', 'Chiffre d\'Affaires Mensuel (TTC)')" title="Plein Écran"><i class="fas fa-expand"></i></button>
-                            <button class="btn-chart-tool" onclick="downloadChart('chart-ca-mois', 'CA_Mensuel_TTC')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-ca-mois', '1. Chiffre d\'Affaires Mensuel Consolidé (TTC)')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-ca-mois', 'CA_Mensuel_Consolide_TTC')" title="Télécharger Image"><i class="fas fa-download"></i></button>
                         </div>
                     </div>
                     <div class="chart-canvas-wrap">
@@ -935,12 +957,12 @@
                 </div>
 
                 <!-- CHART 2: RÉPARTITION PAR TYPE (DOUGHNUT) -->
-                <div class="chart-card col-5">
+                <div class="chart-card col-6">
                     <div class="chart-card-header">
-                        <h4 class="chart-card-title"><i class="fas fa-chart-pie text-success"></i> 2. Répartition par Type de Prestation</h4>
+                        <h4 class="chart-card-title"><i class="fas fa-chart-pie text-success"></i> 2. Ventilation du C.A. par Nature de Prestation</h4>
                         <div class="chart-toolbar">
-                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-repart-type', 'Répartition du CA par Type de Prestation')" title="Plein Écran"><i class="fas fa-expand"></i></button>
-                            <button class="btn-chart-tool" onclick="downloadChart('chart-repart-type', 'Repartition_Type')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-repart-type', '2. Ventilation du C.A. par Nature de Prestation')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-repart-type', 'Ventilation_CA_Prestations')" title="Télécharger Image"><i class="fas fa-download"></i></button>
                         </div>
                     </div>
                     <div class="chart-canvas-wrap">
@@ -952,15 +974,15 @@
                     </div>
                 </div>
 
-                <!-- ROW 2: COMPARATIF CLIENTS (CA vs CRÉANCES) -->
-                <!-- CHART 3: TOP CLIENTS PAR CHIFFRE D'AFFAIRES (HORIZONTAL BAR) -->
+                <!-- ROW 2: PORTEFEUILLE CLIENTS (CA vs ENCOURS & CRÉANCES) -->
+                <!-- CHART 3: PORTEFEUILLE CLIENTS MAJEURS (HORIZONTAL BAR) -->
                 <div class="chart-card col-6">
                     <div class="chart-card-header">
-                        <h4 class="chart-card-title"><i class="fas fa-users text-primary"></i> 3. Top Clients (Chiffre d'Affaires TTC)</h4>
+                        <h4 class="chart-card-title"><i class="fas fa-users text-primary"></i> 3. Portefeuille Clients Majeurs (C.A. Facturé TTC)</h4>
                         <div class="chart-toolbar">
                             <button class="btn-chart-tool" onclick="toggleDataLabels('chart-top-clients')" title="Afficher/Masquer Chiffres"><i class="fas fa-tag"></i></button>
-                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-top-clients', 'Top Clients par Chiffre d\'Affaires')" title="Plein Écran"><i class="fas fa-expand"></i></button>
-                            <button class="btn-chart-tool" onclick="downloadChart('chart-top-clients', 'Top_Clients_CA')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-top-clients', '3. Portefeuille Clients Majeurs (C.A. Facturé TTC)')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-top-clients', 'Portefeuille_Clients_Majeurs_CA')" title="Télécharger Image"><i class="fas fa-download"></i></button>
                         </div>
                     </div>
                     <div class="chart-canvas-wrap">
@@ -972,35 +994,35 @@
                     </div>
                 </div>
 
-                <!-- CHART 4: TOP CRÉANCES PAR CLIENT (HORIZONTAL BAR) -->
+                <!-- CHART 4: ENCOURS ET CRÉANCES PAR DÉBITEUR (HORIZONTAL BAR) -->
                 <div class="chart-card col-6">
                     <div class="chart-card-header">
-                        <h4 class="chart-card-title"><i class="fas fa-hand-holding-dollar text-danger"></i> 4. Top Créances par Client (Impayés)</h4>
+                        <h4 class="chart-card-title"><i class="fas fa-hand-holding-dollar text-danger"></i> 4. Encours & Créances en Souffrance par Débiteur (TTC)</h4>
                         <div class="chart-toolbar">
                             <button class="btn-chart-tool" onclick="toggleDataLabels('chart-creance-client')" title="Afficher/Masquer Chiffres"><i class="fas fa-tag"></i></button>
-                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-creance-client', 'Top Créances par Client')" title="Plein Écran"><i class="fas fa-expand"></i></button>
-                            <button class="btn-chart-tool" onclick="downloadChart('chart-creance-client', 'Creances_Par_Client')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-creance-client', '4. Encours & Créances en Souffrance par Débiteur (TTC)')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-creance-client', 'Encours_Creances_Debiteur_TTC')" title="Télécharger Image"><i class="fas fa-download"></i></button>
                         </div>
                     </div>
                     <div class="chart-canvas-wrap">
                         <canvas id="chart-creance-client"></canvas>
                         <div id="empty-chart-creance-client" class="chart-empty-state">
                             <i class="fas fa-check-circle text-success chart-empty-icon" style="opacity:0.6;"></i>
-                            <div class="chart-empty-title">Toutes les factures sont réglées !</div>
-                            <div class="chart-empty-sub">Aucune créance en attente pour cette sélection</div>
+                            <div class="chart-empty-title">Toutes les factures sont soldées !</div>
+                            <div class="chart-empty-sub">Aucun encours ni créance en attente pour cette sélection</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- ROW 3: ÉVOLUTION DES CRÉANCES & MODES DE PAIEMENT -->
+                <!-- ROW 3: ÉVOLUTION DES CRÉANCES & STRUCTURE DES RÈGLEMENTS -->
                 <!-- CHART 5: CRÉANCE PAR MOIS (BAR) -->
                 <div class="chart-card col-6">
                     <div class="chart-card-header">
-                        <h4 class="chart-card-title"><i class="fas fa-calendar-xmark text-danger"></i> 5. Évolution des Créances par Mois</h4>
+                        <h4 class="chart-card-title"><i class="fas fa-calendar-xmark text-danger"></i> 5. Évolution Chronologique des Créances Non Soldées</h4>
                         <div class="chart-toolbar">
                             <button class="btn-chart-tool" onclick="toggleDataLabels('chart-creance-mois')" title="Afficher/Masquer Chiffres"><i class="fas fa-tag"></i></button>
-                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-creance-mois', 'Créances par Mois')" title="Plein Écran"><i class="fas fa-expand"></i></button>
-                            <button class="btn-chart-tool" onclick="downloadChart('chart-creance-mois', 'Creances_Par_Mois')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-creance-mois', '5. Évolution Chronologique des Créances Non Soldées')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-creance-mois', 'Chronologie_Creances_Non_Soldees')" title="Télécharger Image"><i class="fas fa-download"></i></button>
                         </div>
                     </div>
                     <div class="chart-canvas-wrap">
@@ -1012,13 +1034,13 @@
                     </div>
                 </div>
 
-                <!-- CHART 6: MODES DE PAIEMENT (DOUGHNUT) -->
+                <!-- CHART 6: STRUCTURE DES RÈGLEMENTS (DOUGHNUT) -->
                 <div class="chart-card col-6">
                     <div class="chart-card-header">
-                        <h4 class="chart-card-title"><i class="fas fa-credit-card text-info"></i> 6. Répartition des Modes de Règlement</h4>
+                        <h4 class="chart-card-title"><i class="fas fa-credit-card text-info"></i> 6. Structure des Règlements & Flux Financiers</h4>
                         <div class="chart-toolbar">
-                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-mode-paiement', 'Modes de Paiement')" title="Plein Écran"><i class="fas fa-expand"></i></button>
-                            <button class="btn-chart-tool" onclick="downloadChart('chart-mode-paiement', 'Modes_Paiement')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-mode-paiement', '6. Structure des Règlements & Flux Financiers')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-mode-paiement', 'Structure_Reglements_Flux')" title="Télécharger Image"><i class="fas fa-download"></i></button>
                         </div>
                     </div>
                     <div class="chart-canvas-wrap">
@@ -1034,10 +1056,10 @@
                 <!-- CHART 7: NOMBRE DE BL PAR MOIS (LINE) -->
                 <div class="chart-card col-6">
                     <div class="chart-card-header">
-                        <h4 class="chart-card-title"><i class="fas fa-truck-fast text-warning"></i> 7. Volume de BL par Mois (Rotations)</h4>
+                        <h4 class="chart-card-title"><i class="fas fa-truck-fast text-warning"></i> 7. Activité Logistique : Volume des Bons de Livraison (BL)</h4>
                         <div class="chart-toolbar">
-                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-nb-bl-mois', 'Volume de BL par Mois')" title="Plein Écran"><i class="fas fa-expand"></i></button>
-                            <button class="btn-chart-tool" onclick="downloadChart('chart-nb-bl-mois', 'BL_Par_Mois')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-nb-bl-mois', '7. Activité Logistique : Volume des Bons de Livraison (BL)')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-nb-bl-mois', 'Volume_BL_Logistique')" title="Télécharger Image"><i class="fas fa-download"></i></button>
                         </div>
                     </div>
                     <div class="chart-canvas-wrap">
@@ -1052,10 +1074,10 @@
                 <!-- CHART 8: IMMOBILISATION HEURES PAR MOIS (BAR) -->
                 <div class="chart-card col-6">
                     <div class="chart-card-header">
-                        <h4 class="chart-card-title"><i class="fas fa-stopwatch text-danger"></i> 8. Immobilisation Camions (Heures / Mois)</h4>
+                        <h4 class="chart-card-title"><i class="fas fa-stopwatch text-danger"></i> 8. Immobilisation Flotte : Heures d'Attente Facturées</h4>
                         <div class="chart-toolbar">
-                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-immo-mois', 'Heures d\'Immobilisation par Mois')" title="Plein Écran"><i class="fas fa-expand"></i></button>
-                            <button class="btn-chart-tool" onclick="downloadChart('chart-immo-mois', 'Immo_Par_Mois')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-immo-mois', '8. Immobilisation Flotte : Heures d\'Attente Facturées')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-immo-mois', 'Immobilisation_Flotte_Heures')" title="Télécharger Image"><i class="fas fa-download"></i></button>
                         </div>
                     </div>
                     <div class="chart-canvas-wrap">
@@ -1072,10 +1094,10 @@
                 <!-- CHART 9: LOCATION D'ENGINS PAR TYPE (DOUGHNUT) -->
                 <div class="chart-card col-12">
                     <div class="chart-card-header">
-                        <h4 class="chart-card-title"><i class="fa-solid fa-tractor text-warning"></i> 9. Location d'Engins & Grues (CA par Équipement)</h4>
+                        <h4 class="chart-card-title"><i class="fa-solid fa-tractor text-warning"></i> 9. Matériel & Levage : Location d'Engins par Équipement</h4>
                         <div class="chart-toolbar">
-                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-loc-equip', 'Location de Grues et Engins')" title="Plein Écran"><i class="fas fa-expand"></i></button>
-                            <button class="btn-chart-tool" onclick="downloadChart('chart-loc-equip', 'Location_Grues_Engins')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-loc-equip', '9. Matériel & Levage : Location d\'Engins par Équipement')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-loc-equip', 'Location_Engins_Equipement')" title="Télécharger Image"><i class="fas fa-download"></i></button>
                         </div>
                     </div>
                     <div class="chart-canvas-wrap">
@@ -1755,6 +1777,12 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: {
+                        padding: {
+                            top: 24,
+                            bottom: 5
+                        }
+                    },
                     plugins: {
                         legend: { display: false },
                         tooltip: {
@@ -1823,6 +1851,12 @@
                     indexAxis: 'y',
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: {
+                        padding: {
+                            right: 80,
+                            top: 5
+                        }
+                    },
                     plugins: {
                         legend: { display: false },
                         tooltip: {
@@ -1993,6 +2027,8 @@
                 }
                 chart.update();
             }
+            const btn = document.querySelector(`button[onclick*="'${chartId}'"]`);
+            if (btn) btn.classList.toggle('active', !!dataLabelsEnabled[chartId]);
         }
 
         // ════════════════════════════════════════════════════════════════
