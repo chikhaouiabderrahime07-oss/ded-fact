@@ -733,7 +733,7 @@ function showView(viewName) {
         if (viewName === 'dashboard') updateDashboard();
         if (viewName === 'invoices') renderInvoices();
         if (viewName === 'clients') renderClients();
-        if (viewName === 'reports') populateReportFilters();
+        if (viewName === 'reports') { populateRptClientFilter(); updateReportsView(); }
         if (viewName === 'settings') loadSettings();
 		if (viewName === 'wilaya-prices') setupWilayaPriceManagement();
         if (viewName === 'immobilisation') updateImmobilisationView();
@@ -1188,6 +1188,9 @@ function renderWizardStep() {
         const stepCounterEl = document.getElementById('wizardStepCounter');
         if (stepCounterEl) stepCounterEl.textContent = `Étape ${currentStep}/5`;
         
+        const dlg = document.querySelector('#modalInvoice .modal-dialog');
+        if (dlg) { dlg.className = currentStep >= 4 ? 'modal-dialog modal-fullscreen' : 'modal-dialog modal-xl'; }
+
         switch(currentStep) {
             case 1:
                 renderStep1();
@@ -1377,7 +1380,7 @@ function renderStep2() {
 
         container.innerHTML = `
             <h6>Étape 2/5 - Informations facture</h6>
-            <div class="mb-3 p-2 rounded border bg-light">
+            ${currentInvoice.documentType === 'proforma' ? '<div class="mb-3 p-2 rounded border" style="background: linear-gradient(135deg, #fef3c7, #fde68a);"><div class="fw-bold small text-center" style="color:#92400e;"><i class="fa fa-file-alt me-2"></i>FACTURE PROFORMA</div></div>' : `<div class="mb-3 p-2 rounded border bg-light">
                 <label class="form-label fw-bold small text-uppercase text-muted">Type de Document</label>
                 <div class="btn-group w-100" role="group">
                     <input type="radio" class="btn-check" name="docType" id="docTypeFacture" value="facture" ${currentInvoice.documentType !== 'proforma' ? 'checked' : ''} autocomplete="off">
@@ -1385,7 +1388,7 @@ function renderStep2() {
                     <input type="radio" class="btn-check" name="docType" id="docTypeProforma" value="proforma" ${currentInvoice.documentType === 'proforma' ? 'checked' : ''} autocomplete="off">
                     <label class="btn btn-outline-warning" for="docTypeProforma"><i class="fa fa-file-alt me-1"></i>Proforma</label>
                 </div>
-            </div>
+            </div>`}
             <div class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label">N° Facture</label>
@@ -2111,16 +2114,30 @@ function renderArticles() {
                             <input type="text" class="form-control form-control-sm" data-field="locSite" data-index="${index}" placeholder="Ex: Base vie Sonatrach Hassi Messaoud..." value="${article.locSite || ''}">
                         </div>
                     </div>
-                    <div class="row g-2 mb-2 align-items-end">
+                    <div class="row g-2 mb-2">
                         <div class="col-md-3">
-                            <label class="form-label small fw-bold text-muted mb-1">Du *</label>
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calendar-check me-1 text-success"></i>Date Début</label>
                             <input type="date" class="form-control form-control-sm" data-field="locPeriodStart" data-index="${index}" value="${article.locPeriodStart || ''}">
                         </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-clock me-1 text-success"></i>Heure</label>
+                            <input type="time" class="form-control form-control-sm" data-field="locHourStart" data-index="${index}" value="${article.locHourStart || '08:00'}">
+                        </div>
                         <div class="col-md-3">
-                            <label class="form-label small fw-bold text-muted mb-1">Au *</label>
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calendar-times me-1 text-danger"></i>Date Fin</label>
                             <input type="date" class="form-control form-control-sm" data-field="locPeriodEnd" data-index="${index}" value="${article.locPeriodEnd || ''}">
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-clock me-1 text-danger"></i>Heure</label>
+                            <input type="time" class="form-control form-control-sm" data-field="locHourEnd" data-index="${index}" value="${article.locHourEnd || '17:00'}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calculator me-1" style="color:#f59e0b;"></i>Jours (auto)</label>
+                            <input type="number" class="form-control form-control-sm fw-bold bg-light" data-field="locAutodays" data-index="${index}" value="${article.locAutodays || ''}" readonly style="border-color:#f59e0b;">
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-12">
                             <label class="form-label small fw-bold text-muted mb-1">Opérateur / Chauffeur / Réf</label>
                             <input type="text" class="form-control form-control-sm" data-field="locDriver" data-index="${index}" placeholder="Ex: Mr. Ali - Permis 12345" value="${article.locDriver || ''}">
                         </div>
@@ -2305,7 +2322,27 @@ function renderArticles() {
                             updateImmobilisationDesignation(index);
                         }
                     } else if (article.isLocation) {
-                        if (['locSite', 'locPeriodStart', 'locPeriodEnd', 'locDriver', 'qte'].includes(field)) {
+                        if (['locSite', 'locPeriodStart', 'locPeriodEnd', 'locDriver', 'locHourStart', 'locHourEnd', 'qte'].includes(field)) {
+                            updateLocationDesignation(index);
+                        }
+                        if (['locPeriodStart','locPeriodEnd','locHourStart','locHourEnd'].includes(field)) {
+                            // Auto-calculate days
+                            if (article.locPeriodStart && article.locPeriodEnd) {
+                                const start = new Date(article.locPeriodStart + 'T' + (article.locHourStart || '08:00'));
+                                const end = new Date(article.locPeriodEnd + 'T' + (article.locHourEnd || '17:00'));
+                                const diffMs = end - start;
+                                const diffDays = Math.max(0.5, Math.round((diffMs / (1000*60*60*24)) * 2) / 2);
+                                article.locAutodays = diffDays;
+                                article.qte = diffDays;
+                                // Update displayed fields
+                                const qteInput = container.querySelector(`[data-field="qte"][data-index="${index}"]`);
+                                if (qteInput) qteInput.value = diffDays;
+                                const autoInput = container.querySelector(`[data-field="locAutodays"][data-index="${index}"]`);
+                                if (autoInput) autoInput.value = diffDays;
+                                article.montantHT = diffDays * (parseFloat(article.prixUHT) || 0);
+                                const montantInput = container.querySelector(`[data-field="montantHT"][data-index="${index}"]`);
+                                if (montantInput) montantInput.value = article.montantHT;
+                            }
                             updateLocationDesignation(index);
                         }
                     }
@@ -8557,7 +8594,9 @@ window.updateLocationDesignation = function(index) {
     if (art.locPeriodStart || art.locPeriodEnd) {
         const from = art.locPeriodStart ? new Date(art.locPeriodStart).toLocaleDateString('fr-FR') : '...';
         const to = art.locPeriodEnd ? new Date(art.locPeriodEnd).toLocaleDateString('fr-FR') : '...';
-        des += `-Période : Du ${from} au ${to}<br>`;
+        const hStart = art.locHourStart || '';
+        const hEnd = art.locHourEnd || '';
+        des += `-Période : Du ${from}${hStart ? ' à '+hStart : ''} au ${to}${hEnd ? ' à '+hEnd : ''}<br>`;
     }
     if (art.locDriver && art.locDriver.trim()) des += `-Opérateur / Réf : ${art.locDriver.trim()}<br>`;
     const qty = parseFloat(art.qte) || 0;
@@ -8844,25 +8883,25 @@ async function loadShareLinks() {
         container.innerHTML = links.map(l => {
             const exp = new Date(l.expiresAt);
             const isExp = exp < new Date();
-            const lastAcc = l.lastAccessedAt ? new Date(l.lastAccessedAt).toLocaleString('fr-FR') : 'Jamais';
-            return `<div class="p-2 mb-2 rounded border ${isExp?'bg-light text-muted':'bg-white shadow-sm'}">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <div class="fw-bold small"><i class="fa fa-link me-1"></i>${l.label||'Dashboard'}</div>
+            const views = l.accessCount || 0;
+            const lastIP = l.lastIP || '-';
+            const lastAccess = l.lastAccessedAt ? new Date(l.lastAccessedAt).toLocaleString('fr-FR') : 'Jamais';
+            return `<div class="p-2 mb-2 rounded border ${isExp?'bg-light text-muted':'bg-white'}">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-bold small">${l.label||'Dashboard'} ${isExp?'<span class="badge bg-danger">Expiré</span>':'<span class="badge bg-success">Actif</span>'}</div>
+                        <div class="text-muted" style="font-size:0.7rem;">Expire: ${exp.toLocaleDateString('fr-FR')}</div>
+                    </div>
                     <div class="d-flex gap-1">
                         <button class="btn btn-outline-primary btn-sm" onclick="copyShareLink('${l.token}')" title="Copier"><i class="fa fa-copy"></i></button>
                         <button class="btn btn-outline-warning btn-sm" onclick="extendShareLink('${l.token}')" title="Prolonger"><i class="fa fa-calendar-plus"></i></button>
                         <button class="btn btn-outline-danger btn-sm" onclick="deleteShareLink('${l.token}')" title="Supprimer"><i class="fa fa-trash"></i></button>
                     </div>
                 </div>
-                <div class="d-flex justify-content-between align-items-end" style="font-size:0.7rem;">
-                    <div>
-                        <div class="text-muted">Expire : ${exp.toLocaleDateString('fr-FR')} ${isExp?'<span class="badge bg-danger">Expiré</span>':'<span class="badge bg-success">Actif</span>'}</div>
-                    </div>
-                    <div class="text-end text-muted">
-                        <div>Vues : <b class="text-dark">${l.accessCount || 0}</b></div>
-                        <div>Dernier accès : <b class="text-dark">${lastAcc}</b></div>
-                        ${l.lastIP ? `<div>IP : <b class="text-dark">${l.lastIP}</b></div>` : ''}
-                    </div>
+                <div class="d-flex gap-3 mt-1 small text-muted" style="font-size:0.7rem;">
+                    <span><i class="fa fa-eye me-1"></i>${views} visite${views>1?'s':''}</span>
+                    <span><i class="fa fa-globe me-1"></i>${lastIP}</span>
+                    <span><i class="fa fa-clock me-1"></i>${lastAccess}</span>
                 </div>
             </div>`;
         }).join('');
@@ -9131,4 +9170,196 @@ function generateRandomPassword() {
     for (let i = 0; i < 15; i++) pwd += chars.charAt(Math.floor(Math.random() * chars.length));
     const el = document.getElementById('shareLinkPassword');
     if (el) el.value = pwd;
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// 📊 MODULE RAPPORT & KPI UNIFIÉ
+// ════════════════════════════════════════════════════════════════════════════════
+
+let rptCharts = { revenue: null, typeBreakdown: null, clients: null, debt: null, payment: null };
+
+function populateRptClientFilter() {
+    const sel = document.getElementById('rptFilterClient');
+    if (!sel) return;
+    let html = '<option value="all">Tous les clients</option>';
+    clients.forEach(c => { html += `<option value="${c.id}">${c.nom}</option>`; });
+    sel.innerHTML = html;
+}
+
+function getFilteredRptInvoices() {
+    const clientId = document.getElementById('rptFilterClient')?.value || 'all';
+    const year = document.getElementById('rptFilterYear')?.value || '';
+    const type = document.getElementById('rptFilterType')?.value || 'all';
+    const period = document.getElementById('rptFilterPeriod')?.value || 'all';
+    
+    return invoices.filter(inv => {
+        if (inv.documentType === 'proforma') return false;
+        if (!inv.date) return false;
+        const d = new Date(inv.date);
+        if (year && d.getFullYear() !== parseInt(year)) return false;
+        if (clientId !== 'all' && String(inv.clientId) !== String(clientId)) return false;
+        
+        // Period
+        const m = d.getMonth();
+        if (period === 'S1' && m > 5) return false;
+        if (period === 'S2' && m < 6) return false;
+        if (period === 'Q1' && m > 2) return false;
+        if (period === 'Q2' && (m < 3 || m > 5)) return false;
+        if (period === 'Q3' && (m < 6 || m > 8)) return false;
+        if (period === 'Q4' && m < 9) return false;
+        
+        // Type filter
+        if (type !== 'all') {
+            if (type === 'transport') {
+                const hasTransport = inv.articles && inv.articles.some(a => !a.isImmobilisation && !a.isLocation);
+                if (!hasTransport) return false;
+            } else if (type === 'immobilisation') {
+                if (!isImmobilisationInvoice(inv)) return false;
+            } else if (type === 'location') {
+                if (!isLocationInvoice(inv)) return false;
+            }
+        }
+        return true;
+    });
+}
+
+function updateReportsView() {
+    const filtered = getFilteredRptInvoices();
+    renderRptKPIs(filtered);
+    renderRptCharts('all');
+    renderRptTable();
+}
+
+function renderRptKPIs(data) {
+    const c = document.getElementById('rptKpiContainer');
+    if (!c) return;
+    const totalHT = data.reduce((s,i) => s + (i.totals?.ht || 0), 0);
+    const totalTTC = data.reduce((s,i) => s + (i.totals?.ttc || 0), 0);
+    const nbFactures = data.length;
+    const unpaid = data.filter(i => !i.paid).reduce((s,i) => s + (i.totals?.ttc || 0), 0);
+    const tauxCreance = totalTTC ? ((unpaid/totalTTC)*100).toFixed(1) : '0';
+    
+    let caTransport = 0, caImmo = 0, caLoc = 0, blCount = 0;
+    data.forEach(inv => {
+        if (inv.blReferences) blCount += inv.blReferences.split(',').filter(s => s.trim()).length;
+        if (inv.articles) inv.articles.forEach(a => {
+            if (a.isImmobilisation) caImmo += (a.montantHT || 0);
+            else if (a.isLocation) caLoc += (a.montantHT || 0);
+            else caTransport += (a.montantHT || 0);
+        });
+    });
+    
+    const kpis = [
+        { icon:'fa-money-bill-trend-up', color:'#3b82f6', label:'CA Total TTC', value:formatCurrency(totalTTC) },
+        { icon:'fa-file-invoice', color:'#10b981', label:'Factures', value:nbFactures },
+        { icon:'fa-truck', color:'#6366f1', label:'CA Transport HT', value:formatCurrency(caTransport) },
+        { icon:'fa-stopwatch', color:'#ef4444', label:'CA Immobilisation HT', value:formatCurrency(caImmo) },
+        { icon:'fa-crane', color:'#f59e0b', label:'CA Location HT', value:formatCurrency(caLoc) },
+        { icon:'fa-receipt', color:'#8b5cf6', label:'Nombre de BL', value:blCount },
+        { icon:'fa-triangle-exclamation', color:'#ef4444', label:'Créance (' + tauxCreance + '%)', value:formatCurrency(unpaid) },
+    ];
+    c.innerHTML = kpis.map(k => `
+        <div class="col-xl col-md-4 col-6">
+            <div class="card border-0 shadow-sm h-100" style="border-left:4px solid ${k.color} !important;">
+                <div class="card__body p-3 text-center">
+                    <i class="fa-solid ${k.icon} fs-4 mb-1" style="color:${k.color};"></i>
+                    <div class="fw-bold fs-6">${k.value}</div>
+                    <div class="text-muted" style="font-size:0.75rem;">${k.label}</div>
+                </div>
+            </div>
+        </div>`).join('');
+}
+
+function renderRptCharts(activeTab) {
+    const filtered = getFilteredRptInvoices();
+    const colors = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#84cc16'];
+    const months = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+    
+    // 1. Revenue by month
+    const byMonth = Array(12).fill(0);
+    filtered.forEach(i => { const m = new Date(i.date).getMonth(); byMonth[m] += (i.totals?.ttc || 0); });
+    if (rptCharts.revenue) rptCharts.revenue.destroy();
+    const ctx1 = document.getElementById('rptChartRevenue');
+    if (ctx1) rptCharts.revenue = new Chart(ctx1, { type:'bar', data:{ labels:months, datasets:[{ label:'CA TTC', data:byMonth, backgroundColor:'#3b82f6', borderRadius:6 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, datalabels:{ anchor:'end', align:'top', formatter:v=>v>0?(v/1000).toFixed(0)+'K':'', font:{size:10} } } } });
+    
+    // 2. Type breakdown
+    let caT=0, caI=0, caL=0;
+    filtered.forEach(inv => { if(inv.articles) inv.articles.forEach(a => { if(a.isImmobilisation) caI+=(a.montantHT||0); else if(a.isLocation) caL+=(a.montantHT||0); else caT+=(a.montantHT||0); }); });
+    if (rptCharts.typeBreakdown) rptCharts.typeBreakdown.destroy();
+    const ctx2 = document.getElementById('rptChartTypeBreakdown');
+    if (ctx2) rptCharts.typeBreakdown = new Chart(ctx2, { type:'doughnut', data:{ labels:['Transport','Immobilisation','Location'], datasets:[{ data:[caT,caI,caL], backgroundColor:['#3b82f6','#ef4444','#f59e0b'] }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ datalabels:{ formatter:(v,c)=>{ const t=c.dataset.data.reduce((a,b)=>a+b,0); return t?((v/t)*100).toFixed(0)+'%':''; }, color:'#fff', font:{weight:'bold',size:14} } } } });
+    
+    // 3. CA by client
+    const byClient = {};
+    filtered.forEach(i => { const c = clients.find(cl => cl.id === i.clientId); const n = c ? c.nom : 'Inconnu'; byClient[n] = (byClient[n]||0) + (i.totals?.ttc||0); });
+    const sortedC = Object.entries(byClient).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    if (rptCharts.clients) rptCharts.clients.destroy();
+    const ctx3 = document.getElementById('rptChartClients');
+    if (ctx3) rptCharts.clients = new Chart(ctx3, { type:'bar', data:{ labels:sortedC.map(c=>c[0]), datasets:[{ label:'CA TTC', data:sortedC.map(c=>c[1]), backgroundColor:colors, borderRadius:6 }] }, options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, datalabels:{ anchor:'end', align:'right', formatter:v=>(v/1000).toFixed(0)+'K', font:{size:9} } } } });
+    
+    // 4. Debt by client
+    const debtByClient = {};
+    filtered.filter(i=>!i.paid).forEach(i => { const c = clients.find(cl=>cl.id===i.clientId); const n = c?c.nom:'Inconnu'; debtByClient[n]=(debtByClient[n]||0)+(i.totals?.ttc||0); });
+    const sortedD = Object.entries(debtByClient).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    if (rptCharts.debt) rptCharts.debt.destroy();
+    const ctx4 = document.getElementById('rptChartDebt');
+    if (ctx4) rptCharts.debt = new Chart(ctx4, { type:'bar', data:{ labels:sortedD.map(c=>c[0]), datasets:[{ label:'Créance TTC', data:sortedD.map(c=>c[1]), backgroundColor:'#ef4444', borderRadius:6 }] }, options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, datalabels:{ anchor:'end', align:'right', formatter:v=>(v/1000).toFixed(0)+'K', font:{size:9} } } } });
+    
+    // 5. Payment mode
+    let vir=0, cheq=0, creance=0;
+    filtered.forEach(i => { if(!i.paid) { creance += (i.totals?.ttc||0); } else if(i.paymentDetails && (i.paymentDetails.mode||'').toLowerCase().includes('virement')) { vir += (i.totals?.ttc||0); } else { cheq += (i.totals?.ttc||0); } });
+    if (rptCharts.payment) rptCharts.payment.destroy();
+    const ctx5 = document.getElementById('rptChartPayment');
+    if (ctx5) rptCharts.payment = new Chart(ctx5, { type:'doughnut', data:{ labels:['Virement','Chèque','Créance'], datasets:[{ data:[vir,cheq,creance], backgroundColor:['#10b981','#3b82f6','#ef4444'] }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ datalabels:{ formatter:(v,c)=>{ const t=c.dataset.data.reduce((a,b)=>a+b,0); return t?((v/t)*100).toFixed(0)+'%':''; }, color:'#fff', font:{weight:'bold'} } } } });
+}
+
+function renderRptTable() {
+    const data = getFilteredRptInvoices();
+    const search = (document.getElementById('rptTableSearch')?.value || '').toLowerCase();
+    const tbody = document.getElementById('rptTableBody');
+    if (!tbody) return;
+    const filtered = search ? data.filter(i => { const c = clients.find(cl=>cl.id===i.clientId); return ((c?c.nom:'')+i.number+(i.date||'')).toLowerCase().includes(search); }) : data;
+    if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Aucune facture trouvée.</td></tr>'; return; }
+    tbody.innerHTML = filtered.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(inv => {
+        const c = clients.find(cl=>cl.id===inv.clientId);
+        const hasImmo = inv.articles && inv.articles.some(a=>a.isImmobilisation);
+        const hasLoc = inv.articles && inv.articles.some(a=>a.isLocation);
+        let typeBadge = '<span class="badge bg-primary">Transport</span>';
+        if (hasImmo) typeBadge = '<span class="badge bg-danger">Immobilisation</span>';
+        if (hasLoc) typeBadge = '<span class="badge" style="background:#f59e0b;">Location</span>';
+        const status = inv.paid ? '<span class="badge bg-success">Payée</span>' : '<span class="badge bg-danger">Impayée</span>';
+        return `<tr class="text-center small">
+            <td>${new Date(inv.date).toLocaleDateString('fr-FR')}</td>
+            <td class="fw-bold">${inv.number}</td>
+            <td style="text-align:left;" class="fw-semibold">${c?c.nom:'Inconnu'}</td>
+            <td>${typeBadge}</td>
+            <td class="fw-bold">${formatCurrency(inv.totals?.ht||0)}</td>
+            <td class="fw-bold">${formatCurrency(inv.totals?.ttc||0)}</td>
+            <td>${status}</td>
+        </tr>`;
+    }).join('');
+}
+
+function resetRptFilters() {
+    ['rptFilterClient','rptFilterYear','rptFilterType','rptFilterPeriod'].forEach(id => {
+        const e = document.getElementById(id); if(e) e.selectedIndex = 0;
+    });
+    updateReportsView();
+}
+
+function exportFullReportExcel() {
+    const data = getFilteredRptInvoices();
+    if (!data.length) { alert('Aucune donnée.'); return; }
+    const ws = [['Date','N°','Client','Type','HT','TVA','TTC','Statut']];
+    data.forEach(inv => {
+        const c = clients.find(cl=>cl.id===inv.clientId);
+        const hasImmo = inv.articles && inv.articles.some(a=>a.isImmobilisation);
+        const hasLoc = inv.articles && inv.articles.some(a=>a.isLocation);
+        let type = 'Transport'; if(hasImmo) type='Immobilisation'; if(hasLoc) type='Location';
+        ws.push([new Date(inv.date).toLocaleDateString('fr-FR'), inv.number, c?c.nom:'', type, inv.totals?.ht||0, inv.totals?.tva||0, inv.totals?.ttc||0, inv.paid?'Payée':'Impayée']);
+    });
+    const sheet = XLSX.utils.aoa_to_sheet(ws);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, sheet, 'Rapport');
+    XLSX.writeFile(wb, `Rapport_KPI_${new Date().toISOString().slice(0,10)}.xlsx`);
 }

@@ -1,236 +1,218 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Partagé - DOUROUB EL DJAZAIR</title>
+    <title>DOUROUB EL DJAZAIR - Tableau de Bord KPI</title>
     
-    <!-- Bootstrap CSS -->
+    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
+    <!-- Font Awesome 6 -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
+    
     <style>
         :root {
-            --bg-primary: #0f172a;
-            --bg-card: #1e293b;
-            --bg-card-hover: #334155;
+            --bg: #f8fafc;
+            --bg-card: #ffffff;
+            --text: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
             --accent: #3b82f6;
-            --accent-green: #10b981;
-            --accent-yellow: #f59e0b;
-            --accent-red: #ef4444;
-            --text-primary: #f1f5f9;
+            --accent-hover: #2563eb;
+            --shadow: rgba(0, 0, 0, 0.08);
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        [data-theme='dark'] {
+            --bg: #0f172a;
+            --bg-card: #1e293b;
+            --text: #f1f5f9;
             --text-secondary: #94a3b8;
             --border: #334155;
-            --gradient-accent: linear-gradient(135deg, #3b82f6, #2dd4bf);
+            --accent: #60a5fa;
+            --accent-hover: #93c5fd;
+            --shadow: rgba(0, 0, 0, 0.3);
         }
 
         body {
+            background-color: var(--bg);
+            color: var(--text);
             font-family: 'Inter', sans-serif;
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
+            transition: background-color 0.3s ease, color 0.3s ease;
             margin: 0;
             padding: 0;
-            overflow-x: hidden;
         }
 
-        /* --- Auth Screen --- */
-        #auth-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background-color: #1a1a2e;
+        /* Authentication View */
+        #auth-view {
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 9999;
-            transition: opacity 0.5s ease;
+            background: linear-gradient(135deg, var(--bg) 0%, var(--border) 100%);
         }
-
         .auth-card {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(10px);
-            padding: 3rem;
+            background: var(--bg-card);
             border-radius: 1rem;
+            box-shadow: 0 10px 25px var(--shadow);
+            padding: 3rem;
+            width: 100%;
+            max-width: 450px;
             border: 1px solid var(--border);
             text-align: center;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            max-width: 400px;
-            width: 90%;
-            animation: fadeInDown 0.8s ease-out;
         }
-
-        .auth-card h2 {
-            margin-bottom: 0.5rem;
+        .auth-brand {
             font-weight: 700;
-            background: var(--gradient-accent);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .auth-card p {
-            color: var(--text-secondary);
+            font-size: 1.5rem;
+            color: var(--text);
             margin-bottom: 2rem;
+            letter-spacing: -0.5px;
         }
-
-        .auth-input-group {
-            position: relative;
-            margin-bottom: 1.5rem;
-        }
-
-        .auth-input-group i {
-            position: absolute;
-            top: 50%;
-            left: 1rem;
-            transform: translateY(-50%);
-            color: var(--text-secondary);
-        }
-
         .auth-input {
-            width: 100%;
-            padding: 1rem 1rem 1rem 3rem;
-            background: var(--bg-primary);
+            background: var(--bg);
             border: 1px solid var(--border);
+            color: var(--text);
             border-radius: 0.5rem;
-            color: var(--text-primary);
-            font-size: 1rem;
-            transition: all 0.3s ease;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1.5rem;
+            width: 100%;
+            transition: border-color 0.2s;
         }
-
         .auth-input:focus {
             outline: none;
             border-color: var(--accent);
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
         }
-
         .auth-btn {
-            width: 100%;
-            padding: 1rem;
-            background: var(--gradient-accent);
+            background: var(--accent);
+            color: white;
             border: none;
             border-radius: 0.5rem;
-            color: #fff;
+            padding: 0.75rem 1rem;
+            width: 100%;
             font-weight: 600;
-            font-size: 1rem;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: background 0.2s;
         }
-
         .auth-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4);
+            background: var(--accent-hover);
         }
 
-        .auth-error {
-            color: var(--accent-red);
-            margin-top: 1rem;
-            font-size: 0.9rem;
+        /* Dashboard Wrapper */
+        #dashboard-view {
             display: none;
+            padding-bottom: 3rem;
         }
 
-        /* --- Dashboard Screen --- */
-        #dashboard-screen {
-            display: none;
-            opacity: 0;
-            transition: opacity 0.5s ease;
-            padding: 2rem 1rem;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
+        /* Topbar */
         .topbar {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 2rem;
-            flex-wrap: wrap;
-            gap: 1rem;
-            padding: 1rem 2rem;
-            background: var(--bg-card);
-            border-radius: 1rem;
-            border: 1px solid var(--border);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 4px var(--shadow);
         }
-
-        .brand h1 {
-            font-size: 1.5rem;
+        .topbar-brand {
             font-weight: 700;
-            margin: 0;
-            background: var(--gradient-accent);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .brand span {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        .filters {
+            font-size: 1.25rem;
+            color: var(--text);
             display: flex;
-            gap: 1rem;
             align-items: center;
+            gap: 1rem;
         }
-
+        .expiry-badge {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            font-weight: 600;
+        }
+        .topbar-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
         .filter-select {
-            background: var(--bg-primary);
+            background: var(--bg);
             border: 1px solid var(--border);
-            color: var(--text-primary);
-            padding: 0.5rem 2rem 0.5rem 1rem;
+            color: var(--text);
             border-radius: 0.5rem;
-            appearance: none;
-            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394a3b8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E");
-            background-repeat: no-repeat;
-            background-position: right 0.7rem top 50%;
-            background-size: 0.65rem auto;
-        }
-        
-        .filter-select:focus {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
             outline: none;
+        }
+        .btn-icon {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 0.5rem;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-icon:hover {
+            background: var(--bg);
+            color: var(--accent);
             border-color: var(--accent);
         }
-
-        .expiry-badge {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--accent-red);
+        .btn-primary-action {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
             padding: 0.5rem 1rem;
-            border-radius: 2rem;
-            font-size: 0.85rem;
-            font-weight: 600;
+            font-weight: 500;
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary-action:hover {
+            background: var(--accent-hover);
         }
 
-        /* --- KPIs --- */
+        /* Container */
+        .content-container {
+            padding: 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* KPI Cards */
         .kpi-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1.5rem;
             margin-bottom: 2rem;
         }
-
         .kpi-card {
             background: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: 1rem;
             padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px var(--shadow);
+            transition: transform 0.2s, box-shadow 0.2s;
             position: relative;
             overflow: hidden;
-            transition: transform 0.3s, box-shadow 0.3s;
-            animation: fadeInUp 0.5s ease-out backwards;
         }
-
         .kpi-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-            background: var(--bg-card-hover);
+            box-shadow: 0 10px 15px -3px var(--shadow);
         }
-
         .kpi-card::before {
             content: '';
             position: absolute;
@@ -238,989 +220,879 @@
             left: 0;
             width: 100%;
             height: 4px;
-            background: var(--gradient-accent);
+            background: var(--accent);
             opacity: 0.8;
         }
-        
-        .kpi-card.kpi-danger::before { background: linear-gradient(90deg, #ef4444, #f87171); }
-        .kpi-card.kpi-warning::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
-        .kpi-card.kpi-success::before { background: linear-gradient(90deg, #10b981, #34d399); }
-        .kpi-card.kpi-info::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
-
         .kpi-title {
             color: var(--text-secondary);
-            font-size: 0.9rem;
-            font-weight: 500;
-            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
         }
-
         .kpi-value {
-            font-size: 1.8rem;
+            font-size: 1.75rem;
             font-weight: 700;
-            color: var(--text-primary);
+            color: var(--text);
+            margin: 0;
         }
 
-        .kpi-icon {
-            position: absolute;
-            right: 1.5rem;
-            top: 1.5rem;
-            font-size: 2rem;
-            opacity: 0.1;
-            color: #fff;
-        }
-
-        /* --- Charts Grid --- */
-        .charts-grid {
+        /* Chart Grid */
+        .chart-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            grid-template-columns: repeat(2, 1fr);
             gap: 1.5rem;
             margin-bottom: 2rem;
         }
-
+        @media (max-width: 1200px) {
+            .chart-grid { grid-template-columns: 1fr; }
+        }
         .chart-card {
             background: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: 1rem;
             padding: 1.5rem;
-            animation: fadeInUp 0.5s ease-out backwards;
+            box-shadow: 0 4px 6px -1px var(--shadow);
             display: flex;
             flex-direction: column;
         }
-
         .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 1rem;
             border-bottom: 1px solid var(--border);
             padding-bottom: 0.75rem;
         }
-
         .chart-title {
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 600;
+            color: var(--text);
             margin: 0;
         }
-
+        .chart-download {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: color 0.2s;
+            font-size: 1.1rem;
+        }
+        .chart-download:hover {
+            color: var(--accent);
+        }
         .chart-container {
             position: relative;
-            height: 300px;
+            flex: 1;
+            min-height: 300px;
             width: 100%;
-            flex-grow: 1;
         }
 
-        /* --- Data Table --- */
+        /* Table */
         .table-card {
             background: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: 1rem;
             padding: 1.5rem;
-            animation: fadeInUp 0.5s ease-out backwards;
+            box-shadow: 0 4px 6px -1px var(--shadow);
         }
-
         .table-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1.5rem;
-            flex-wrap: wrap;
-            gap: 1rem;
+            margin-bottom: 1rem;
         }
-
-        .search-box {
-            position: relative;
-            width: 100%;
-            max-width: 300px;
-        }
-
-        .search-box i {
-            position: absolute;
-            top: 50%;
-            left: 1rem;
-            transform: translateY(-50%);
-            color: var(--text-secondary);
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 0.5rem 1rem 0.5rem 2.5rem;
-            background: var(--bg-primary);
+        .table-search {
+            background: var(--bg);
             border: 1px solid var(--border);
-            border-radius: 2rem;
-            color: var(--text-primary);
-        }
-        
-        .search-input:focus {
+            color: var(--text);
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            width: 300px;
             outline: none;
-            border-color: var(--accent);
         }
-
-        .table-responsive {
-            overflow-x: auto;
-        }
-
         table {
             width: 100%;
             border-collapse: collapse;
         }
-
-        th {
+        th, td {
+            padding: 1rem;
             text-align: left;
-            padding: 1rem;
-            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border);
+            color: var(--text);
+        }
+        th {
             font-weight: 600;
-            font-size: 0.9rem;
-            border-bottom: 1px solid var(--border);
-            white-space: nowrap;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
         }
-
-        td {
-            padding: 1rem;
-            border-bottom: 1px solid var(--border);
-            color: var(--text-primary);
-            font-size: 0.95rem;
-        }
-
-        tr:last-child td {
-            border-bottom: none;
-        }
-
-        tr:hover td {
-            background-color: rgba(255, 255, 255, 0.02);
-        }
-
-        .status-badge {
+        .badge {
             padding: 0.25rem 0.75rem;
-            border-radius: 1rem;
-            font-size: 0.8rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
             font-weight: 600;
         }
-
-        .status-paid {
-            background: rgba(16, 185, 129, 0.1);
-            color: var(--accent-green);
-        }
-
-        .status-unpaid {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--accent-red);
-        }
-
-        .doc-type {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            background: var(--bg-primary);
-            padding: 0.2rem 0.5rem;
-            border-radius: 0.25rem;
-            border: 1px solid var(--border);
-        }
-
-        /* Animations */
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        .badge-success { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .badge-danger { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
         
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        .loader {
+            border: 4px solid var(--border);
+            border-top: 4px solid var(--accent);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
         }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: var(--bg-primary); 
-        }
-        ::-webkit-scrollbar-thumb {
-            background: var(--border); 
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--text-secondary); 
-        }
-
-        @media (max-width: 768px) {
-            .charts-grid { grid-template-columns: 1fr; }
-            .kpi-grid { grid-template-columns: 1fr 1fr; }
-        }
-        @media (max-width: 480px) {
-            .kpi-grid { grid-template-columns: 1fr; }
-            .topbar { flex-direction: column; align-items: flex-start; }
-            .filters { width: 100%; flex-wrap: wrap; }
-            .filter-select { flex: 1; }
+        /* Loader Overlay */
+        #loader-overlay {
+            position: fixed;
+            top:0; left:0; right:0; bottom:0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            color: white;
+            flex-direction: column;
+            gap: 1rem;
         }
     </style>
 </head>
 <body>
 
-    <!-- Loading Overlay -->
-    <div id="loading" style="position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg-primary);z-index:10000;display:flex;justify-content:center;align-items:center;">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Chargement...</span>
-        </div>
-    </div>
-
-    <!-- Auth Screen -->
-    <div id="auth-screen">
+    <!-- Auth View -->
+    <div id="auth-view">
         <div class="auth-card">
-            <h2>DOUROUB EL DJAZAIR</h2>
-            <p>Accès au Tableau de Bord Partagé</p>
+            <div class="auth-brand">
+                <i class="fas fa-chart-pie" style="color: var(--accent); margin-right: 0.5rem;"></i>
+                DOUROUB EL DJAZAIR
+            </div>
+            <p style="color: var(--text-secondary); margin-bottom: 2rem;">Accès au Tableau de Bord Partagé</p>
             
-            <form id="auth-form">
-                <div class="auth-input-group">
-                    <i class="fa-solid fa-lock"></i>
-                    <input type="password" id="password" class="auth-input" placeholder="Mot de passe" required>
-                </div>
+            <div id="auth-error" class="alert alert-danger" style="display:none; font-size:0.9rem; padding:0.5rem; margin-bottom:1rem;"></div>
+            
+            <form id="auth-form" onsubmit="handleAuth(event)">
+                <input type="password" id="auth-password" class="auth-input" placeholder="Mot de passe" required>
                 <button type="submit" class="auth-btn">
-                    Accéder au Tableau de Bord
+                    <i class="fas fa-lock" style="margin-right: 0.5rem;"></i> Accéder
                 </button>
-                <div id="auth-error" class="auth-error">Mot de passe incorrect ou lien expiré.</div>
             </form>
+            
+            <div id="auth-loading" style="display:none; margin-top:1rem;">
+                <div class="loader"></div>
+            </div>
         </div>
     </div>
 
-    <!-- Dashboard Screen -->
-    <div id="dashboard-screen">
+    <!-- Dashboard View -->
+    <div id="dashboard-view">
         <div class="topbar">
-            <div class="brand">
-                <h1>DOUROUB EL DJAZAIR</h1>
-                <span>Dashboard Partagé des KPIs</span>
+            <div class="topbar-brand">
+                <i class="fas fa-chart-pie" style="color: var(--accent);"></i>
+                <span id="header-company-name">DOUROUB EL DJAZAIR</span>
+                <span id="expiry-badge" class="expiry-badge">Expiré</span>
             </div>
-            <div class="filters">
-                <div class="expiry-badge" id="expiry-badge" style="display:none;">
-                    <i class="fa-regular fa-clock"></i>&nbsp;<span id="expiry-time">--</span>
-                </div>
-                <select id="year-filter" class="filter-select">
+            <div class="topbar-controls">
+                <select id="filter-year" class="filter-select" onchange="applyFilters()">
                     <option value="all">Toutes les années</option>
-                    <option value="2026" selected>2026</option>
-                    <option value="2025">2025</option>
-                    <option value="2024">2024</option>
                 </select>
-                <select id="client-filter" class="filter-select">
+                <select id="filter-client" class="filter-select" onchange="applyFilters()">
                     <option value="all">Tous les clients</option>
-                    <!-- Populated by JS -->
                 </select>
+                <button class="btn-icon" onclick="toggleTheme()" title="Basculer le thème">
+                    <i class="fas fa-moon" id="theme-icon"></i>
+                </button>
+                <button class="btn-primary-action" onclick="downloadFullDashboard()">
+                    <i class="fas fa-camera"></i> Exporter Dashboard
+                </button>
             </div>
         </div>
 
-        <!-- KPIs -->
-        <div class="kpi-grid">
-            <div class="kpi-card kpi-info" style="animation-delay: 0.1s;">
-                <div class="kpi-title">CA Total TTC</div>
-                <div class="kpi-value" id="kpi-ca-total">0,00 DA</div>
-                <i class="fa-solid fa-money-bill-trend-up kpi-icon"></i>
-            </div>
-            <div class="kpi-card" style="animation-delay: 0.15s;">
-                <div class="kpi-title">Nombre de Factures</div>
-                <div class="kpi-value" id="kpi-factures-count">0</div>
-                <i class="fa-solid fa-file-invoice kpi-icon"></i>
-            </div>
-            <div class="kpi-card" style="animation-delay: 0.2s;">
-                <div class="kpi-title">Nombre de BL</div>
-                <div class="kpi-value" id="kpi-bl-count">0</div>
-                <i class="fa-solid fa-truck-ramp-box kpi-icon"></i>
-            </div>
-            <div class="kpi-card kpi-danger" style="animation-delay: 0.25s;">
-                <div class="kpi-title">Créance Total</div>
-                <div class="kpi-value" id="kpi-creance-total">0,00 DA</div>
-                <i class="fa-solid fa-hand-holding-dollar kpi-icon"></i>
-            </div>
-            <div class="kpi-card kpi-warning" style="animation-delay: 0.3s;">
-                <div class="kpi-title">Taux de Créance</div>
-                <div class="kpi-value" id="kpi-taux-creance">0.00%</div>
-                <i class="fa-solid fa-percent kpi-icon"></i>
-            </div>
-            <div class="kpi-card kpi-success" style="animation-delay: 0.35s;">
-                <div class="kpi-title">CA Immobilisation (HT)</div>
-                <div class="kpi-value" id="kpi-ca-immo">0,00 DA</div>
-                <i class="fa-solid fa-building kpi-icon"></i>
-            </div>
-            <div class="kpi-card kpi-success" style="animation-delay: 0.4s;">
-                <div class="kpi-title">CA Location (HT)</div>
-                <div class="kpi-value" id="kpi-ca-location">0,00 DA</div>
-                <i class="fa-solid fa-key kpi-icon"></i>
-            </div>
-        </div>
-
-        <!-- Charts Grid -->
-        <div class="charts-grid">
-            <div class="chart-card" style="animation-delay: 0.1s;">
-                <div class="chart-header"><h3 class="chart-title">CA par Mois</h3></div>
-                <div class="chart-container"><canvas id="chart-ca-mois"></canvas></div>
-            </div>
-            <div class="chart-card" style="animation-delay: 0.2s;">
-                <div class="chart-header"><h3 class="chart-title">Répartition CA par Mois</h3></div>
-                <div class="chart-container"><canvas id="chart-repart-mois"></canvas></div>
-            </div>
-            <div class="chart-card" style="animation-delay: 0.3s;">
-                <div class="chart-header"><h3 class="chart-title">CA par Mode de Paiement</h3></div>
-                <div class="chart-container"><canvas id="chart-mode-paiement"></canvas></div>
-            </div>
-            <div class="chart-card" style="animation-delay: 0.4s;">
-                <div class="chart-header"><h3 class="chart-title">Créance par Mois</h3></div>
-                <div class="chart-container"><canvas id="chart-creance-mois"></canvas></div>
-            </div>
-            <div class="chart-card" style="animation-delay: 0.5s;">
-                <div class="chart-header"><h3 class="chart-title">Créance par Client</h3></div>
-                <div class="chart-container"><canvas id="chart-creance-client"></canvas></div>
-            </div>
-            <div class="chart-card" style="animation-delay: 0.6s;">
-                <div class="chart-header"><h3 class="chart-title">Nombre de BL par mois</h3></div>
-                <div class="chart-container"><canvas id="chart-bl-mois"></canvas></div>
-            </div>
-            <div class="chart-card" style="animation-delay: 0.7s;">
-                <div class="chart-header"><h3 class="chart-title">PU Moyenne par BL par Client</h3></div>
-                <div class="chart-container"><canvas id="chart-pu-bl-client"></canvas></div>
-            </div>
-            <div class="chart-card" style="animation-delay: 0.8s;">
-                <div class="chart-header"><h3 class="chart-title">Situation des BL</h3></div>
-                <div class="chart-container"><canvas id="chart-situation-bl"></canvas></div>
-            </div>
-            <div class="chart-card" style="animation-delay: 0.9s;">
-                <div class="chart-header"><h3 class="chart-title">Immobilisation: Heures par Client</h3></div>
-                <div class="chart-container"><canvas id="chart-immo-client"></canvas></div>
-            </div>
-            <div class="chart-card" style="animation-delay: 1.0s;">
-                <div class="chart-header"><h3 class="chart-title">Immobilisation: Heures par Mois</h3></div>
-                <div class="chart-container"><canvas id="chart-immo-mois"></canvas></div>
-            </div>
-            <div class="chart-card" style="animation-delay: 1.1s;">
-                <div class="chart-header"><h3 class="chart-title">Location: CA par Type d'Équipement</h3></div>
-                <div class="chart-container"><canvas id="chart-loc-type"></canvas></div>
-            </div>
-            <div class="chart-card" style="animation-delay: 1.2s;">
-                <div class="chart-header"><h3 class="chart-title">Location: CA par Mois</h3></div>
-                <div class="chart-container"><canvas id="chart-loc-mois"></canvas></div>
-            </div>
-        </div>
-
-        <!-- Data Table -->
-        <div class="table-card" style="animation-delay: 1.3s;">
-            <div class="table-header">
-                <h3 class="chart-title" style="margin:0;">Liste des Documents</h3>
-                <div class="search-box">
-                    <i class="fa-solid fa-search"></i>
-                    <input type="text" id="table-search" class="search-input" placeholder="Rechercher...">
+        <div class="content-container" id="dashboard-content">
+            <!-- KPI Cards -->
+            <div class="kpi-grid">
+                <div class="kpi-card" style="--accent: #3b82f6;">
+                    <div class="kpi-title">CA Total TTC</div>
+                    <div class="kpi-value"><span class="counter" data-target="0" data-format="currency" id="kpi-ca-total">0</span></div>
+                </div>
+                <div class="kpi-card" style="--accent: #10b981;">
+                    <div class="kpi-title">Nombre de Factures</div>
+                    <div class="kpi-value"><span class="counter" data-target="0" data-format="number" id="kpi-nb-factures">0</span></div>
+                </div>
+                <div class="kpi-card" style="--accent: #f59e0b;">
+                    <div class="kpi-title">Nombre de BL</div>
+                    <div class="kpi-value"><span class="counter" data-target="0" data-format="number" id="kpi-nb-bl">0</span></div>
+                </div>
+                <div class="kpi-card" style="--accent: #ef4444;">
+                    <div class="kpi-title">Créance Total</div>
+                    <div class="kpi-value"><span class="counter" data-target="0" data-format="currency" id="kpi-creance">0</span></div>
+                </div>
+                <div class="kpi-card" style="--accent: #8b5cf6;">
+                    <div class="kpi-title">Taux de Créance %</div>
+                    <div class="kpi-value"><span class="counter" data-target="0" data-format="percent" id="kpi-taux-creance">0</span></div>
+                </div>
+                <div class="kpi-card" style="--accent: #ec4899;">
+                    <div class="kpi-title">CA Immobilisation</div>
+                    <div class="kpi-value"><span class="counter" data-target="0" data-format="currency" id="kpi-ca-immo">0</span></div>
+                </div>
+                <div class="kpi-card" style="--accent: #06b6d4;">
+                    <div class="kpi-title">CA Location</div>
+                    <div class="kpi-value"><span class="counter" data-target="0" data-format="currency" id="kpi-ca-loc">0</span></div>
                 </div>
             </div>
-            <div class="table-responsive">
-                <table id="invoices-table">
-                    <thead>
-                        <tr>
-                            <th>N°</th>
-                            <th>Date</th>
-                            <th>Client</th>
-                            <th>Type</th>
-                            <th>Montant HT</th>
-                            <th>Montant TTC</th>
-                            <th>Statut</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Populated by JS -->
-                    </tbody>
-                </table>
+
+            <!-- Charts -->
+            <div class="chart-grid">
+                <!-- Row 1 -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">CA par Mois</h3>
+                        <button class="chart-download" onclick="downloadChart('chart-ca-mois', 'CA_par_Mois')" title="Télécharger"><i class="fas fa-download"></i></button>
+                    </div>
+                    <div class="chart-container"><canvas id="chart-ca-mois"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Répartition CA par Mois</h3>
+                        <button class="chart-download" onclick="downloadChart('chart-repart-ca', 'Repartition_CA')" title="Télécharger"><i class="fas fa-download"></i></button>
+                    </div>
+                    <div class="chart-container"><canvas id="chart-repart-ca"></canvas></div>
+                </div>
+                
+                <!-- Row 2 -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">CA par Mode de Paiement</h3>
+                        <button class="chart-download" onclick="downloadChart('chart-mode-paiement', 'Mode_Paiement')" title="Télécharger"><i class="fas fa-download"></i></button>
+                    </div>
+                    <div class="chart-container"><canvas id="chart-mode-paiement"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Créance par Mois</h3>
+                        <button class="chart-download" onclick="downloadChart('chart-creance-mois', 'Creance_Mois')" title="Télécharger"><i class="fas fa-download"></i></button>
+                    </div>
+                    <div class="chart-container"><canvas id="chart-creance-mois"></canvas></div>
+                </div>
+
+                <!-- Row 3 -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Créance par Client</h3>
+                        <button class="chart-download" onclick="downloadChart('chart-creance-client', 'Creance_Client')" title="Télécharger"><i class="fas fa-download"></i></button>
+                    </div>
+                    <div class="chart-container"><canvas id="chart-creance-client"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Nombre de BL par Mois</h3>
+                        <button class="chart-download" onclick="downloadChart('chart-nb-bl-mois', 'NB_BL_Mois')" title="Télécharger"><i class="fas fa-download"></i></button>
+                    </div>
+                    <div class="chart-container"><canvas id="chart-nb-bl-mois"></canvas></div>
+                </div>
+
+                <!-- Row 4 -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">PU Moyenne par BL par Client</h3>
+                        <button class="chart-download" onclick="downloadChart('chart-pu-bl-client', 'PU_Moyenne_BL_Client')" title="Télécharger"><i class="fas fa-download"></i></button>
+                    </div>
+                    <div class="chart-container"><canvas id="chart-pu-bl-client"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Situation des BL</h3>
+                        <button class="chart-download" onclick="downloadChart('chart-situation-bl', 'Situation_BL')" title="Télécharger"><i class="fas fa-download"></i></button>
+                    </div>
+                    <div class="chart-container"><canvas id="chart-situation-bl"></canvas></div>
+                </div>
+
+                <!-- Row 5 -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Immobilisation: Heures par Client</h3>
+                        <button class="chart-download" onclick="downloadChart('chart-immo-heures-client', 'Immo_Heures_Client')" title="Télécharger"><i class="fas fa-download"></i></button>
+                    </div>
+                    <div class="chart-container"><canvas id="chart-immo-heures-client"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Immobilisation: Heures par Mois</h3>
+                        <button class="chart-download" onclick="downloadChart('chart-immo-heures-mois', 'Immo_Heures_Mois')" title="Télécharger"><i class="fas fa-download"></i></button>
+                    </div>
+                    <div class="chart-container"><canvas id="chart-immo-heures-mois"></canvas></div>
+                </div>
+
+                <!-- Row 6 -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Location: CA par Type</h3>
+                        <button class="chart-download" onclick="downloadChart('chart-loc-ca-type', 'Loc_CA_Type')" title="Télécharger"><i class="fas fa-download"></i></button>
+                    </div>
+                    <div class="chart-container"><canvas id="chart-loc-ca-type"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Location: CA par Mois</h3>
+                        <button class="chart-download" onclick="downloadChart('chart-loc-ca-mois', 'Loc_CA_Mois')" title="Télécharger"><i class="fas fa-download"></i></button>
+                    </div>
+                    <div class="chart-container"><canvas id="chart-loc-ca-mois"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="table-card">
+                <div class="table-header">
+                    <h3 class="chart-title" style="margin:0;">Liste des Factures</h3>
+                    <input type="text" id="table-search" class="table-search" placeholder="Rechercher..." onkeyup="filterTable()">
+                </div>
+                <div style="overflow-x:auto;">
+                    <table id="invoices-table">
+                        <thead>
+                            <tr>
+                                <th>N°</th>
+                                <th>Date</th>
+                                <th>Client</th>
+                                <th>Montant HT</th>
+                                <th>TVA</th>
+                                <th>TTC</th>
+                                <th>Statut</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoices-tbody">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
+    </div>
 
+    <!-- Loader -->
+    <div id="loader-overlay">
+        <div class="loader"></div>
+        <div>Génération de l'export...</div>
     </div>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-    <script>
-        // Register Chart.js DataLabels plugin globally
-        Chart.register(ChartDataLabels);
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
+    <script>
         // Global State
-        let rawData = { clients: [], invoices: [], settings: null };
+        let token = window.location.pathname.split('/').pop();
+        if(token === 'shared-dashboard.html' || !token) token = new URLSearchParams(window.location.search).get('token'); // fallback for local testing
+        let globalData = null;
         let filteredInvoices = [];
         let chartInstances = {};
-        
-        const token = window.location.pathname.split('/').pop();
-        const moisNoms = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-        const chartColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#14b8a6', '#a855f7', '#6366f1'];
 
-        // Helper: Format Currency
-        function formatCurrency(n) { 
-            return (n||0).toLocaleString('fr-DZ', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' DA'; 
-        }
+        const palette = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#84cc16','#f97316','#14b8a6','#a855f7','#6366f1'];
+        const monthsFr = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 
-        // Helper: Parse Date properly safely
-        function getInvoiceMonth(dateStr) {
-            if(!dateStr) return -1;
-            const d = new Date(dateStr);
-            return d.getMonth();
-        }
-        function getInvoiceYear(dateStr) {
-            if(!dateStr) return -1;
-            const d = new Date(dateStr);
-            return d.getFullYear();
-        }
-
-        // Helper: Count BLs from string
-        function getBLCount(blString) {
-            if(!blString || typeof blString !== 'string' || blString.trim() === '') return 0;
-            return blString.split(',').filter(x => x.trim() !== '').length;
-        }
-        
-        // Helper: Get Client Name
-        function getClientName(clientId) {
-            const client = rawData.clients.find(c => c.id === clientId || c._id === clientId);
-            return client ? (client.nom || client.name || 'Client Inconnu') : 'Client Inconnu';
-        }
+        // Register Plugin
+        Chart.register(ChartDataLabels);
+        Chart.defaults.color = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim();
+        Chart.defaults.font.family = "'Inter', sans-serif";
 
         // Initialization
-        document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        const res = await fetch(`/api/shared/verify/${token}`);
-        const resData = await res.json();
-        if (!resData.valid) {
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('auth-error').innerText = resData.expired ? "Ce lien a expiré. Demandez un nouveau lien." : "Lien invalide.";
-            document.getElementById('auth-error').style.display = 'block';
-            document.getElementById('auth-screen').style.display = 'flex';
-            document.querySelector('.auth-btn').disabled = true;
-            return;
-        }
-        if(resData.expiresAt) setupExpiryTimer(resData.expiresAt);
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('auth-screen').style.display = 'flex';
-    } catch (err) {
-        console.error('Verification error', err);
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('auth-screen').style.display = 'flex';
-    }
-});
-
-        function setupExpiryTimer(expiresAtIso) {
-            const expiryTimeEl = document.getElementById('expiry-time');
-            const expiryBadge = document.getElementById('expiry-badge');
-            const expiresAt = new Date(expiresAtIso).getTime();
-            
-            if(isNaN(expiresAt)) return;
-            expiryBadge.style.display = 'flex';
-
-            const interval = setInterval(() => {
-                const now = new Date().getTime();
-                const distance = expiresAt - now;
-
-                if (distance < 0) {
-                    clearInterval(interval);
-                    expiryTimeEl.innerHTML = "Expiré";
-                    location.reload();
-                    return;
+        window.onload = async () => {
+            if(!token) {
+                showAuthError("Jeton manquant ou invalide.");
+                return;
+            }
+            try {
+                const res = await fetch(`/api/shared/verify/${token}`);
+                if(res.ok) {
+                    const data = await res.json();
+                    if(!data.valid) showAuthError("Jeton expiré ou invalide.");
+                    // We just wait for user to login
                 }
-                
-                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-                
-                let str = "";
-                if (days > 0) str += days + "j ";
-                str += hours + "h " + minutes + "m restants";
-                expiryTimeEl.innerHTML = str;
-            }, 1000);
+            } catch (e) {
+                console.error(e);
+            }
+        };
+
+        // UI Helpers
+        function formatCurrency(n) { return (n||0).toLocaleString('fr-DZ', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' DA'; }
+        
+        function animateCounter(el, target, format, duration=1500) {
+            let start = 0;
+            const step = target / (duration / 16);
+            if(target === 0) {
+                el.textContent = formatVal(0, format);
+                return;
+            }
+            const timer = setInterval(() => {
+                start += step; 
+                if (start >= target) { 
+                    start = target; 
+                    clearInterval(timer); 
+                }
+                el.textContent = formatVal(start, format);
+            }, 16);
         }
 
-        // Authentication Submit
-        document.getElementById('auth-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const password = document.getElementById('password').value;
-            const btn = document.querySelector('.auth-btn');
+        function formatVal(val, format) {
+            if(format === 'currency') return formatCurrency(val);
+            if(format === 'percent') return val.toFixed(2) + ' %';
+            return Math.floor(val).toLocaleString('fr-DZ');
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.getAttribute('data-theme') === 'dark';
+            html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+            document.getElementById('theme-icon').className = isDark ? 'fas fa-moon' : 'fas fa-sun';
             
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Chargement...';
-            btn.disabled = true;
+            Chart.defaults.color = getComputedStyle(html).getPropertyValue('--text-secondary').trim();
+            updateChartsTheme();
+        }
+
+        function updateChartsTheme() {
+            Object.values(chartInstances).forEach(chart => {
+                chart.options.scales && Object.keys(chart.options.scales).forEach(scale => {
+                    if(chart.options.scales[scale].grid) {
+                        chart.options.scales[scale].grid.color = getComputedStyle(document.documentElement).getPropertyValue('--border').trim();
+                    }
+                    if(chart.options.scales[scale].ticks) {
+                        chart.options.scales[scale].ticks.color = Chart.defaults.color;
+                    }
+                });
+                if(chart.options.plugins.legend.labels) {
+                    chart.options.plugins.legend.labels.color = Chart.defaults.color;
+                }
+                chart.update();
+            });
+        }
+
+        // Auth Logic
+        async function handleAuth(e) {
+            e.preventDefault();
+            const password = document.getElementById('auth-password').value;
             document.getElementById('auth-error').style.display = 'none';
+            document.getElementById('auth-loading').style.display = 'block';
 
             try {
-                const res = await fetch(`/api/shared/auth`, {
+                const res = await fetch('/api/shared/auth', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ token, password })
                 });
-
+                
                 const json = await res.json();
-
-                if (json.success && json.data) {
-                    rawData = json.data;
-                    document.getElementById('auth-screen').style.opacity = '0';
-                    setTimeout(() => {
-                        document.getElementById('auth-screen').style.display = 'none';
-                        const dash = document.getElementById('dashboard-screen');
-                        dash.style.display = 'block';
-                        // trigger reflow
-                        void dash.offsetWidth; 
-                        dash.style.opacity = '1';
-                        initDashboard();
-                    }, 500);
+                if(json.success && json.data) {
+                    globalData = json.data;
+                    initDashboard();
                 } else {
-                    throw new Error(json.message || 'Mot de passe incorrect');
+                    showAuthError(json.message || "Mot de passe incorrect.");
                 }
-            } catch (err) {
-                document.getElementById('auth-error').innerText = err.message || "Erreur de connexion";
-                document.getElementById('auth-error').style.display = 'block';
+            } catch(e) {
+                showAuthError("Erreur de connexion serveur.");
             } finally {
-                btn.innerHTML = 'Accéder au Tableau de Bord';
-                btn.disabled = false;
+                document.getElementById('auth-loading').style.display = 'none';
             }
-        });
+        }
 
-        // Initialize Dashboard
+        function showAuthError(msg) {
+            const el = document.getElementById('auth-error');
+            el.textContent = msg;
+            el.style.display = 'block';
+        }
+
+        // Dashboard Init
         function initDashboard() {
-            // Populate Clients Filter
-            const clientFilter = document.getElementById('client-filter');
-            // Sort clients alphabetically
-            const sortedClients = [...rawData.clients].sort((a,b) => (a.nom||'').localeCompare(b.nom||''));
-            sortedClients.forEach(c => {
+            document.getElementById('auth-view').style.display = 'none';
+            document.getElementById('dashboard-view').style.display = 'block';
+            
+            // Setup Header
+            if(globalData.settings && globalData.settings.companyName) {
+                document.getElementById('header-company-name').textContent = globalData.settings.companyName;
+            }
+
+            // Expiry
+            if(globalData.sharedSettings && globalData.sharedSettings.expiresAt) {
+                const expiry = new Date(globalData.sharedSettings.expiresAt);
+                const now = new Date();
+                const badge = document.getElementById('expiry-badge');
+                if(expiry > now) {
+                    const diffDays = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
+                    badge.textContent = `Expire dans ${diffDays}j`;
+                    badge.style.background = 'rgba(16, 185, 129, 0.1)';
+                    badge.style.color = 'var(--success)';
+                }
+            }
+
+            // Populate Filters
+            populateFilters();
+            
+            // Filter Data initially
+            applyFilters();
+        }
+
+        function populateFilters() {
+            const yearSelect = document.getElementById('filter-year');
+            const clientSelect = document.getElementById('filter-client');
+            
+            const years = new Set();
+            globalData.invoices.forEach(inv => {
+                if(inv.date) years.add(new Date(inv.date).getFullYear());
+            });
+            Array.from(years).sort().reverse().forEach(y => {
                 const opt = document.createElement('option');
-                opt.value = c.id || c._id;
-                opt.textContent = c.nom || c.name || 'Inconnu';
-                clientFilter.appendChild(opt);
+                opt.value = y; opt.textContent = y;
+                yearSelect.appendChild(opt);
             });
 
-            // Set up Global Chart Defaults for Dark Theme
-            Chart.defaults.color = '#94a3b8';
-            Chart.defaults.borderColor = '#334155';
-            Chart.defaults.plugins.datalabels.color = '#ffffff';
-            Chart.defaults.plugins.datalabels.font.weight = 'bold';
-            Chart.defaults.plugins.datalabels.display = false; // default off, turn on per chart
-
-            // Event Listeners for filters
-            document.getElementById('year-filter').addEventListener('change', updateDashboard);
-            document.getElementById('client-filter').addEventListener('change', updateDashboard);
-            document.getElementById('table-search').addEventListener('input', populateTable);
-
-            updateDashboard();
-        }
-
-        // Apply Filters and Update Everything
-        function updateDashboard() {
-            const yearVal = document.getElementById('year-filter').value;
-            const clientVal = document.getElementById('client-filter').value;
-
-            filteredInvoices = rawData.invoices.filter(inv => {
-                // exclude proformas from main KPIs by default unless specified, but let's include all factures
-                const isFacture = !inv.documentType || inv.documentType.toLowerCase() === 'facture';
-                if(!isFacture) return false; 
-                
-                let matchYear = true;
-                if (yearVal !== 'all') {
-                    matchYear = getInvoiceYear(inv.date) === parseInt(yearVal);
-                }
-                
-                let matchClient = true;
-                if (clientVal !== 'all') {
-                    const cid = inv.clientId || inv.client;
-                    // handle object or string for client ID
-                    const invClientId = typeof cid === 'object' ? cid._id || cid.id : cid;
-                    matchClient = invClientId === clientVal;
-                }
-
-                return matchYear && matchClient;
+            globalData.clients.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c._id; opt.textContent = c.nom;
+                clientSelect.appendChild(opt);
             });
-
-            calculateKPIs();
-            renderCharts();
-            populateTable();
         }
 
-        function animateValue(obj, start, end, duration, isCurrency = false, isPercent = false) {
-            let startTimestamp = null;
-            const step = (timestamp) => {
-                if (!startTimestamp) startTimestamp = timestamp;
-                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                const current = progress * (end - start) + start;
-                
-                if (isCurrency) {
-                    obj.innerHTML = formatCurrency(current);
-                } else if (isPercent) {
-                    obj.innerHTML = current.toFixed(2) + '%';
-                } else {
-                    obj.innerHTML = Math.floor(current);
-                }
+        function applyFilters() {
+            const year = document.getElementById('filter-year').value;
+            const clientId = document.getElementById('filter-client').value;
+            
+            filteredInvoices = globalData.invoices.filter(inv => inv.documentType !== 'proforma');
+            
+            if(year !== 'all') {
+                filteredInvoices = filteredInvoices.filter(inv => new Date(inv.date).getFullYear().toString() === year);
+            }
+            if(clientId !== 'all') {
+                filteredInvoices = filteredInvoices.filter(inv => inv.client && inv.client._id === clientId);
+            }
 
-                if (progress < 1) {
-                    window.requestAnimationFrame(step);
-                }
-            };
-            window.requestAnimationFrame(step);
+            updateKPIs();
+            updateCharts();
+            updateTable();
         }
 
-        // Calculate and Update KPIs
-        function calculateKPIs() {
+        // Data processing and calculations
+        function updateKPIs() {
             let caTotal = 0;
-            let creanceTotal = 0;
             let nbFactures = filteredInvoices.length;
-            let nbBL = 0;
+            let blSet = new Set();
+            let creance = 0;
             let caImmo = 0;
-            let caLocation = 0;
+            let caLoc = 0;
 
             filteredInvoices.forEach(inv => {
-                const ttc = inv.totals ? (inv.totals.ttc || 0) : 0;
-                caTotal += ttc;
+                if(inv.totals && inv.totals.ttc) caTotal += inv.totals.ttc;
+                if(!inv.paid) creance += (inv.totals ? inv.totals.ttc : 0) - (inv.amountPaid || 0);
                 
-                if (!inv.paid && !inv.isPaid) {
-                    creanceTotal += ttc;
+                if(inv.blReferences) {
+                    inv.blReferences.split(',').forEach(bl => {
+                        if(bl.trim()) blSet.add(bl.trim());
+                    });
                 }
 
-                nbBL += getBLCount(inv.blReferences || inv.bl);
-
-                if (inv.articles && Array.isArray(inv.articles)) {
+                if(inv.articles) {
                     inv.articles.forEach(art => {
-                        const ht = art.montantHT || (art.qte * art.prixUHT) || 0;
-                        if (art.isImmobilisation) caImmo += ht;
-                        if (art.isLocation) caLocation += ht;
+                        const lineTotal = (art.qte || 0) * (art.pu || 0);
+                        if(art.isImmobilisation) caImmo += lineTotal;
+                        if(art.isLocation) caLoc += lineTotal;
                     });
                 }
             });
 
-            const tauxCreance = caTotal > 0 ? (creanceTotal / caTotal) * 100 : 0;
+            const tauxCreance = caTotal > 0 ? (creance / caTotal) * 100 : 0;
+            const nbBl = blSet.size;
 
-            // Animate KPIs
-            animateValue(document.getElementById('kpi-ca-total'), 0, caTotal, 1000, true);
-            animateValue(document.getElementById('kpi-factures-count'), 0, nbFactures, 1000);
-            animateValue(document.getElementById('kpi-bl-count'), 0, nbBL, 1000);
-            animateValue(document.getElementById('kpi-creance-total'), 0, creanceTotal, 1000, true);
-            animateValue(document.getElementById('kpi-taux-creance'), 0, tauxCreance, 1000, false, true);
-            animateValue(document.getElementById('kpi-ca-immo'), 0, caImmo, 1000, true);
-            animateValue(document.getElementById('kpi-ca-location'), 0, caLocation, 1000, true);
+            animateCounter(document.getElementById('kpi-ca-total'), caTotal, 'currency');
+            animateCounter(document.getElementById('kpi-nb-factures'), nbFactures, 'number');
+            animateCounter(document.getElementById('kpi-nb-bl'), nbBl, 'number');
+            animateCounter(document.getElementById('kpi-creance'), creance, 'currency');
+            animateCounter(document.getElementById('kpi-taux-creance'), tauxCreance, 'percent');
+            animateCounter(document.getElementById('kpi-ca-immo'), caImmo, 'currency');
+            animateCounter(document.getElementById('kpi-ca-loc'), caLoc, 'currency');
         }
 
-        // Render All Charts
-        function renderCharts() {
-            destroyCharts();
-
-            // Prepare common data structures
-            const monthlyCA = Array(12).fill(0);
-            const monthlyCreance = Array(12).fill(0);
-            const monthlyBL = Array(12).fill(0);
-            const monthlyImmoHrs = Array(12).fill(0);
-            const monthlyLocCA = Array(12).fill(0);
+        function updateTable() {
+            const tbody = document.getElementById('invoices-tbody');
+            tbody.innerHTML = '';
             
-            const clientCreance = {};
-            const paymentModes = { 'Virement': 0, 'Chèque': 0, 'Créance': 0, 'Espèces': 0 };
-            const blSituation = { 'Payé Virement': 0, 'Payé Chèque': 0, 'Créance (Impayé)': 0 };
-            const clientImmoHrs = {};
-            const locTypes = {};
-            const clientPuBlData = {}; // { clientId: { totalHT: 0, totalBL: 0 } }
+            filteredInvoices.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(inv => {
+                const tr = document.createElement('tr');
+                const dateStr = inv.date ? new Date(inv.date).toLocaleDateString('fr-DZ') : '';
+                const clientName = inv.client ? inv.client.nom : 'Inconnu';
+                const statusBadge = inv.paid 
+                    ? '<span class="badge badge-success">Payée</span>' 
+                    : '<span class="badge badge-danger">Impayée</span>';
+                
+                tr.innerHTML = `
+                    <td>${inv.numero || '-'}</td>
+                    <td>${dateStr}</td>
+                    <td>${clientName}</td>
+                    <td>${formatCurrency(inv.totals?.ht)}</td>
+                    <td>${formatCurrency(inv.totals?.tva)}</td>
+                    <td>${formatCurrency(inv.totals?.ttc)}</td>
+                    <td>${statusBadge}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterTable() {
+            const query = document.getElementById('table-search').value.toLowerCase();
+            const rows = document.getElementById('invoices-tbody').getElementsByTagName('tr');
+            
+            Array.from(rows).forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(query) ? '' : 'none';
+            });
+        }
+
+        // Chart Rendering Helpers
+        function createOrUpdateChart(id, type, data, options = {}) {
+            const ctx = document.getElementById(id).getContext('2d');
+            if(chartInstances[id]) {
+                chartInstances[id].destroy();
+            }
+            
+            const defaultOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: Chart.defaults.color } },
+                    datalabels: {
+                        display: type === 'doughnut' || type === 'pie',
+                        color: '#fff',
+                        font: { weight: 'bold' },
+                        formatter: (val, ctx) => {
+                            if(val === 0) return '';
+                            let sum = 0;
+                            let dataArr = ctx.chart.data.datasets[0].data;
+                            dataArr.map(data => { sum += data; });
+                            let percentage = (val*100 / sum).toFixed(1)+"%";
+                            return percentage;
+                        }
+                    }
+                }
+            };
+            
+            if(type === 'bar' || type === 'line') {
+                defaultOptions.scales = {
+                    x: { grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() } },
+                    y: { grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() }, beginAtZero: true }
+                };
+            }
+
+            chartInstances[id] = new Chart(ctx, {
+                type: type,
+                data: data,
+                options: { ...defaultOptions, ...options }
+            });
+        }
+
+        function updateCharts() {
+            // Data grouping helpers
+            const byMonth = Array(12).fill(0);
+            const creanceByMonth = Array(12).fill(0);
+            const blByMonth = Array(12).fill(0);
+            
+            const creanceByClient = {};
+            let virementCa = 0; let chequeCa = 0; let creanceCa = 0;
+            
+            const blDetails = {}; // client -> {blCount, totalAmount}
+            
+            const immoByClient = {};
+            const immoByMonth = Array(12).fill(0);
+            
+            const locByType = {};
+            const locByMonth = Array(12).fill(0);
 
             filteredInvoices.forEach(inv => {
-                const m = getInvoiceMonth(inv.date);
-                if (m < 0 || m > 11) return;
+                const m = new Date(inv.date).getMonth();
+                const ttc = inv.totals?.ttc || 0;
                 
-                const ttc = inv.totals ? (inv.totals.ttc || 0) : 0;
-                const ht = inv.totals ? (inv.totals.ht || 0) : 0;
-                const cid = inv.clientId || inv.client;
-                const cname = getClientName(typeof cid === 'object' ? cid._id || cid.id : cid);
-                const isPaid = inv.paid || inv.isPaid;
-                const pMode = inv.paymentMode || inv.modePaiement || 'Non spécifié';
-                const bls = getBLCount(inv.blReferences || inv.bl);
+                // Monthly Revenue
+                byMonth[m] += ttc;
 
-                // Monthly CA
-                monthlyCA[m] += ttc;
+                // Creance
+                const unpaid = inv.paid ? 0 : ttc - (inv.amountPaid || 0);
+                creanceByMonth[m] += unpaid;
                 
-                // Monthly BL
-                monthlyBL[m] += bls;
+                const cName = inv.client ? inv.client.nom : 'Inconnu';
+                if(!creanceByClient[cName]) creanceByClient[cName] = 0;
+                creanceByClient[cName] += unpaid;
 
-                // Payment Modes & Creance
-                if (!isPaid) {
-                    monthlyCreance[m] += ttc;
-                    clientCreance[cname] = (clientCreance[cname] || 0) + ttc;
-                    paymentModes['Créance'] += ttc;
-                    blSituation['Créance (Impayé)'] += bls;
+                // Payment modes
+                if(inv.paid) {
+                    const mode = (inv.paymentDetails?.mode || '').toLowerCase();
+                    if(mode.includes('virement')) virementCa += ttc;
+                    else if(mode.includes('cheque') || mode.includes('chèque')) chequeCa += ttc;
+                    else virementCa += ttc; // default to virement if unknown but paid
                 } else {
-                    // Paid
-                    if (pMode.toLowerCase().includes('virement')) {
-                        paymentModes['Virement'] += ttc;
-                        blSituation['Payé Virement'] += bls;
-                    }
-                    else if (pMode.toLowerCase().includes('chèque') || pMode.toLowerCase().includes('cheque')) {
-                        paymentModes['Chèque'] += ttc;
-                        blSituation['Payé Chèque'] += bls;
-                    }
-                    else if (pMode.toLowerCase().includes('espèce') || pMode.toLowerCase().includes('espece')) {
-                        paymentModes['Espèces'] += ttc;
-                        blSituation['Payé Virement'] += bls; // fallback
-                    }
-                    else {
-                        paymentModes['Virement'] += ttc; // fallback
-                        blSituation['Payé Virement'] += bls; // fallback
+                    creanceCa += unpaid;
+                    if(inv.amountPaid > 0) {
+                        const mode = (inv.paymentDetails?.mode || '').toLowerCase();
+                        if(mode.includes('cheque') || mode.includes('chèque')) chequeCa += inv.amountPaid;
+                        else virementCa += inv.amountPaid;
                     }
                 }
 
-                // PU per BL per Client
-                if (!clientPuBlData[cname]) clientPuBlData[cname] = { ht: 0, bls: 0 };
-                clientPuBlData[cname].ht += ht;
-                clientPuBlData[cname].bls += bls;
+                // BLs
+                let nbBl = 0;
+                if(inv.blReferences) {
+                    const bls = inv.blReferences.split(',').filter(x => x.trim().length > 0);
+                    nbBl = bls.length;
+                    blByMonth[m] += nbBl;
+                }
 
-                // Articles details
-                if (inv.articles && Array.isArray(inv.articles)) {
+                if(!blDetails[cName]) blDetails[cName] = { bls: 0, total: 0 };
+                blDetails[cName].bls += nbBl;
+                blDetails[cName].total += ttc;
+
+                // Articles
+                if(inv.articles) {
                     inv.articles.forEach(art => {
-                        const artHt = art.montantHT || (art.qte * art.prixUHT) || 0;
-                        const qte = parseFloat(art.qte) || 0;
-                        
-                        if (art.isImmobilisation) {
-                            monthlyImmoHrs[m] += qte;
-                            clientImmoHrs[cname] = (clientImmoHrs[cname] || 0) + qte;
+                        if(art.isImmobilisation) {
+                            if(!immoByClient[cName]) immoByClient[cName] = 0;
+                            immoByClient[cName] += art.qte || 0;
+                            immoByMonth[m] += art.qte || 0;
                         }
-                        if (art.isLocation) {
-                            monthlyLocCA[m] += artHt;
-                            const type = art.locEquipment || art.equipement || 'Autre';
-                            locTypes[type] = (locTypes[type] || 0) + artHt;
+                        if(art.isLocation) {
+                            const type = art.locEquipment || 'Autre';
+                            const lineTotal = (art.qte || 0) * (art.pu || 0);
+                            if(!locByType[type]) locByType[type] = 0;
+                            locByType[type] += lineTotal;
+                            locByMonth[m] += lineTotal;
                         }
                     });
                 }
             });
 
             // 1. CA par Mois (Bar)
-            createChart('chart-ca-mois', 'bar', moisNoms, [{
-                label: 'CA TTC (DA)',
-                data: monthlyCA,
-                backgroundColor: 'rgba(59, 130, 246, 0.8)',
-                borderRadius: 4
-            }], { yCurrency: true });
+            createOrUpdateChart('chart-ca-mois', 'bar', {
+                labels: monthsFr,
+                datasets: [{ label: 'Chiffre d\'Affaires (TTC)', data: byMonth, backgroundColor: palette[0], borderRadius: 4 }]
+            }, { plugins: { tooltip: { callbacks: { label: (ctx) => formatCurrency(ctx.raw) } } } });
 
-            // 2. Répartition CA par Mois (Pie)
-            createChart('chart-repart-mois', 'pie', moisNoms, [{
-                data: monthlyCA,
-                backgroundColor: chartColors
-            }], { showDataLabels: true, legendRight: true });
+            // 2. Repart CA (Doughnut)
+            createOrUpdateChart('chart-repart-ca', 'doughnut', {
+                labels: monthsFr.filter((_, i) => byMonth[i] > 0),
+                datasets: [{ data: byMonth.filter(v => v > 0), backgroundColor: palette }]
+            });
 
-            // 3. CA par Mode de Paiement (Doughnut)
-            const pmLabels = Object.keys(paymentModes).filter(k => paymentModes[k] > 0);
-            const pmData = pmLabels.map(k => paymentModes[k]);
-            createChart('chart-mode-paiement', 'doughnut', pmLabels, [{
-                data: pmData,
-                backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
-            }], { showDataLabels: true, legendRight: true });
+            // 3. Mode Paiement
+            createOrUpdateChart('chart-mode-paiement', 'doughnut', {
+                labels: ['Virement', 'Chèque', 'Créance'],
+                datasets: [{ data: [virementCa, chequeCa, creanceCa], backgroundColor: [palette[1], palette[2], palette[3]] }]
+            });
 
-            // 4. Créance par Mois (Horizontal Bar)
-            createChart('chart-creance-mois', 'bar', moisNoms, [{
-                label: 'Créance (DA)',
-                data: monthlyCreance,
-                backgroundColor: 'rgba(239, 68, 68, 0.8)',
-                borderRadius: 4
-            }], { yCurrency: true, indexAxis: 'y' });
+            // 4. Creance par Mois
+            createOrUpdateChart('chart-creance-mois', 'bar', {
+                labels: monthsFr,
+                datasets: [{ label: 'Créance', data: creanceByMonth, backgroundColor: palette[3], borderRadius: 4 }]
+            }, { indexAxis: 'y', plugins: { tooltip: { callbacks: { label: (ctx) => formatCurrency(ctx.raw) } } } });
 
-            // 5. Créance par Client (Horizontal Bar)
-            const ccSorted = Object.entries(clientCreance).sort((a,b) => b[1] - a[1]).slice(0, 10); // Top 10
-            createChart('chart-creance-client', 'bar', ccSorted.map(x=>x[0]), [{
-                label: 'Créance (DA)',
-                data: ccSorted.map(x=>x[1]),
-                backgroundColor: 'rgba(245, 158, 11, 0.8)',
-                borderRadius: 4
-            }], { yCurrency: true, indexAxis: 'y' });
+            // 5. Creance par client
+            const cKeys = Object.keys(creanceByClient).filter(k => creanceByClient[k] > 0).sort((a,b) => creanceByClient[b] - creanceByClient[a]).slice(0, 10);
+            createOrUpdateChart('chart-creance-client', 'bar', {
+                labels: cKeys.map(k => k.substring(0, 15) + (k.length > 15 ? '...' : '')),
+                datasets: [{ label: 'Créance par Client', data: cKeys.map(k => creanceByClient[k]), backgroundColor: palette[4], borderRadius: 4 }]
+            }, { indexAxis: 'y' });
 
-            // 6. Nombre de BL par mois (Line)
-            createChart('chart-bl-mois', 'line', moisNoms, [{
-                label: 'Nombre de BL',
-                data: monthlyBL,
-                borderColor: '#10b981',
-                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                fill: true,
-                tension: 0.4
-            }]);
+            // 6. NB BL Mois
+            createOrUpdateChart('chart-nb-bl-mois', 'line', {
+                labels: monthsFr,
+                datasets: [{ label: 'Nombre de BL', data: blByMonth, borderColor: palette[5], backgroundColor: palette[5]+'33', fill: true, tension: 0.4 }]
+            });
 
-            // 7. PU Moyenne par BL par Client (Bar)
-            const puSorted = Object.entries(clientPuBlData)
-                .map(([name, data]) => ({ name, pu: data.bls > 0 ? data.ht / data.bls : 0 }))
-                .filter(x => x.pu > 0)
-                .sort((a,b) => b.pu - a.pu)
-                .slice(0, 10);
-            createChart('chart-pu-bl-client', 'bar', puSorted.map(x=>x.name), [{
-                label: 'PU Moyenne HT (DA)',
-                data: puSorted.map(x=>x.pu),
-                backgroundColor: 'rgba(139, 92, 246, 0.8)',
-                borderRadius: 4
-            }], { yCurrency: true });
+            // 7. PU Moyenne par BL Client
+            const blClients = Object.keys(blDetails).filter(k => blDetails[k].bls > 0);
+            const puByBl = blClients.map(k => blDetails[k].total / blDetails[k].bls);
+            createOrUpdateChart('chart-pu-bl-client', 'bar', {
+                labels: blClients.map(k => k.substring(0, 15)),
+                datasets: [{ label: 'Montant Moyen par BL', data: puByBl, backgroundColor: palette[6], borderRadius: 4 }]
+            });
 
-            // 8. Situation des BL (Doughnut)
-            const blsLabels = Object.keys(blSituation).filter(k => blSituation[k] > 0);
-            const blsData = blsLabels.map(k => blSituation[k]);
-            createChart('chart-situation-bl', 'doughnut', blsLabels, [{
-                data: blsData,
-                backgroundColor: ['#10b981', '#3b82f6', '#ef4444']
-            }], { showDataLabels: true, legendRight: true });
+            // 8. Situation BL
+            createOrUpdateChart('chart-situation-bl', 'doughnut', {
+                labels: ['Payés', 'Impayés'],
+                datasets: [{ data: [virementCa+chequeCa, creanceCa], backgroundColor: [palette[1], palette[3]] }]
+            });
 
-            // 9. Immobilisation: Heures par Client (Bar)
-            const immoSorted = Object.entries(clientImmoHrs).sort((a,b) => b[1] - a[1]).slice(0, 10);
-            createChart('chart-immo-client', 'bar', immoSorted.map(x=>x[0]), [{
-                label: 'Heures',
-                data: immoSorted.map(x=>x[1]),
-                backgroundColor: 'rgba(20, 184, 166, 0.8)',
-                borderRadius: 4
-            }]);
+            // 9. Immo Client
+            const iClients = Object.keys(immoByClient);
+            createOrUpdateChart('chart-immo-heures-client', 'bar', {
+                labels: iClients.map(k => k.substring(0, 15)),
+                datasets: [{ label: 'Heures Immobilisation', data: iClients.map(k => immoByClient[k]), backgroundColor: palette[7], borderRadius: 4 }]
+            });
 
-            // 10. Immobilisation: Heures par Mois (Line)
-            createChart('chart-immo-mois', 'line', moisNoms, [{
-                label: 'Heures Immobilisation',
-                data: monthlyImmoHrs,
-                borderColor: '#06b6d4',
-                backgroundColor: 'rgba(6, 182, 212, 0.1)',
-                fill: true,
-                tension: 0.4
-            }]);
+            // 10. Immo Mois
+            createOrUpdateChart('chart-immo-heures-mois', 'line', {
+                labels: monthsFr,
+                datasets: [{ label: 'Heures Immo/Mois', data: immoByMonth, borderColor: palette[8], backgroundColor: palette[8]+'33', fill: true, tension: 0.4 }]
+            });
 
-            // 11. Location: CA par Type (Doughnut)
-            const locTLabels = Object.keys(locTypes);
-            const locTData = locTLabels.map(k => locTypes[k]);
-            createChart('chart-loc-type', 'doughnut', locTLabels, [{
-                data: locTData,
-                backgroundColor: chartColors.slice(2)
-            }], { showDataLabels: true, legendRight: true });
+            // 11. Loc Type
+            const lTypes = Object.keys(locByType);
+            createOrUpdateChart('chart-loc-ca-type', 'doughnut', {
+                labels: lTypes,
+                datasets: [{ data: lTypes.map(k => locByType[k]), backgroundColor: palette }]
+            });
 
-            // 12. Location: CA par Mois (Bar)
-            createChart('chart-loc-mois', 'bar', moisNoms, [{
-                label: 'CA Location HT (DA)',
-                data: monthlyLocCA,
-                backgroundColor: 'rgba(236, 72, 153, 0.8)',
-                borderRadius: 4
-            }], { yCurrency: true });
+            // 12. Loc Mois
+            createOrUpdateChart('chart-loc-ca-mois', 'bar', {
+                labels: monthsFr,
+                datasets: [{ label: 'CA Location', data: locByMonth, backgroundColor: palette[10], borderRadius: 4 }]
+            }, { plugins: { tooltip: { callbacks: { label: (ctx) => formatCurrency(ctx.raw) } } } });
+
         }
 
-        // Helper to create and store chart
-        function createChart(id, type, labels, datasets, options = {}) {
-            const ctx = document.getElementById(id).getContext('2d');
+        // Export Functions
+        function downloadChart(canvasId, filename) {
+            const canvas = document.getElementById(canvasId);
             
-            const config = {
-                type: type,
-                data: { labels, datasets },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: options.legendRight ? 'right' : 'top',
-                            labels: { color: '#f1f5f9' }
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) label += ': ';
-                                    if (context.parsed.y !== null && options.yCurrency && type !== 'pie' && type !== 'doughnut') {
-                                        label += formatCurrency(options.indexAxis === 'y' ? context.parsed.x : context.parsed.y);
-                                    } else if ((type === 'pie' || type === 'doughnut') && context.raw) {
-                                        if (id.includes('ca') || id.includes('paiement') || id.includes('loc-type')) {
-                                            label += formatCurrency(context.raw);
-                                        } else {
-                                            label += context.raw;
-                                        }
-                                    } else {
-                                        label += context.parsed.y || context.raw;
-                                    }
-                                    return label;
-                                }
-                            }
-                        },
-                        datalabels: {
-                            display: options.showDataLabels ? true : false,
-                            formatter: (value, ctx) => {
-                                if (value === 0) return '';
-                                let sum = 0;
-                                let dataArr = ctx.chart.data.datasets[0].data;
-                                dataArr.map(data => { sum += data; });
-                                if (sum === 0) return '';
-                                let percentage = (value*100 / sum).toFixed(0)+"%";
-                                return percentage;
-                            },
-                            color: '#fff'
-                        }
-                    },
-                    scales: (type === 'pie' || type === 'doughnut') ? {} : {
-                        x: { 
-                            grid: { color: '#334155' },
-                            ticks: { color: '#94a3b8' }
-                        },
-                        y: {
-                            grid: { color: '#334155' },
-                            ticks: { 
-                                color: '#94a3b8',
-                                callback: function(value, index, values) {
-                                    if(options.yCurrency && !options.indexAxis) return formatCurrency(value);
-                                    return value;
-                                }
-                            }
-                        }
-                    }
-                }
-            };
-
-            if (options.indexAxis === 'y') {
-                config.options.indexAxis = 'y';
-                config.options.scales.x.ticks.callback = function(value) {
-                    if(options.yCurrency) return formatCurrency(value);
-                    return value;
-                };
-                delete config.options.scales.y.ticks.callback;
-            }
-
-            chartInstances[id] = new Chart(ctx, config);
-        }
-
-        function destroyCharts() {
-            Object.keys(chartInstances).forEach(key => {
-                if(chartInstances[key]) chartInstances[key].destroy();
-            });
-            chartInstances = {};
-        }
-
-        // Populate Table
-        function populateTable() {
-            const tbody = document.querySelector('#invoices-table tbody');
-            const search = document.getElementById('table-search').value.toLowerCase();
-            tbody.innerHTML = '';
-
-            // Filter for table
-            let tableData = rawData.invoices.filter(inv => {
-                const num = (inv.numero || inv.numeroFacture || '').toLowerCase();
-                const cid = inv.clientId || inv.client;
-                const cname = getClientName(typeof cid === 'object' ? cid._id || cid.id : cid).toLowerCase();
-                return num.includes(search) || cname.includes(search);
-            });
+            // Create a temp canvas to add white background (important for transparent PNGs)
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const ctx = tempCanvas.getContext('2d');
             
-            // Sort by date desc
-            tableData.sort((a,b) => new Date(b.date) - new Date(a.date));
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            ctx.fillStyle = isDark ? '#1e293b' : '#ffffff';
+            ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            ctx.drawImage(canvas, 0, 0);
 
-            // Limit to 100 for performance
-            tableData.slice(0, 100).forEach(inv => {
-                const tr = document.createElement('tr');
-                
-                const d = new Date(inv.date);
-                const dateStr = !isNaN(d) ? d.toLocaleDateString('fr-DZ') : '-';
-                
-                const cid = inv.clientId || inv.client;
-                const cname = getClientName(typeof cid === 'object' ? cid._id || cid.id : cid);
-                
-                const ht = inv.totals ? (inv.totals.ht || 0) : 0;
-                const ttc = inv.totals ? (inv.totals.ttc || 0) : 0;
-                
-                const isPaid = inv.paid || inv.isPaid;
-                const statusHtml = isPaid 
-                    ? '<span class="status-badge status-paid">Payée</span>'
-                    : '<span class="status-badge status-unpaid">Impayée</span>';
-
-                const docType = inv.documentType || 'Facture';
-
-                tr.innerHTML = `
-                    <td><strong>${inv.numero || inv.numeroFacture || '-'}</strong></td>
-                    <td>${dateStr}</td>
-                    <td>${cname}</td>
-                    <td><span class="doc-type">${docType}</span></td>
-                    <td>${formatCurrency(ht)}</td>
-                    <td><strong>${formatCurrency(ttc)}</strong></td>
-                    <td>${statusHtml}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-
-            if (tableData.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;">Aucun document trouvé.</td></tr>';
-            }
+            const link = document.createElement('a');
+            link.download = filename + '_' + new Date().toISOString().slice(0,10) + '.png';
+            link.href = tempCanvas.toDataURL('image/png', 1.0);
+            link.click();
         }
+
+        function downloadFullDashboard() {
+            document.getElementById('loader-overlay').style.display = 'flex';
+            
+            setTimeout(() => {
+                const target = document.getElementById('dashboard-content');
+                html2canvas(target, {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()
+                }).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = 'Dashboard_KPI_Douroub_' + new Date().toISOString().slice(0,10) + '.png';
+                    link.href = canvas.toDataURL('image/png', 1.0);
+                    link.click();
+                    document.getElementById('loader-overlay').style.display = 'none';
+                }).catch(err => {
+                    console.error("Erreur html2canvas:", err);
+                    document.getElementById('loader-overlay').style.display = 'none';
+                    alert("Une erreur est survenue lors de l'export.");
+                });
+            }, 500); // give loader time to render
+        }
+
     </script>
 </body>
 </html>
