@@ -1023,7 +1023,7 @@
                 <!-- 1. CA TOTAL TTC -->
                 <div class="kpi-card" style="--card-accent:#2563eb; --card-bg-subtle:rgba(37,99,235,0.1);">
                     <div class="kpi-header">
-                        <span class="kpi-label">C.A. Global Facturé</span>
+                        <span class="kpi-label">Chiffre d'Affaires Total</span>
                         <div class="kpi-icon-wrap"><i class="fas fa-wallet"></i></div>
                     </div>
                     <div class="kpi-value-block">
@@ -1054,7 +1054,7 @@
                 <!-- 3. BONS DE LIVRAISON -->
                 <div class="kpi-card" style="--card-accent:#f59e0b; --card-bg-subtle:rgba(245,158,11,0.1);">
                     <div class="kpi-header">
-                        <span class="kpi-label">Volume Logistique (BL)</span>
+                        <span class="kpi-label">Bons de Livraison (BL)</span>
                         <div class="kpi-icon-wrap"><i class="fas fa-boxes-stacked"></i></div>
                     </div>
                     <div class="kpi-value-block">
@@ -1070,7 +1070,7 @@
                 <!-- 4. CRÉANCE TOTALE -->
                 <div class="kpi-card" style="--card-accent:#ef4444; --card-bg-subtle:rgba(239,68,68,0.1);">
                     <div class="kpi-header">
-                        <span class="kpi-label">Créances & Encours Débiteurs</span>
+                        <span class="kpi-label">Créance Totale</span>
                         <div class="kpi-icon-wrap"><i class="fas fa-hand-holding-dollar"></i></div>
                     </div>
                     <div class="kpi-value-block">
@@ -1079,14 +1079,14 @@
                     </div>
                     <div class="kpi-footer">
                         <span>Encaissé : <b id="kpi-encaisse-val" class="text-success">0 DA</b></span>
-                        <span class="kpi-badge text-danger fw-bold" id="kpi-badge-creance">À recouvrer</span>
+                        <span class="kpi-badge text-danger fw-bold" id="kpi-badge-creance">Non payé</span>
                     </div>
                 </div>
 
                 <!-- 5. TAUX DE CRÉANCE -->
                 <div class="kpi-card" style="--card-accent:#8b5cf6; --card-bg-subtle:rgba(139,92,246,0.1);">
                     <div class="kpi-header">
-                        <span class="kpi-label">Taux de Créance & Risque</span>
+                        <span class="kpi-label">Taux de Créance</span>
                         <div class="kpi-icon-wrap"><i class="fas fa-chart-pie"></i></div>
                     </div>
                     <div class="kpi-value-block">
@@ -1094,14 +1094,14 @@
                         <span class="kpi-unit">%</span>
                     </div>
                     <div class="kpi-footer">
-                        <span>Taux de recouvrement : <b id="kpi-recouvrement-rate" class="text-success">0%</b></span>
+                        <span>Taux payé : <b id="kpi-recouvrement-rate" class="text-success">0%</b></span>
                     </div>
                 </div>
 
                 <!-- 6. CA IMMOBILISATION -->
                 <div class="kpi-card" style="--card-accent:#dc2626; --card-bg-subtle:rgba(220,38,38,0.1);">
                     <div class="kpi-header">
-                        <span class="kpi-label">Immobilisation Flotte</span>
+                        <span class="kpi-label">Frais d'Immobilisation</span>
                         <div class="kpi-icon-wrap"><i class="fas fa-stopwatch"></i></div>
                     </div>
                     <div class="kpi-value-block">
@@ -1117,7 +1117,7 @@
                 <!-- 7. CA LOCATION D'ENGINS -->
                 <div class="kpi-card" style="--card-accent:#d97706; --card-bg-subtle:rgba(217,119,6,0.1);">
                     <div class="kpi-header">
-                        <span class="kpi-label">Location d'Engins & Levage</span>
+                        <span class="kpi-label">Location d'Engins</span>
                         <div class="kpi-icon-wrap"><i class="fa-solid fa-tractor"></i></div>
                     </div>
                     <div class="kpi-value-block">
@@ -1134,15 +1134,15 @@
             <!-- SECTION 2: CHARTS GRID WITH INDEPENDENT TOOLBARS -->
             <div class="charts-grid">
                 
-                <!-- ROW 1: CA MENSUEL CONSOLIDÉ & VENTILATION PAR PRESTATION -->
+                <!-- ROW 1: CA MENSUEL & RÉPARTITION -->
                 <!-- CHART 1: CA PAR MOIS (BAR) -->
                 <div class="chart-card col-6">
                     <div class="chart-card-header">
-                        <h4 class="chart-card-title"><i class="fas fa-chart-column text-primary"></i> 1. Chiffre d'Affaires Mensuel Consolidé (TTC)</h4>
+                        <h4 class="chart-card-title"><i class="fas fa-chart-column text-primary"></i> 1. Chiffre d'Affaires par Mois (CA)</h4>
                         <div class="chart-toolbar">
                             <button class="btn-chart-tool" onclick="toggleDataLabels('chart-ca-mois')" title="Afficher/Masquer Chiffres"><i class="fas fa-tag"></i></button>
-                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-ca-mois', '1. Chiffre d\'Affaires Mensuel Consolidé (TTC)')" title="Plein Écran"><i class="fas fa-expand"></i></button>
-                            <button class="btn-chart-tool" onclick="downloadChart('chart-ca-mois', 'CA_Mensuel_Consolide_TTC')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-ca-mois', '1. Chiffre d\'Affaires par Mois (CA)')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-ca-mois', 'CA_par_Mois')" title="Télécharger Image"><i class="fas fa-download"></i></button>
                         </div>
                     </div>
                     <div class="chart-canvas-wrap">
@@ -1158,10 +1158,10 @@
                 <!-- CHART 2: RÉPARTITION PAR TYPE (DOUGHNUT) -->
                 <div class="chart-card col-6">
                     <div class="chart-card-header">
-                        <h4 class="chart-card-title"><i class="fas fa-chart-pie text-success"></i> 2. Ventilation du C.A. par Nature de Prestation</h4>
+                        <h4 class="chart-card-title"><i class="fas fa-chart-pie text-success"></i> 2. Répartition du CA par Prestation</h4>
                         <div class="chart-toolbar">
-                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-repart-type', '2. Ventilation du C.A. par Nature de Prestation')" title="Plein Écran"><i class="fas fa-expand"></i></button>
-                            <button class="btn-chart-tool" onclick="downloadChart('chart-repart-type', 'Ventilation_CA_Prestations')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-repart-type', '2. Répartition du CA par Prestation')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-repart-type', 'Repartition_CA')" title="Télécharger Image"><i class="fas fa-download"></i></button>
                         </div>
                     </div>
                     <div class="chart-canvas-wrap">
@@ -1173,15 +1173,15 @@
                     </div>
                 </div>
 
-                <!-- ROW 2: PORTEFEUILLE CLIENTS (CA vs ENCOURS & CRÉANCES) -->
-                <!-- CHART 3: PORTEFEUILLE CLIENTS MAJEURS (HORIZONTAL BAR) -->
+                <!-- ROW 2: CA PAR CLIENT vs CRÉANCE PAR CLIENT -->
+                <!-- CHART 3: CA PAR CLIENT (HORIZONTAL BAR) -->
                 <div class="chart-card col-6">
                     <div class="chart-card-header">
-                        <h4 class="chart-card-title"><i class="fas fa-users text-primary"></i> 3. Portefeuille Clients Majeurs (C.A. Facturé TTC)</h4>
+                        <h4 class="chart-card-title"><i class="fas fa-users text-primary"></i> 3. CA par Client (Top Clients)</h4>
                         <div class="chart-toolbar">
                             <button class="btn-chart-tool" onclick="toggleDataLabels('chart-top-clients')" title="Afficher/Masquer Chiffres"><i class="fas fa-tag"></i></button>
-                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-top-clients', '3. Portefeuille Clients Majeurs (C.A. Facturé TTC)')" title="Plein Écran"><i class="fas fa-expand"></i></button>
-                            <button class="btn-chart-tool" onclick="downloadChart('chart-top-clients', 'Portefeuille_Clients_Majeurs_CA')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-top-clients', '3. CA par Client (Top Clients)')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-top-clients', 'CA_par_Client')" title="Télécharger Image"><i class="fas fa-download"></i></button>
                         </div>
                     </div>
                     <div class="chart-canvas-wrap">
@@ -1193,35 +1193,35 @@
                     </div>
                 </div>
 
-                <!-- CHART 4: ENCOURS ET CRÉANCES PAR DÉBITEUR (HORIZONTAL BAR) -->
+                <!-- CHART 4: CRÉANCE PAR CLIENT (HORIZONTAL BAR) -->
                 <div class="chart-card col-6">
                     <div class="chart-card-header">
-                        <h4 class="chart-card-title"><i class="fas fa-hand-holding-dollar text-danger"></i> 4. Encours & Créances en Souffrance par Débiteur (TTC)</h4>
+                        <h4 class="chart-card-title"><i class="fas fa-hand-holding-dollar text-danger"></i> 4. Créance par Client (Impayés par Client)</h4>
                         <div class="chart-toolbar">
                             <button class="btn-chart-tool" onclick="toggleDataLabels('chart-creance-client')" title="Afficher/Masquer Chiffres"><i class="fas fa-tag"></i></button>
-                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-creance-client', '4. Encours & Créances en Souffrance par Débiteur (TTC)')" title="Plein Écran"><i class="fas fa-expand"></i></button>
-                            <button class="btn-chart-tool" onclick="downloadChart('chart-creance-client', 'Encours_Creances_Debiteur_TTC')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-creance-client', '4. Créance par Client (Impayés par Client)')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-creance-client', 'Creance_par_Client')" title="Télécharger Image"><i class="fas fa-download"></i></button>
                         </div>
                     </div>
                     <div class="chart-canvas-wrap">
                         <canvas id="chart-creance-client"></canvas>
                         <div id="empty-chart-creance-client" class="chart-empty-state">
                             <i class="fas fa-check-circle text-success chart-empty-icon" style="opacity:0.6;"></i>
-                            <div class="chart-empty-title">Toutes les factures sont soldées !</div>
-                            <div class="chart-empty-sub">Aucun encours ni créance en attente pour cette sélection</div>
+                            <div class="chart-empty-title">Toutes les factures sont payées !</div>
+                            <div class="chart-empty-sub">Aucun impayé pour cette sélection</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- ROW 3: ÉVOLUTION DES CRÉANCES & STRUCTURE DES RÈGLEMENTS -->
+                <!-- ROW 3: CRÉANCE PAR MOIS & SITUATION DES PAIEMENTS -->
                 <!-- CHART 5: CRÉANCE PAR MOIS (BAR) -->
                 <div class="chart-card col-6">
                     <div class="chart-card-header">
-                        <h4 class="chart-card-title"><i class="fas fa-calendar-xmark text-danger"></i> 5. Évolution Chronologique des Créances Non Soldées</h4>
+                        <h4 class="chart-card-title"><i class="fas fa-calendar-xmark text-danger"></i> 5. Créance par Mois (Impayés par Mois)</h4>
                         <div class="chart-toolbar">
                             <button class="btn-chart-tool" onclick="toggleDataLabels('chart-creance-mois')" title="Afficher/Masquer Chiffres"><i class="fas fa-tag"></i></button>
-                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-creance-mois', '5. Évolution Chronologique des Créances Non Soldées')" title="Plein Écran"><i class="fas fa-expand"></i></button>
-                            <button class="btn-chart-tool" onclick="downloadChart('chart-creance-mois', 'Chronologie_Creances_Non_Soldees')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-creance-mois', '5. Créance par Mois (Impayés par Mois)')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-creance-mois', 'Creance_par_Mois')" title="Télécharger Image"><i class="fas fa-download"></i></button>
                         </div>
                     </div>
                     <div class="chart-canvas-wrap">
@@ -1233,13 +1233,13 @@
                     </div>
                 </div>
 
-                <!-- CHART 6: STRUCTURE DES RÈGLEMENTS (DOUGHNUT) -->
+                <!-- CHART 6: SITUATION DES PAIEMENTS (DOUGHNUT) -->
                 <div class="chart-card col-6">
                     <div class="chart-card-header">
-                        <h4 class="chart-card-title"><i class="fas fa-credit-card text-info"></i> 6. Structure des Règlements & Flux Financiers</h4>
+                        <h4 class="chart-card-title"><i class="fas fa-credit-card text-info"></i> 6. Situation des Paiements (Virement / Chèque / Créance)</h4>
                         <div class="chart-toolbar">
-                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-mode-paiement', '6. Structure des Règlements & Flux Financiers')" title="Plein Écran"><i class="fas fa-expand"></i></button>
-                            <button class="btn-chart-tool" onclick="downloadChart('chart-mode-paiement', 'Structure_Reglements_Flux')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-mode-paiement', '6. Situation des Paiements (Virement / Chèque / Créance)')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-mode-paiement', 'Situation_des_Paiements')" title="Télécharger Image"><i class="fas fa-download"></i></button>
                         </div>
                     </div>
                     <div class="chart-canvas-wrap">
@@ -1251,14 +1251,14 @@
                     </div>
                 </div>
 
-                <!-- ROW 4: LOGISTIQUE ET FLOTTE -->
+                <!-- ROW 4: LOGISTIQUE ET IMMOBILISATION -->
                 <!-- CHART 7: NOMBRE DE BL PAR MOIS (LINE) -->
                 <div class="chart-card col-6">
                     <div class="chart-card-header">
-                        <h4 class="chart-card-title"><i class="fas fa-truck-fast text-warning"></i> 7. Activité Logistique : Volume des Bons de Livraison (BL)</h4>
+                        <h4 class="chart-card-title"><i class="fas fa-truck-fast text-warning"></i> 7. Nombre de BL réalisé par Mois</h4>
                         <div class="chart-toolbar">
-                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-nb-bl-mois', '7. Activité Logistique : Volume des Bons de Livraison (BL)')" title="Plein Écran"><i class="fas fa-expand"></i></button>
-                            <button class="btn-chart-tool" onclick="downloadChart('chart-nb-bl-mois', 'Volume_BL_Logistique')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-nb-bl-mois', '7. Nombre de BL réalisé par Mois')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-nb-bl-mois', 'Nombre_de_BL_par_Mois')" title="Télécharger Image"><i class="fas fa-download"></i></button>
                         </div>
                     </div>
                     <div class="chart-canvas-wrap">
@@ -1270,13 +1270,13 @@
                     </div>
                 </div>
 
-                <!-- CHART 8: IMMOBILISATION HEURES PAR MOIS (BAR) -->
+                <!-- CHART 8: IMMOBILISATION PAR MOIS (BAR) -->
                 <div class="chart-card col-6">
                     <div class="chart-card-header">
-                        <h4 class="chart-card-title"><i class="fas fa-stopwatch text-danger"></i> 8. Immobilisation Flotte : Heures d'Attente Facturées</h4>
+                        <h4 class="chart-card-title"><i class="fas fa-stopwatch text-danger"></i> 8. Immobilisation par Mois (Heures d'attente)</h4>
                         <div class="chart-toolbar">
-                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-immo-mois', '8. Immobilisation Flotte : Heures d\'Attente Facturées')" title="Plein Écran"><i class="fas fa-expand"></i></button>
-                            <button class="btn-chart-tool" onclick="downloadChart('chart-immo-mois', 'Immobilisation_Flotte_Heures')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-immo-mois', '8. Immobilisation par Mois (Heures d\'attente)')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-immo-mois', 'Immobilisation_par_Mois')" title="Télécharger Image"><i class="fas fa-download"></i></button>
                         </div>
                     </div>
                     <div class="chart-canvas-wrap">
@@ -1290,13 +1290,13 @@
                 </div>
 
                 <!-- ROW 5: LOCATION D'ENGINS -->
-                <!-- CHART 9: LOCATION D'ENGINS PAR TYPE (DOUGHNUT) -->
+                <!-- CHART 9: LOCATION PAR ENGIN (DOUGHNUT) -->
                 <div class="chart-card col-12">
                     <div class="chart-card-header">
-                        <h4 class="chart-card-title"><i class="fa-solid fa-tractor text-warning"></i> 9. Matériel & Levage : Location d'Engins par Équipement</h4>
+                        <h4 class="chart-card-title"><i class="fa-solid fa-tractor text-warning"></i> 9. Location par Engin (Grues et Matériel)</h4>
                         <div class="chart-toolbar">
-                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-loc-equip', '9. Matériel & Levage : Location d\'Engins par Équipement')" title="Plein Écran"><i class="fas fa-expand"></i></button>
-                            <button class="btn-chart-tool" onclick="downloadChart('chart-loc-equip', 'Location_Engins_Equipement')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-loc-equip', '9. Location par Engin (Grues et Matériel)')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-loc-equip', 'Location_par_Engin')" title="Télécharger Image"><i class="fas fa-download"></i></button>
                         </div>
                     </div>
                     <div class="chart-canvas-wrap">
@@ -1315,7 +1315,7 @@
             <div class="table-card">
                 <div class="table-card-header">
                     <div>
-                        <h4 class="chart-card-title"><i class="fas fa-table-list text-primary"></i> Journal Récapitulatif des Factures</h4>
+                        <h4 class="chart-card-title"><i class="fas fa-table-list text-primary"></i> Tableau des Factures</h4>
                         <div class="text-muted small" id="table-summary-count">Chargement des données...</div>
                     </div>
                     <div class="d-flex gap-2">
