@@ -13,7 +13,12 @@ let dashboardCharts = {
     immoStages: null,
     immoReasons: null,
     immoRates: null,
-    immoTrucks: null
+    immoTrucks: null,
+    locClients: null,
+    locMonths: null,
+    locEquipment: null,
+    locDurations: null,
+    locRates: null
 };
 
 let clients = [];
@@ -42,7 +47,9 @@ let settings = {
     logoLeft: '',
     logoRight: '',
     defaultImmoRate: 2500,
-    pricingTypes: 'Transport, Transfert, Immobilisation'
+    pricingTypes: 'Transport, Transfert, Immobilisation',
+    defaultLocationRate: 150000,
+    locationEquipmentTypes: 'Grue 25T, Grue 50T, Grue 75T'
 };
 
 
@@ -354,6 +361,7 @@ function initializeApp() {
         loadSettings();
         setupWilayaPriceManagement();
         setupLogoHandlers();
+        if (typeof loadShareLinks === 'function') loadShareLinks();
 
     } catch (error) {
         console.error('Error initializing app:', error);
@@ -727,6 +735,7 @@ function showView(viewName) {
         if (viewName === 'settings') loadSettings();
 		if (viewName === 'wilaya-prices') setupWilayaPriceManagement();
         if (viewName === 'immobilisation') updateImmobilisationView();
+        if (viewName === 'location') { populateLocClientFilter(); populateLocEquipmentFilter(); updateLocationView(); }
 
     } catch (error) {
         console.error('Error showing view:', error);
@@ -989,16 +998,17 @@ function renderClients() {
 // Invoice Management
 function openInvoiceWizard(initialType = 'transport') {
   const isImmo = initialType === 'immobilisation';
+  const isLoc = initialType === 'location';
   const immoRate = settings.defaultImmoRate || 2500;
+  const locRate = settings.defaultLocationRate || 150000;
+  const defaultEquip = (settings.locationEquipmentTypes || 'Grue 25T').split(',')[0].trim();
   
-  currentInvoice = {
-    contratRef : '',
-    bdcRef     : '',
-    invoiceType: initialType,
-    articles: [
-      isImmo ? {
+  let defaultArticle;
+  if (isImmo) {
+      defaultArticle = {
         no: 1,
         isImmobilisation: true,
+        isLocation: false,
         pricingType: 'Immobilisation',
         immoTitle: "Frais d'attente et d'immobilisation",
         immoStage: 'dechargement',
@@ -1017,19 +1027,49 @@ function openInvoiceWizard(initialType = 'transport') {
         wilayaDepart: '',
         wilayaDestination: '',
         selectedDestination: ''
-      } : {
+      };
+  } else if (isLoc) {
+      defaultArticle = {
+        no: 1,
+        isLocation: true,
+        isImmobilisation: false,
+        pricingType: 'Location',
+        locEquipment: defaultEquip,
+        locTonnage: '',
+        locPeriodStart: '',
+        locPeriodEnd: '',
+        locSite: '',
+        locDriver: '',
+        designation: `<b>Location de ${defaultEquip}</b><br>-Site : <br>-Période : `,
+        qte: 1,
+        prixUHT: locRate,
+        montantHT: locRate,
+        wilayaDepart: '',
+        wilayaDestination: '',
+        selectedDestination: ''
+      };
+  } else {
+      defaultArticle = {
         no: 1,
         isImmobilisation: false,
+        isLocation: false,
         pricingType: 'Transport',
         designation: '<b>Prestation de transport routier</b><br>-WILAYA DEPART : <br>-DESTINATION : <br>-Nombre de palettes : 0',
         qte: 1,
         prixUHT: 0,
         montantHT: 0,
-        wilayaDepart: '',    // ✅ No default, user chooses it
+        wilayaDepart: '',
         wilayaDestination: '',
         selectedDestination: ''
-      }
-    ],
+      };
+  }
+  
+  currentInvoice = {
+    documentType: 'facture',
+    contratRef : '',
+    bdcRef     : '',
+    invoiceType: initialType,
+    articles: [defaultArticle],
 
     blReferences: '',
     palettes: isImmo ? 0 : 26,
@@ -1037,7 +1077,7 @@ function openInvoiceWizard(initialType = 'transport') {
     refBonTransfert: '',
     showDestinationInDoitA: false,
     remise: { enabled: false, type: 'percentage', value: 0 },
-    totals: { ht: isImmo ? (immoRate * 8) : 0, remise:0, htRemise: isImmo ? (immoRate * 8) : 0, tva: isImmo ? (immoRate * 8 * 0.19) : 0, ttc: isImmo ? (immoRate * 8 * 1.19) : 0, netAPayer: isImmo ? (immoRate * 8 * 1.19) : 0 }
+    totals: { ht: isImmo ? (immoRate * 8) : (isLoc ? locRate : 0), remise:0, htRemise: isImmo ? (immoRate * 8) : (isLoc ? locRate : 0), tva: isImmo ? (immoRate * 8 * 0.19) : (isLoc ? locRate * 0.19 : 0), ttc: isImmo ? (immoRate * 8 * 1.19) : (isLoc ? locRate * 1.19 : 0), netAPayer: isImmo ? (immoRate * 8 * 1.19) : (isLoc ? locRate * 1.19 : 0) }
   };
 
   currentStep = 1;
@@ -1334,6 +1374,15 @@ function renderStep2() {
 
         container.innerHTML = `
             <h6>Étape 2/5 - Informations facture</h6>
+            <div class="mb-3 p-2 rounded border bg-light">
+                <label class="form-label fw-bold small text-uppercase text-muted">Type de Document</label>
+                <div class="btn-group w-100" role="group">
+                    <input type="radio" class="btn-check" name="docType" id="docTypeFacture" value="facture" ${currentInvoice.documentType !== 'proforma' ? 'checked' : ''} autocomplete="off">
+                    <label class="btn btn-outline-primary" for="docTypeFacture"><i class="fa fa-file-invoice me-1"></i>Facture</label>
+                    <input type="radio" class="btn-check" name="docType" id="docTypeProforma" value="proforma" ${currentInvoice.documentType === 'proforma' ? 'checked' : ''} autocomplete="off">
+                    <label class="btn btn-outline-warning" for="docTypeProforma"><i class="fa fa-file-alt me-1"></i>Proforma</label>
+                </div>
+            </div>
             <div class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label">N° Facture</label>
@@ -1359,6 +1408,14 @@ function renderStep2() {
         `;
 
         // Listeners (Code inchangé pour la sauvegarde)
+        const docTypeRadios = container.querySelectorAll('input[name="docType"]');
+        docTypeRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                currentInvoice.documentType = this.value;
+                updateInvoicePreview();
+            });
+        });
+
         const wizardDate = document.getElementById('wizardDate');
         const wizardDelai = document.getElementById('wizardDelai');
         const wizardMode = document.getElementById('wizardMode');
@@ -1475,6 +1532,7 @@ function renderStep4() {
                     <button type="button" class="btn btn-immo btn-sm px-3 shadow-sm fw-semibold" onclick="addImmobilisationArticle()">
                         <i class="fa fa-stopwatch me-1"></i> + Frais d'Immobilisation / Attente
                     </button>
+                    <button type="button" class="btn btn-sm px-3 shadow-sm fw-semibold" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:white;" onclick="addLocationArticle()"><i class="fa fa-crane me-1"></i> + Location</button>
                 </div>
             </div>
 
@@ -1491,6 +1549,7 @@ function renderStep4() {
                     <button type="button" class="btn btn-outline-immo btn-sm px-3 fw-semibold" onclick="addImmobilisationArticle()">
                         <i class="fa fa-stopwatch me-1"></i> + Ajouter Frais d'Immobilisation / Attente
                     </button>
+                    <button type="button" class="btn btn-sm px-3 shadow-sm fw-semibold" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:white;" onclick="addLocationArticle()"><i class="fa fa-crane me-1"></i> + Location</button>
                 </div>
             </div>
         `;
@@ -1674,6 +1733,7 @@ window.setArticleType = function(index, type) {
     if (!currentInvoice.articles || !currentInvoice.articles[index]) return;
     const article = currentInvoice.articles[index];
     if (type === 'immobilisation') {
+        article.isLocation = false;
         article.isImmobilisation = true;
         article.pricingType = 'Immobilisation';
         if (!article.immoTitle) article.immoTitle = "Frais d'attente et d'immobilisation";
@@ -1684,7 +1744,17 @@ window.setArticleType = function(index, type) {
         if (!article.immoReason) article.immoReason = 'Attente déchargement chez client';
         article.montantHT = (parseFloat(article.qte) || 0) * (parseFloat(article.prixUHT) || 0);
         updateImmobilisationDesignation(index);
+    } else if (type === 'location') {
+        article.isLocation = true;
+        article.isImmobilisation = false;
+        article.pricingType = 'Location';
+        if (!article.locEquipment) article.locEquipment = (settings.locationEquipmentTypes || 'Grue 25T').split(',')[0].trim();
+        if (!article.qte || article.qte < 1) article.qte = 1;
+        if (!article.prixUHT || article.prixUHT === 0) article.prixUHT = settings.defaultLocationRate || 150000;
+        article.montantHT = (parseFloat(article.qte) || 0) * (parseFloat(article.prixUHT) || 0);
+        updateLocationDesignation(index);
     } else {
+        article.isLocation = false;
         article.isImmobilisation = false;
         article.pricingType = 'Transport';
         updateArticleDesignation(index);
@@ -1812,6 +1882,7 @@ function renderArticles() {
         
         currentInvoice.articles.forEach((article, index) => {
             const isImmo = !!article.isImmobilisation || (article.pricingType && article.pricingType.toLowerCase().includes('immobilis'));
+            const isLoc = !!article.isLocation || (article.pricingType && article.pricingType.toLowerCase() === 'location');
             
             // Client destinations
             const client = clients.find(c => c.id === currentInvoice.clientId);
@@ -1820,20 +1891,24 @@ function renderArticles() {
                 '<option value="">Aucune destination disponible</option>';
             
             const div = document.createElement('div');
-            div.className = isImmo ? 'article-card-base article-card-immo' : 'article-card-base article-card-transport';
+            div.className = isImmo ? 'article-card-base article-card-immo' : (isLoc ? 'article-card-base' : 'article-card-base article-card-transport');
+            if (isLoc) div.style.borderLeftColor = '#f59e0b';
             
             const typeBar = `
                 <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom flex-wrap gap-2">
                     <div class="d-flex align-items-center gap-2">
-                        <span class="${isImmo ? 'badge-immo' : 'badge bg-primary'} fs-6 px-2 py-1 shadow-sm">
-                            ${isImmo ? '<i class="fa fa-stopwatch me-1"></i>Ligne ' + article.no + ' • Frais d\'Attente / Immobilisation' : '<i class="fa fa-truck me-1"></i>Ligne ' + article.no + ' • Transport'}
+                        <span class="${isImmo ? 'badge-immo' : (isLoc ? 'badge' : 'badge bg-primary')} fs-6 px-2 py-1 shadow-sm" style="${isLoc ? 'background:#fef3c7;color:#92400e;' : ''}">
+                            ${isImmo ? '<i class="fa fa-stopwatch me-1"></i>Ligne ' + article.no + ' • Frais d\'Attente / Immobilisation' : (isLoc ? '<i class="fa fa-crane me-1"></i>Ligne ' + article.no + ' • Location' : '<i class="fa fa-truck me-1"></i>Ligne ' + article.no + ' • Transport')}
                         </span>
                         <div class="btn-group btn-group-sm" role="group">
-                            <button type="button" class="btn ${!isImmo ? 'btn-primary' : 'btn-outline-secondary'}" onclick="setArticleType(${index}, 'transport')">
+                            <button type="button" class="btn ${!isImmo && !isLoc ? 'btn-primary' : 'btn-outline-secondary'}" onclick="setArticleType(${index}, 'transport')">
                                 <i class="fa fa-truck me-1"></i>Transport
                             </button>
                             <button type="button" class="btn ${isImmo ? 'btn-immo' : 'btn-outline-secondary'}" onclick="setArticleType(${index}, 'immobilisation')">
                                 <i class="fa fa-stopwatch me-1"></i>Immobilisation
+                            </button>
+                            <button type="button" class="btn ${isLoc ? 'btn-primary' : 'btn-outline-secondary'}" style="${isLoc ? 'background:linear-gradient(135deg,#f59e0b,#d97706);color:white;border:none;' : ''}" onclick="setArticleType(${index}, 'location')">
+                                <i class="fa fa-crane me-1"></i>Location
                             </button>
                         </div>
                     </div>
@@ -2015,6 +2090,64 @@ function renderArticles() {
                         </div>
                     </div>
                 `;
+            } else if (isLoc) {
+                // Location article fields
+                const equipTypes = (settings.locationEquipmentTypes || 'Grue 25T, Grue 50T, Grue 75T').split(',').map(t => t.trim());
+                let eqHtml = '';
+                equipTypes.forEach(t => { eqHtml += `<option value="${t}" ${t===article.locEquipment?'selected':''}>${t}</option>`; });
+                
+                articleFieldsHtml = `
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-cogs text-warning me-1"></i>Type d'équipement *</label>
+                            <select class="form-select form-select-sm" data-field="locEquipment" data-index="${index}" required>${eqHtml}</select>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-map-marker-alt text-warning me-1"></i>Site / Chantier</label>
+                            <input type="text" class="form-control form-control-sm" data-field="locSite" data-index="${index}" placeholder="Ex: Base vie Sonatrach Hassi Messaoud..." value="${article.locSite || ''}">
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold text-muted mb-1">Du *</label>
+                            <input type="date" class="form-control form-control-sm" data-field="locPeriodStart" data-index="${index}" value="${article.locPeriodStart || ''}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold text-muted mb-1">Au *</label>
+                            <input type="date" class="form-control form-control-sm" data-field="locPeriodEnd" data-index="${index}" value="${article.locPeriodEnd || ''}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted mb-1">Opérateur / Chauffeur / Réf</label>
+                            <input type="text" class="form-control form-control-sm" data-field="locDriver" data-index="${index}" placeholder="Ex: Mr. Ali - Permis 12345" value="${article.locDriver || ''}">
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label small fw-bold text-muted mb-0">Désignation facturée *</label>
+                                <button type="button" class="btn btn-link btn-xs p-0 text-decoration-none fw-semibold text-warning" onclick="updateLocationDesignation(${index})"><i class="fa fa-sync-alt me-1"></i>Régénérer</button>
+                            </div>
+                            <textarea class="form-control form-control-sm" rows="3" data-field="designation" data-index="${index}" required>${article.designation || ''}</textarea>
+                        </div>
+                    </div>
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted mb-1">Jours facturés *</label>
+                            <input type="number" class="form-control fw-bold" data-field="qte" data-index="${index}" value="${article.qte || 1}" min="0.5" step="0.5" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted mb-1">Taux Journalier HT *</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control fw-bold" data-field="prixUHT" data-index="${index}" value="${article.prixUHT || settings.defaultLocationRate || 150000}" min="0" required>
+                                <span class="input-group-text">DA/j</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted mb-1">Montant Ligne HT</label>
+                            <input type="number" class="form-control fw-bold bg-light" data-field="montantHT" data-index="${index}" value="${article.montantHT || 0}" readonly>
+                        </div>
+                    </div>
+                `;
             } else {
                 articleFieldsHtml = `
                     <div class="row g-2 mb-2">
@@ -2103,6 +2236,8 @@ function renderArticles() {
                     
                     if (field === 'immoTitle') {
                         updateImmobilisationDesignation(index);
+                    } else if (field === 'locEquipment') {
+                        updateLocationDesignation(index);
                     } else if (['wilayaDepart', 'wilayaDestination', 'selectedDestination', 'pricingType'].includes(field)) {
                         updateArticleDesignation(index);
                     }
@@ -2164,6 +2299,10 @@ function renderArticles() {
 
                         if (['matricule', 'immoTruckCount', 'immoTitle', 'immoDriver', 'immoLocation', 'immoSiteChargement', 'immoSiteDechargement', 'immoPeriod', 'immoReason', 'qte'].includes(field)) {
                             updateImmobilisationDesignation(index);
+                        }
+                    } else if (article.isLocation) {
+                        if (['locSite', 'locPeriodStart', 'locPeriodEnd', 'locDriver', 'qte'].includes(field)) {
+                            updateLocationDesignation(index);
                         }
                     }
                     
@@ -2646,7 +2785,7 @@ function generateInvoiceHTML(invoice, options = {}) {
 
                 <div class="invoice-meta-container">
                     <div class="meta-left">
-                        <div class="invoice-number">Facture N° ${invoice.number}</div>
+                        <div class="invoice-number">${invoice.documentType === 'proforma' ? 'PROFORMA N°' : 'Facture N°'} ${invoice.number}</div>
                         ${duplicataHTML}
                         <div class="invoice-date">${biskraDate}</div>
                     </div>
@@ -3006,8 +3145,17 @@ function renderInvoices() {
       if (!displayDest) displayDest = '—';
 
       // Check for immobilisation
-      const hasImmo = inv.invoiceType === 'immobilisation' || (inv.articles && inv.articles.some(a => a.isImmobilisation || (a.pricingType && a.pricingType.toLowerCase().includes('immobilis')) || (a.designation && a.designation.toLowerCase().includes('immobilis'))));
+      const hasImmo = inv.invoiceType === 'immobilisation' || (inv.articles && inv.articles.some(a => a.isImmobilisation || (a.pricingType && a.pricingType.toLowerCase().includes('immobilis'))));
       const immoBadgeHtml = hasImmo ? `<span class="badge badge-immo me-1" title="Contient des frais d'attente / immobilisation"><i class="fa fa-stopwatch me-1"></i>Immo</span>` : '';
+
+      // Check for location
+      const hasLoc = inv.invoiceType === 'location' || (inv.articles && inv.articles.some(a => a.isLocation || (a.pricingType && a.pricingType.toLowerCase() === 'location')));
+      const locBadgeHtml = hasLoc ? `<span class="badge me-1" style="background:#f59e0b;color:#fff;" title="Contient de la location"><i class="fa fa-crane me-1"></i>Loc</span>` : '';
+      
+      // Check for proforma
+      const isProforma = inv.documentType === 'proforma';
+      const proformaBadgeHtml = isProforma ? `<span class="badge bg-warning text-dark me-1"><i class="fa fa-file-alt me-1"></i>PROFORMA</span>` : '';
+      const convertBtn = isProforma ? `<button class="btn btn-sm btn-success ms-1" onclick="convertProformaToFacture(${inv.id}); event.stopPropagation();" title="Convertir en Facture"><i class="fa fa-exchange-alt"></i></button>` : '';
 
       // BUTTONS
       let actionButtons = '';
@@ -3019,19 +3167,20 @@ function renderInvoices() {
       const commonButtons = `
         <button class="btn btn-sm btn-outline-primary" onclick="editInvoice(${inv.id}); event.stopPropagation();" title="Modifier Facture"><i class="fa fa-edit"></i></button>
         ${actionButtons}
+        ${convertBtn}
         <button class="btn btn-sm btn-outline-danger" onclick="deleteInvoice(${inv.id}); event.stopPropagation();" title="Supprimer Facture"><i class="fa fa-trash"></i></button>
       `;
 
       const row = document.createElement('tr');
       row.innerHTML = `
         <td class="text-center"><input type="checkbox" class="invoice-checkbox" data-id="${inv.id}"></td>
-        <td class="fw-bold text-primary">${inv.number}</td>
+        <td class="fw-bold text-primary">${proformaBadgeHtml}${inv.number}</td>
         <td>${dateDisplay}</td>
         <td class="fw-semibold">${client.nom || 'Inconnu'}</td>
         
         <td>
             <small class="text-muted text-truncate d-block" style="max-width: 200px;" title="${displayDest}">
-                ${immoBadgeHtml}${displayDest}
+                ${immoBadgeHtml}${locBadgeHtml}${displayDest}
             </small>
         </td>
         
@@ -3635,7 +3784,7 @@ function generateInvoiceHTMLForPDF(invoice, options = {}) {
       invoiceMetaHTML = `
         <div class="invoice-meta-container">
             <div class="meta-left">
-                <div class="invoice-number">Facture N° ${invoice.number}</div>
+                <div class="invoice-number">${invoice.documentType === 'proforma' ? 'PROFORMA N°' : 'Facture N°'} ${invoice.number}</div>
                 ${duplicata ? '<div style="color: #CC0000; font-weight: bold; font-size: 1.1em; letter-spacing: 2px; margin-top: 2px; border: 2px solid #CC0000; display: inline-block; padding: 1px 10px; border-radius: 3px;">DUPLICATA</div>' : ''}
                 <div class="invoice-date">${biskraDate}</div>
             </div>
@@ -5514,6 +5663,9 @@ function loadSettings() {
     if (elOdd) elOdd.value = settings.excelColorOdd || '#ffffff';
     const elImmoRate = document.getElementById('defaultImmoRate');
     if (elImmoRate) elImmoRate.value = settings.defaultImmoRate !== undefined ? settings.defaultImmoRate : 2500;
+    if(document.getElementById('locationEquipmentTypes')) document.getElementById('locationEquipmentTypes').value = settings.locationEquipmentTypes || 'Grue 25T, Grue 50T, Grue 75T';
+    const elLocRate = document.getElementById('defaultLocationRate');
+    if (elLocRate) elLocRate.value = settings.defaultLocationRate !== undefined ? settings.defaultLocationRate : 150000;
 
     // ✅ Load left logo
     const logoLeftDisplay = document.getElementById('logoLeftDisplay');
@@ -5553,6 +5705,9 @@ function saveSettings() {
     if (elOdd) settings.excelColorOdd = elOdd.value;
     const elImmoRate = document.getElementById('defaultImmoRate');
     if (elImmoRate) settings.defaultImmoRate = parseFloat(elImmoRate.value) || 2500;
+    if(document.getElementById('locationEquipmentTypes')) settings.locationEquipmentTypes = document.getElementById('locationEquipmentTypes').value;
+    const elLocRate2 = document.getElementById('defaultLocationRate');
+    if (elLocRate2) settings.defaultLocationRate = parseFloat(elLocRate2.value) || 150000;
 
     saveDataToLocalStorage();
     alert('✅ Paramètres sauvegardés !');
@@ -8346,4 +8501,342 @@ window.exportImmobilisationToExcel = function() {
         console.error('Erreur export immobilisation:', err);
         alert('Erreur lors de l\'export Excel : ' + err.message);
     }
+};
+// ════════════════════════════════════════════════════════════════
+// 🏗️ MODULE LOCATION & RENTAL
+// ════════════════════════════════════════════════════════════════
+
+window.addLocationArticle = function() {
+    try {
+        if (!currentInvoice.articles) currentInvoice.articles = [];
+        const newNo = currentInvoice.articles.length + 1;
+        const rate = settings.defaultLocationRate || 150000;
+        const defaultEquip = (settings.locationEquipmentTypes || 'Grue 25T').split(',')[0].trim();
+        currentInvoice.articles.push({
+            no: newNo, isLocation: true, isImmobilisation: false, pricingType: 'Location',
+            locEquipment: defaultEquip, locTonnage: '', locPeriodStart: '', locPeriodEnd: '',
+            locSite: '', locDriver: '', designation: '', qte: 1,
+            prixUHT: rate, montantHT: rate, wilayaDepart: '', wilayaDestination: '', selectedDestination: ''
+        });
+        updateLocationDesignation(currentInvoice.articles.length - 1);
+        renderArticles();
+        const badge = document.getElementById('articleCountBadge');
+        if (badge) badge.textContent = `${currentInvoice.articles.length} ligne${currentInvoice.articles.length > 1 ? 's' : ''}`;
+        updateInvoicePreview();
+    } catch (e) { console.error('Error adding location article:', e); }
+};
+
+window.updateLocationDesignation = function(index) {
+    if (!currentInvoice.articles || !currentInvoice.articles[index]) return;
+    const art = currentInvoice.articles[index];
+    const equip = art.locEquipment || 'Engin';
+    let des = `<b>Location de ${equip}</b><br>`;
+    if (art.locSite && art.locSite.trim()) des += `-Site / Chantier : <b>${art.locSite.trim()}</b><br>`;
+    if (art.locPeriodStart || art.locPeriodEnd) {
+        const from = art.locPeriodStart ? new Date(art.locPeriodStart).toLocaleDateString('fr-FR') : '...';
+        const to = art.locPeriodEnd ? new Date(art.locPeriodEnd).toLocaleDateString('fr-FR') : '...';
+        des += `-Période : Du ${from} au ${to}<br>`;
+    }
+    if (art.locDriver && art.locDriver.trim()) des += `-Opérateur / Réf : ${art.locDriver.trim()}<br>`;
+    const qty = parseFloat(art.qte) || 0;
+    if (qty > 0) des += `-Durée : <b>${qty} Jour${qty > 1 ? 's' : ''}</b>`;
+    art.designation = des;
+    const textarea = document.querySelector(`textarea[data-field="designation"][data-index="${index}"]`);
+    if (textarea) textarea.value = des;
+};
+
+function isLocationArticle(art) {
+    if (!art) return false;
+    if (art.isLocation === true) return true;
+    if (art.pricingType && typeof art.pricingType === 'string' && art.pricingType.toLowerCase() === 'location') return true;
+    return false;
+}
+function isLocationInvoice(inv) {
+    if (!inv) return false;
+    if (inv.invoiceType === 'location') return true;
+    return inv.articles && inv.articles.some(a => isLocationArticle(a));
+}
+
+window.convertProformaToFacture = function(invoiceId) {
+    const inv = invoices.find(i => i.id === invoiceId);
+    if (!inv || inv.documentType !== 'proforma') return;
+    if (!confirm('Convertir cette proforma en facture définitive ?')) return;
+    inv.documentType = 'facture';
+    const year = new Date().getFullYear();
+    inv.number = `${String(invoiceCounter).padStart(3, '0')}/${year}`;
+    invoiceCounter++;
+    saveDataToLocalStorage();
+    renderInvoices();
+    updateDashboard();
+    alert('\u2705 Proforma convertie en Facture N\u00b0 ' + inv.number);
+};
+
+// --- Location Analytics ---
+function populateLocClientFilter() {
+    const sel = document.getElementById('locFilterClient');
+    if (!sel) return;
+    const cv = sel.value || 'all';
+    let html = '<option value="all">\ud83d\udc51 Tous les clients</option>';
+    clients.forEach(c => { html += `<option value="${c.id}" ${String(c.id) === String(cv) ? 'selected' : ''}>${c.nom}</option>`; });
+    sel.innerHTML = html;
+}
+function populateLocEquipmentFilter() {
+    const sel = document.getElementById('locFilterEquipment');
+    if (!sel) return;
+    const types = new Set();
+    invoices.forEach(inv => { if (inv.articles) inv.articles.forEach(a => { if (isLocationArticle(a) && a.locEquipment) types.add(a.locEquipment); }); });
+    let html = '<option value="all">Tous les types</option>';
+    types.forEach(t => { html += `<option value="${t}">${t}</option>`; });
+    sel.innerHTML = html;
+}
+
+function getFilteredLocData() {
+    const clientId = document.getElementById('locFilterClient')?.value || 'all';
+    const year = document.getElementById('locFilterYear')?.value || '';
+    const equip = document.getElementById('locFilterEquipment')?.value || 'all';
+    const period = document.getElementById('locFilterPeriod')?.value || 'all';
+    const dateFrom = document.getElementById('locDateFrom')?.value;
+    const dateTo = document.getElementById('locDateTo')?.value;
+    let items = [];
+    invoices.forEach(inv => {
+        if (!inv.articles || !inv.date) return;
+        if (inv.documentType === 'proforma') return;
+        const d = new Date(inv.date);
+        if (year && d.getFullYear() !== parseInt(year)) return;
+        if (clientId !== 'all' && String(inv.clientId) !== String(clientId)) return;
+        // Period filter
+        const m = d.getMonth();
+        if (period !== 'all' && period !== 'custom') {
+            if (period === 'S1' && m > 5) return;
+            if (period === 'S2' && m < 6) return;
+            if (period === 'Q1' && (m < 0 || m > 2)) return;
+            if (period === 'Q2' && (m < 3 || m > 5)) return;
+            if (period === 'Q3' && (m < 6 || m > 8)) return;
+            if (period === 'Q4' && (m < 9 || m > 11)) return;
+            if (/^\d+$/.test(period) && m !== parseInt(period)) return;
+        }
+        if (period === 'custom') {
+            if (dateFrom && inv.date < dateFrom) return;
+            if (dateTo && inv.date > dateTo) return;
+        }
+        inv.articles.forEach(art => {
+            if (!isLocationArticle(art)) return;
+            if (equip !== 'all' && art.locEquipment !== equip) return;
+            const client = clients.find(c => c.id === inv.clientId);
+            items.push({
+                invoiceId: inv.id, date: inv.date, number: inv.number,
+                clientName: client ? client.nom : 'Inconnu', clientId: inv.clientId,
+                equipment: art.locEquipment || 'N/A', site: art.locSite || '',
+                periodStart: art.locPeriodStart || '', periodEnd: art.locPeriodEnd || '',
+                days: parseFloat(art.qte) || 0, rate: parseFloat(art.prixUHT) || 0,
+                montantHT: parseFloat(art.montantHT) || 0,
+                montantTTC: (parseFloat(art.montantHT) || 0) * 1.19,
+                paid: !!inv.paid, documentType: inv.documentType || 'facture'
+            });
+        });
+    });
+    return items;
+}
+
+function updateLocationView() {
+    const data = getFilteredLocData();
+    renderLocKPICards(data);
+    renderLocCharts(data);
+    renderLocTable();
+    updateSidebarLocationBadge();
+}
+
+function renderLocKPICards(data) {
+    const c = document.getElementById('locKpiContainer');
+    if (!c) return;
+    const totalHT = data.reduce((s, i) => s + i.montantHT, 0);
+    const totalTTC = data.reduce((s, i) => s + i.montantTTC, 0);
+    const totalDays = data.reduce((s, i) => s + i.days, 0);
+    const nbFactures = new Set(data.map(i => i.invoiceId)).size;
+    const unpaid = data.filter(i => !i.paid).reduce((s, i) => s + i.montantTTC, 0);
+    const equipTypes = new Set(data.map(i => i.equipment)).size;
+    const avgRate = data.length ? (totalHT / totalDays) : 0;
+    const kpis = [
+        { icon: 'fa-money-bill-trend-up', color: '#f59e0b', label: 'CA Location HT', value: formatCurrency(totalHT) },
+        { icon: 'fa-file-invoice', color: '#3b82f6', label: 'Factures', value: nbFactures },
+        { icon: 'fa-calendar-days', color: '#10b981', label: 'Jours Total', value: totalDays.toFixed(1) },
+        { icon: 'fa-cogs', color: '#8b5cf6', label: 'Types Équipement', value: equipTypes },
+        { icon: 'fa-coins', color: '#ec4899', label: 'Taux Moyen / Jour', value: formatCurrency(avgRate) },
+        { icon: 'fa-triangle-exclamation', color: '#ef4444', label: 'Créance Location', value: formatCurrency(unpaid) },
+    ];
+    c.innerHTML = kpis.map(k => `
+        <div class="col-lg-2 col-md-4 col-6">
+            <div class="card border-0 shadow-sm h-100" style="border-left:4px solid ${k.color} !important;">
+                <div class="card__body p-3 text-center">
+                    <i class="fa-solid ${k.icon} fs-4 mb-2" style="color:${k.color};"></i>
+                    <div class="fw-bold fs-5">${k.value}</div>
+                    <div class="text-muted small">${k.label}</div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderLocCharts(data) {
+    const colors = ['#f59e0b','#3b82f6','#10b981','#ef4444','#8b5cf6','#ec4899','#06b6d4','#84cc16'];
+    const months = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+    // 1. CA by client
+    const byClient = {};
+    data.forEach(i => { byClient[i.clientName] = (byClient[i.clientName] || 0) + i.montantHT; });
+    const sortedClients = Object.entries(byClient).sort((a,b) => b[1]-a[1]);
+    if (dashboardCharts.locClients) dashboardCharts.locClients.destroy();
+    const ctx1 = document.getElementById('chartLocClients');
+    if (ctx1) dashboardCharts.locClients = new Chart(ctx1, { type:'bar', data:{ labels:sortedClients.map(c=>c[0]), datasets:[{ label:'CA HT', data:sortedClients.map(c=>c[1]), backgroundColor:colors, borderRadius:6 }] }, options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, datalabels:{ anchor:'end', align:'right', formatter:v=>formatCurrency(v), font:{size:10} } } } });
+    // 2. CA by month
+    const byMonth = Array(12).fill(0);
+    data.forEach(i => { const m = new Date(i.date).getMonth(); byMonth[m] += i.montantHT; });
+    if (dashboardCharts.locMonths) dashboardCharts.locMonths.destroy();
+    const ctx2 = document.getElementById('chartLocMonths');
+    if (ctx2) dashboardCharts.locMonths = new Chart(ctx2, { type:'bar', data:{ labels:months, datasets:[{ label:'CA HT Location', data:byMonth, backgroundColor:'#f59e0b', borderRadius:6 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, datalabels:{ anchor:'end', align:'top', formatter:v=>v>0?formatCurrency(v):'', font:{size:10} } } } });
+    // 3. By equipment type
+    const byEquip = {};
+    data.forEach(i => { byEquip[i.equipment] = (byEquip[i.equipment] || 0) + i.montantHT; });
+    const eqEntries = Object.entries(byEquip);
+    if (dashboardCharts.locEquipment) dashboardCharts.locEquipment.destroy();
+    const ctx3 = document.getElementById('chartLocEquipment');
+    if (ctx3) dashboardCharts.locEquipment = new Chart(ctx3, { type:'doughnut', data:{ labels:eqEntries.map(e=>e[0]), datasets:[{ data:eqEntries.map(e=>e[1]), backgroundColor:colors }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ datalabels:{ formatter:(v,c)=>{ const t=c.dataset.data.reduce((a,b)=>a+b,0); return t?((v/t)*100).toFixed(0)+'%':''; }, color:'#fff', font:{weight:'bold'} } } } });
+    // 4. Duration by client
+    const durByClient = {};
+    data.forEach(i => { durByClient[i.clientName] = (durByClient[i.clientName] || 0) + i.days; });
+    const durSorted = Object.entries(durByClient).sort((a,b) => b[1]-a[1]);
+    if (dashboardCharts.locDurations) dashboardCharts.locDurations.destroy();
+    const ctx4 = document.getElementById('chartLocDurations');
+    if (ctx4) dashboardCharts.locDurations = new Chart(ctx4, { type:'bar', data:{ labels:durSorted.map(c=>c[0]), datasets:[{ label:'Jours', data:durSorted.map(c=>c[1]), backgroundColor:'#10b981', borderRadius:6 }] }, options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, datalabels:{ anchor:'end', align:'right', formatter:v=>v.toFixed(1)+'j', font:{size:10} } } } });
+    // 5. Avg rate by equipment
+    const rateByEquip = {}; const daysByEquip = {};
+    data.forEach(i => { rateByEquip[i.equipment] = (rateByEquip[i.equipment] || 0) + i.montantHT; daysByEquip[i.equipment] = (daysByEquip[i.equipment] || 0) + i.days; });
+    const rateEntries = Object.keys(rateByEquip).map(k => ({ name:k, avg: daysByEquip[k] ? rateByEquip[k]/daysByEquip[k] : 0 }));
+    if (dashboardCharts.locRates) dashboardCharts.locRates.destroy();
+    const ctx5 = document.getElementById('chartLocRates');
+    if (ctx5) dashboardCharts.locRates = new Chart(ctx5, { type:'bar', data:{ labels:rateEntries.map(r=>r.name), datasets:[{ label:'DA/Jour', data:rateEntries.map(r=>r.avg), backgroundColor:'#8b5cf6', borderRadius:6 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, datalabels:{ anchor:'end', align:'top', formatter:v=>formatCurrency(v), font:{size:10} } } } });
+}
+
+function renderLocTable() {
+    const data = getFilteredLocData();
+    const search = (document.getElementById('locTableSearch')?.value || '').toLowerCase();
+    const filtered = search ? data.filter(i => (i.clientName+i.number+i.equipment+i.site).toLowerCase().includes(search)) : data;
+    const tbody = document.getElementById('tableLocBody');
+    const tfoot = document.getElementById('tableLocFoot');
+    if (!tbody) return;
+    if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted py-4">Aucune donnée de location trouvée.</td></tr>'; if(tfoot) tfoot.innerHTML=''; return; }
+    let totalHT = 0, totalTTC = 0, totalDays = 0;
+    tbody.innerHTML = filtered.map(i => {
+        totalHT += i.montantHT; totalTTC += i.montantTTC; totalDays += i.days;
+        const statusBadge = i.paid ? '<span class="badge bg-success">Payée</span>' : '<span class="badge bg-danger">Impayée</span>';
+        const docBadge = i.documentType === 'proforma' ? '<span class="badge bg-warning text-dark">PRO</span>' : '<span class="badge bg-primary">FAC</span>';
+        const period = (i.periodStart && i.periodEnd) ? `${new Date(i.periodStart).toLocaleDateString('fr-FR')} - ${new Date(i.periodEnd).toLocaleDateString('fr-FR')}` : '-';
+        return `<tr class="text-center small">
+            <td>${new Date(i.date).toLocaleDateString('fr-FR')}</td>
+            <td class="fw-bold">${i.number || '-'}</td>
+            <td style="text-align:left;" class="fw-semibold">${i.clientName}</td>
+            <td>${docBadge}</td>
+            <td><span class="badge" style="background:#fef3c7;color:#92400e;">${i.equipment}</span></td>
+            <td class="small">${period}</td>
+            <td class="fw-bold" style="background:#fef3c7;color:#92400e;">${i.days.toFixed(1)}j</td>
+            <td>${formatCurrency(i.rate)}</td>
+            <td class="fw-bold">${formatCurrency(i.montantHT)}</td>
+            <td class="fw-bold">${formatCurrency(i.montantTTC)}</td>
+            <td>${statusBadge}</td>
+            <td><button class="btn btn-outline-primary btn-sm" onclick="viewInvoiceFromReport(${i.invoiceId})"><i class="fa fa-eye"></i></button></td>
+        </tr>`;
+    }).join('');
+    if (tfoot) tfoot.innerHTML = `<tr class="fw-bold text-center bg-light"><td colspan="6">TOTAUX</td><td style="background:#fef3c7;color:#92400e;">${totalDays.toFixed(1)}j</td><td></td><td>${formatCurrency(totalHT)}</td><td>${formatCurrency(totalTTC)}</td><td colspan="2"></td></tr>`;
+}
+
+function onLocPeriodChange() {
+    const p = document.getElementById('locFilterPeriod')?.value;
+    const cd = document.getElementById('locCustomDates');
+    if (cd) cd.style.display = (p === 'custom') ? 'flex' : 'none';
+    updateLocationView();
+}
+function resetLocFilters() {
+    const els = ['locFilterClient','locFilterYear','locFilterEquipment','locFilterPeriod'];
+    els.forEach(id => { const e = document.getElementById(id); if(e) e.selectedIndex = 0; });
+    const cd = document.getElementById('locCustomDates');
+    if (cd) cd.style.display = 'none';
+    updateLocationView();
+}
+function updateSidebarLocationBadge() {
+    const badge = document.getElementById('sidebarLocationBadge');
+    if (!badge) return;
+    let count = 0;
+    invoices.forEach(inv => { if (inv.articles) inv.articles.forEach(a => { if (isLocationArticle(a)) count++; }); });
+    badge.textContent = count;
+}
+function exportLocationToExcel() {
+    const data = getFilteredLocData();
+    if (!data.length) { alert('Aucune donnée à exporter.'); return; }
+    const wsData = [['Date','N° Facture','Client','Équipement','Site','Période Début','Période Fin','Jours','Taux/Jour','Montant HT','Montant TTC','Statut']];
+    data.forEach(i => wsData.push([new Date(i.date).toLocaleDateString('fr-FR'), i.number, i.clientName, i.equipment, i.site, i.periodStart, i.periodEnd, i.days, i.rate, i.montantHT, i.montantTTC, i.paid ? 'Payée' : 'Impayée']));
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Location');
+    XLSX.writeFile(wb, `Location_Export_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// ════════════════════════════════════════════════════════════════
+// 🔗 MODULE SHARE LINKS
+// ════════════════════════════════════════════════════════════════
+
+async function generateShareLink() {
+    const password = document.getElementById('shareLinkPassword')?.value;
+    const expiresAt = document.getElementById('shareLinkExpiry')?.value;
+    const label = document.getElementById('shareLinkLabel')?.value || 'Dashboard';
+    if (!password || !expiresAt) { alert('Veuillez remplir le mot de passe et la date d\'expiration.'); return; }
+    try {
+        const resp = await fetch(API_URL + '/api/share-links', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: CURRENT_ACCESS_KEY, password, expiresAt, label })
+        });
+        const result = await resp.json();
+        if (result.success) {
+            const fullLink = window.location.origin + '/shared/' + result.token;
+            prompt('\u2705 Lien créé ! Copiez-le :', fullLink);
+            loadShareLinks();
+        } else { alert('Erreur: ' + (result.message || 'Échec')); }
+    } catch(e) { console.error(e); alert('Erreur réseau'); }
+}
+
+async function loadShareLinks() {
+    if (!CURRENT_ACCESS_KEY) return;
+    try {
+        const resp = await fetch(API_URL + '/api/share-links/' + CURRENT_ACCESS_KEY);
+        const links = await resp.json();
+        const container = document.getElementById('shareLinksContainer');
+        if (!container) return;
+        if (!links.length) { container.innerHTML = '<div class="text-center text-muted small py-2">Aucun lien actif</div>'; return; }
+        container.innerHTML = links.map(l => {
+            const exp = new Date(l.expiresAt);
+            const isExp = exp < new Date();
+            return `<div class="d-flex justify-content-between align-items-center p-2 mb-2 rounded border ${isExp?'bg-light text-muted':'bg-white'}">
+                <div><div class="fw-bold small">${l.label||'Dashboard'}</div>
+                <div class="text-muted" style="font-size:0.7rem;">Expire: ${exp.toLocaleDateString('fr-FR')} ${isExp?'<span class="badge bg-danger">Expiré</span>':'<span class="badge bg-success">Actif</span>'}</div></div>
+                <div class="d-flex gap-1">
+                    <button class="btn btn-outline-primary btn-sm" onclick="copyShareLink('${l.token}')" title="Copier"><i class="fa fa-copy"></i></button>
+                    <button class="btn btn-outline-warning btn-sm" onclick="extendShareLink('${l.token}')" title="Prolonger"><i class="fa fa-calendar-plus"></i></button>
+                    <button class="btn btn-outline-danger btn-sm" onclick="deleteShareLink('${l.token}')" title="Supprimer"><i class="fa fa-trash"></i></button>
+                </div></div>`;
+        }).join('');
+    } catch(e) { console.error(e); }
+}
+window.copyShareLink = function(token) {
+    const url = window.location.origin + '/shared/' + token;
+    navigator.clipboard.writeText(url).then(() => alert('\u2705 Lien copié !')).catch(() => prompt('Copiez ce lien:', url));
+};
+window.extendShareLink = async function(token) {
+    const newDate = prompt('Nouvelle date d\'expiration (AAAA-MM-JJ):');
+    if (!newDate) return;
+    try {
+        await fetch(API_URL + '/api/share-links/' + token + '/extend', { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({expiresAt:newDate}) });
+        loadShareLinks(); alert('\u2705 Lien prolongé !');
+    } catch(e) { alert('Erreur'); }
+};
+window.deleteShareLink = async function(token) {
+    if (!confirm('Supprimer ce lien partagé ?')) return;
+    try { await fetch(API_URL + '/api/share-links/' + token, { method:'DELETE' }); loadShareLinks(); } catch(e) { alert('Erreur'); }
 };

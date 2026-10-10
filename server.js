@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const cron = require('node-cron');
 const path = require('path');
+const crypto = require('crypto');
 
 const app = express();
 const DEV_MODE = process.env.DEV_MODE === 'true';
@@ -19,11 +20,12 @@ let devStore = {
     invoices: [],
     settings: {},
     invoiceCounter: 1,
-    clientWilayaPairPrices: {}
+    clientWilayaPairPrices: {},
+    shareLinks: []
 };
 
 // --- MONGODB CONNECTION (skip in DEV_MODE) ---
-let AccessKey, AppData, Backup;
+let AccessKey, AppData, Backup, ShareLink;
 
 if (DEV_MODE) {
     console.log("⚡ DEV MODE ENABLED — No MongoDB required. Using in-memory storage.");
@@ -64,6 +66,16 @@ if (DEV_MODE) {
         dataSnapshot: Array
     });
     Backup = mongoose.model('Backup', backupSchema);
+
+    const shareLinkSchema = new mongoose.Schema({
+        token: { type: String, unique: true, required: true },
+        accessKey: String,
+        password: String, // bcrypt or plain (we'll use plain for simplicity)
+        expiresAt: Date,
+        createdAt: { type: Date, default: Date.now },
+        label: String
+    });
+    ShareLink = mongoose.model('ShareLink', shareLinkSchema);
 
     // --- AUTOMATIC BACKUP ROBOT ---
     cron.schedule('0 0 * * *', async () => {
@@ -206,6 +218,136 @@ app.post('/api/restore/:id', async (req, res) => {
         console.error("Restore Error:", e);
         res.status(500).json({ error: "Restore failed" });
     }
+});
+
+// --- SHARE LINKS ROUTES ---
+
+app.post('/api/share-links', async (req, res) => {
+    try {
+        const { key, password, expiresAt, label } = req.body;
+        const token = crypto.randomBytes(32).toString('hex');
+        
+        if (DEV_MODE) {
+            devStore.shareLinks.push({ token, accessKey: key, password, expiresAt, label, createdAt: new Date() });
+            return res.json({ success: true, token, link: `/shared/${token}` });
+        }
+
+        await ShareLink.create({ token, accessKey: key, password, expiresAt, label });
+        res.json({ success: true, token, link: `/shared/${token}` });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/share-links/:key', async (req, res) => {
+    try {
+        const { key } = req.params;
+        if (DEV_MODE) {
+            return res.json(devStore.shareLinks.filter(link => link.accessKey === key));
+        }
+        
+        const links = await ShareLink.find({ accessKey: key });
+        res.json(links);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.delete('/api/share-links/:token', async (req, res) => {
+    try {
+        const { token } = req.params;
+        if (DEV_MODE) {
+            devStore.shareLinks = devStore.shareLinks.filter(link => link.token !== token);
+            return res.json({ success: true });
+        }
+        
+        await ShareLink.deleteOne({ token });
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.put('/api/share-links/:token/extend', async (req, res) => {
+    try {
+        const { token } = req.params;
+        const { expiresAt } = req.body;
+        
+        if (DEV_MODE) {
+            const link = devStore.shareLinks.find(l => l.token === token);
+            if (link) link.expiresAt = expiresAt;
+            return res.json({ success: true });
+        }
+
+        await ShareLink.updateOne({ token }, { expiresAt });
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/shared/auth', async (req, res) => {
+    try {
+        const { token, password } = req.body;
+        let link;
+        
+        if (DEV_MODE) {
+            link = devStore.shareLinks.find(l => l.token === token);
+        } else {
+            link = await ShareLink.findOne({ token });
+        }
+
+        if (!link) return res.status(404).json({ error: 'Lien invalide ou expiré' });
+        if (link.expiresAt && new Date(link.expiresAt) < new Date()) {
+            return res.status(403).json({ error: 'Lien expiré' });
+        }
+        if (link.password && link.password !== password) {
+            return res.status(401).json({ error: 'Mot de passe incorrect' });
+        }
+
+        let data;
+        if (DEV_MODE) {
+            data = devStore;
+        } else {
+            data = await AppData.findOne({ accessKey: link.accessKey });
+        }
+
+        if (!data) return res.status(404).json({ error: 'Aucune donnée trouvée' });
+        
+        res.json({
+            clients: data.clients,
+            invoices: data.invoices,
+            settings: data.settings
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/shared/verify/:token', async (req, res) => {
+    try {
+        const { token } = req.params;
+        let link;
+        
+        if (DEV_MODE) {
+            link = devStore.shareLinks.find(l => l.token === token);
+        } else {
+            link = await ShareLink.findOne({ token });
+        }
+
+        if (!link) return res.json({ valid: false });
+        if (link.expiresAt && new Date(link.expiresAt) < new Date()) {
+            return res.json({ valid: false, expired: true, label: link.label, expiresAt: link.expiresAt });
+        }
+
+        res.json({ valid: true, label: link.label, expiresAt: link.expiresAt });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/shared/:token', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'shared-dashboard.html'));
 });
 
 // --- START SERVER ---

@@ -310,6 +310,11 @@ th.sortable.sorted-desc .sort-icon::after {
         <span>Immobilisation</span>
         <span class="badge badge-immo ms-auto font-monospace" id="sidebarImmoBadge" style="font-size:0.7rem;">0h</span>
     </a>
+    <a class="nav-link d-flex align-items-center gap-2" data-view="location" href="#">
+        <i class="fa-solid fa-crane" style="color:#f59e0b;"></i> 
+        <span>Location</span>
+        <span class="badge bg-warning text-dark ms-auto font-monospace" id="sidebarLocationBadge" style="font-size:0.7rem;">0</span>
+    </a>
     <a class="nav-link d-flex align-items-center gap-2" data-view="wilaya-prices" href="#">
         <i class="fa-solid fa-coins"></i> 
         <span>Prix par Wilaya</span>
@@ -723,6 +728,9 @@ th.sortable.sorted-desc .sort-icon::after {
     <div class="d-flex gap-2">
         <button class="btn btn-outline-immo btn-sm shadow-sm" onclick="showView('immobilisation')">
             <i class="fa fa-truck-ramp-box me-1"></i> Voir Rapport Immobilisation Flotte →
+        </button>
+        <button class="btn btn-sm shadow-sm fw-bold" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none;" onclick="showView('location')">
+            <i class="fa fa-crane me-1"></i> Voir Rapport Location →
         </button>
     </div>
   </header>
@@ -1147,6 +1155,173 @@ th.sortable.sorted-desc .sort-icon::after {
     </div>
 </section>
 
+<!-- LOCATION & RENTAL VIEW -->
+<section id="view-location" class="app-view d-none">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h2 class="mb-0 fw-bold" style="color:var(--text-main);"><i class="fa-solid fa-crane me-2" style="color:#f59e0b;"></i>Location & Rental – Analyse</h2>
+            <div class="text-muted small">Suivi des locations d'engins (Grue, etc.) : chiffre d'affaires, durées, types d'équipement et rentabilité par client.</div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <button class="btn shadow-sm fw-bold" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white;" onclick="openInvoiceWizard('location')">
+                <i class="fa fa-plus me-1"></i> Nouvelle Facture Location
+            </button>
+            <button class="btn btn-success shadow-sm" onclick="exportLocationToExcel()">
+                <i class="fa fa-file-excel me-1"></i> Export Excel
+            </button>
+        </div>
+    </div>
+
+    <!-- FILTER PANEL -->
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card__body py-3">
+            <div class="row g-2 align-items-center">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-user me-1 text-warning"></i>Client</label>
+                    <select id="locFilterClient" class="form-select form-select-sm" onchange="updateLocationView()">
+                        <option value="all">👑 Tous les clients</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calendar me-1 text-warning"></i>Année</label>
+                    <select id="locFilterYear" class="form-select form-select-sm" onchange="updateLocationView()">
+                        <option value="">Toutes années</option>
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                        <option value="2026" selected>2026</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-cogs me-1 text-warning"></i>Équipement</label>
+                    <select id="locFilterEquipment" class="form-select form-select-sm" onchange="updateLocationView()">
+                        <option value="all">Tous les types</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calendar-alt me-1 text-warning"></i>Période</label>
+                    <select id="locFilterPeriod" class="form-select form-select-sm" onchange="onLocPeriodChange()">
+                        <option value="all" selected>📅 Toute l'année</option>
+                        <optgroup label="── Semestres ──">
+                            <option value="S1">S1 (Jan - Juin)</option>
+                            <option value="S2">S2 (Juil - Déc)</option>
+                        </optgroup>
+                        <optgroup label="── Trimestres ──">
+                            <option value="Q1">T1 (Jan - Mar)</option>
+                            <option value="Q2">T2 (Avr - Juin)</option>
+                            <option value="Q3">T3 (Juil - Sep)</option>
+                            <option value="Q4">T4 (Oct - Déc)</option>
+                        </optgroup>
+                        <optgroup label="── Mois ──">
+                            <option value="0">Janvier</option>
+                            <option value="1">Février</option>
+                            <option value="2">Mars</option>
+                            <option value="3">Avril</option>
+                            <option value="4">Mai</option>
+                            <option value="5">Juin</option>
+                            <option value="6">Juillet</option>
+                            <option value="7">Août</option>
+                            <option value="8">Septembre</option>
+                            <option value="9">Octobre</option>
+                            <option value="10">Novembre</option>
+                            <option value="11">Décembre</option>
+                        </optgroup>
+                        <optgroup label="── Personnalisé ──">
+                            <option value="custom">🔧 Période personnalisée</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end gap-1">
+                    <button class="btn btn-outline-secondary btn-sm flex-grow-1" onclick="resetLocFilters()" title="Réinitialiser"><i class="fa fa-undo"></i></button>
+                </div>
+            </div>
+            <div id="locCustomDates" class="row g-2 mt-2 align-items-center" style="display:none !important;">
+                <div class="col-md-3">
+                    <label class="text-muted small fw-bold mb-0">Du :</label>
+                    <input type="date" id="locDateFrom" class="form-control form-control-sm" onchange="updateLocationView()">
+                </div>
+                <div class="col-md-3">
+                    <label class="text-muted small fw-bold mb-0">Au :</label>
+                    <input type="date" id="locDateTo" class="form-control form-control-sm" onchange="updateLocationView()">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI CARDS -->
+    <div class="row g-3 mb-4" id="locKpiContainer"></div>
+
+    <!-- CHARTS -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-chart-bar me-2" style="color:#f59e0b;"></i>1. CA Location par Client</h6></div>
+                <div class="text-muted small px-4 pb-2 border-bottom" style="font-size:0.75rem;">Chiffre d'affaires de location par client.</div>
+                <div class="card__body pt-3"><div style="height:270px;"><canvas id="chartLocClients"></canvas></div></div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-chart-line me-2 text-primary"></i>2. CA Location par Mois</h6></div>
+                <div class="text-muted small px-4 pb-2 border-bottom" style="font-size:0.75rem;">Évolution mensuelle du chiffre d'affaires de location.</div>
+                <div class="card__body pt-3"><div style="height:270px;"><canvas id="chartLocMonths"></canvas></div></div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-cogs me-2 text-info"></i>3. Répartition par Équipement</h6></div>
+                <div class="text-muted small px-4 pb-2 border-bottom" style="font-size:0.75rem;">Types d'équipement les plus loués.</div>
+                <div class="card__body pt-3"><div style="height:250px;"><canvas id="chartLocEquipment"></canvas></div></div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-clock me-2" style="color:#f59e0b;"></i>4. Durées de Location (Jours)</h6></div>
+                <div class="text-muted small px-4 pb-2 border-bottom" style="font-size:0.75rem;">Durée moyenne de location par client.</div>
+                <div class="card__body pt-3"><div style="height:250px;"><canvas id="chartLocDurations"></canvas></div></div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-coins me-2 text-success"></i>5. Taux Journalier Moyen</h6></div>
+                <div class="text-muted small px-4 pb-2 border-bottom" style="font-size:0.75rem;">Tarif journalier moyen par type d'équipement.</div>
+                <div class="card__body pt-3"><div style="height:250px;"><canvas id="chartLocRates"></canvas></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="card shadow-sm border-0">
+        <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h6 class="fw-bold mb-0"><i class="fa fa-table me-2 text-secondary"></i>Détail des Factures de Location</h6>
+            <input type="text" id="locTableSearch" class="form-control form-control-sm" placeholder="Recherche..." style="width:250px;" oninput="renderLocTable()">
+        </div>
+        <div class="card__body p-0">
+            <div class="table-responsive" style="max-height:60vh;overflow-y:auto;">
+                <table class="table table-hover align-middle mb-0" id="tableLocation">
+                    <thead class="table-light sticky-top shadow-sm">
+                        <tr class="text-uppercase small text-center" style="font-size:0.75rem;">
+                            <th>Date</th>
+                            <th>N° Facture</th>
+                            <th style="text-align:left;">Client</th>
+                            <th>Type Doc</th>
+                            <th>Équipement</th>
+                            <th>Période</th>
+                            <th style="background-color:#fef3c7;color:#92400e;font-weight:800;">Durée</th>
+                            <th>Taux / Jour</th>
+                            <th>Montant HT</th>
+                            <th>Montant TTC</th>
+                            <th>Statut</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableLocBody"></tbody>
+                    <tfoot id="tableLocFoot"></tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- WILAYA PRICES VIEW -->
 <section id="view-wilaya-prices" class="app-view d-none">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -1279,6 +1454,18 @@ th.sortable.sorted-desc .sort-icon::after {
                                     <span class="input-group-text">DA / h</span>
                                 </div>
                             </div>
+                            <!-- Location Equipment Types -->
+                            <div class="col-md-6 mt-3">
+                                <label for="locationEquipmentTypes" class="form-label fw-bold" style="color: #f59e0b;"><i class="fa fa-crane me-1"></i>Types d'Équipement Location (virgule)</label>
+                                <input type="text" id="locationEquipmentTypes" class="form-control" placeholder="Ex: Grue 25T, Grue 50T, Grue 75T">
+                            </div>
+                            <div class="col-md-6 mt-3">
+                                <label for="defaultLocationRate" class="form-label fw-bold" style="color: #f59e0b;"><i class="fa fa-coins me-1"></i>Taux journalier Location par défaut</label>
+                                <div class="input-group">
+                                    <input type="number" id="defaultLocationRate" class="form-control" placeholder="Ex: 150000" value="150000" min="0" step="1000">
+                                    <span class="input-group-text">DA / jour</span>
+                                </div>
+                            </div>
                             
                             <!-- ✅ LEFT LOGO SECTION -->
                             <div class="col-md-6">
@@ -1365,6 +1552,34 @@ th.sortable.sorted-desc .sort-icon::after {
                         </label>
                         <input type="file" id="inputImportJSON" accept="application/json" class="d-none">
                     </div>
+                </div>
+            </div>
+
+            <!-- SHARE LINK MANAGEMENT -->
+            <div class="card mt-3">
+                <div class="card__header" style="background: linear-gradient(135deg, #1e3a8a, #2563eb); color: white;">
+                    <h5 class="mb-0"><i class="fa fa-share-alt me-2"></i>Tableau de Bord Partagé</h5>
+                </div>
+                <div class="card__body">
+                    <p class="text-muted small">Générez un lien sécurisé avec mot de passe pour partager vos KPIs.</p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Mot de passe du lien *</label>
+                        <input type="text" id="shareLinkPassword" class="form-control form-control-sm" placeholder="Ex: manager2026">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Date d'expiration *</label>
+                        <input type="date" id="shareLinkExpiry" class="form-control form-control-sm">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Libellé (optionnel)</label>
+                        <input type="text" id="shareLinkLabel" class="form-control form-control-sm" placeholder="Ex: Lien Direction">
+                    </div>
+                    <button class="btn btn-primary w-100 shadow-sm fw-bold" onclick="generateShareLink()">
+                        <i class="fa fa-link me-2"></i>Générer le lien
+                    </button>
+                    <hr>
+                    <h6 class="fw-bold small text-muted"><i class="fa fa-list me-1"></i>Liens actifs</h6>
+                    <div id="shareLinksContainer"><div class="text-center text-muted small py-2">Aucun lien actif</div></div>
                 </div>
             </div>
         </div>
