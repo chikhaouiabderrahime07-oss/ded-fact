@@ -8905,7 +8905,7 @@ function openProformaWizard(initialType = null) {
             duree: 'Location minimum de 4 heures avec tolérance de 30 minutes. Au-delà de 4h30, facturation automatique de 4 heures supplémentaires (total 8 heures).',
             paiement: 'Chèque bancaire',
             delai: '15 jours après réception de notre facture',
-            validite: 'Cette proforma est valable 15 jours à compter de sa date d\'émission.'
+            validite: "Cette proforma est valable 15 jours."
         }
     };
     
@@ -9058,7 +9058,7 @@ function renderProformaConditions() {
             </div>
             <div class="mb-3">
                 <label class="form-label small fw-bold">Validité de l'Offre :</label>
-                <input type="text" class="form-control form-control-sm" id="condValidite" value="${conds.validite || 'Cette proforma est valable 15 jours à compter de sa date d\\'émission.'}">
+                <input type="text" class="form-control form-control-sm" id="condValidite" value="${conds.validite || "Proforma valable 15 jours."}">
             </div>
         </div>
     </div>`;
