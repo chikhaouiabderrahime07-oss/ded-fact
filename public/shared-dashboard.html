@@ -26,9 +26,9 @@
             --bg-card: #ffffff;
             --bg-glass: rgba(255, 255, 255, 0.85);
             --text: #0f172a;
-            --text-secondary: #64748b;
-            --border: #e2e8f0;
-            --border-subtle: #f1f5f9;
+            --text-secondary: #475569;
+            --border: #cbd5e1;
+            --border-subtle: #e2e8f0;
             --accent: #2563eb;
             --accent-gradient: linear-gradient(135deg, #2563eb, #1d4ed8);
             --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -58,7 +58,7 @@
             --bg-glass: rgba(21, 28, 46, 0.85);
             --text: #f8fafc;
             --text-secondary: #94a3b8;
-            --border: #1e293b;
+            --border: #334155;
             --border-subtle: #1e293b;
             --accent: #3b82f6;
             --accent-gradient: linear-gradient(135deg, #3b82f6, #2563eb);
@@ -361,9 +361,10 @@
         .kpi-card {
             background: var(--bg-card);
             border-radius: 0.85rem;
-            padding: 0.85rem 0.9rem;
-            border: 1px solid var(--border);
-            box-shadow: var(--shadow-sm);
+            padding: 0.85rem 0.95rem;
+            border: 1.5px solid var(--border);
+            border-top: 3.5px solid var(--card-accent, var(--accent));
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             position: relative;
             overflow: hidden;
@@ -385,16 +386,8 @@
         }
         .kpi-card:hover {
             transform: translateY(-3px);
-            box-shadow: 0 8px 24px -4px rgba(0,0,0,0.12), 0 0 0 1px var(--card-accent, var(--accent));
+            box-shadow: 0 8px 24px -4px rgba(0,0,0,0.12), 0 0 0 1.5px var(--card-accent, var(--accent));
             border-color: var(--card-accent, var(--accent));
-        }
-        .kpi-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, var(--card-accent, var(--accent)), transparent);
-            border-radius: 3px 3px 0 0;
         }
         .kpi-card::after {
             content: '';
@@ -410,7 +403,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.45rem;
         }
         .kpi-label {
             font-size: 0.65rem;
@@ -428,6 +421,7 @@
             align-items: center;
             justify-content: center;
             background: var(--card-bg-subtle, rgba(37, 99, 235, 0.1));
+            border: 1px solid var(--border);
             color: var(--card-accent, var(--accent));
             font-size: 0.85rem;
         }
@@ -435,39 +429,45 @@
             display: flex;
             align-items: baseline;
             flex-wrap: wrap;
-            gap: 0.3rem;
-            margin-bottom: 0.4rem;
+            gap: 0.35rem;
+            margin: 0.2rem 0 0.45rem 0;
+            padding: 0.35rem 0.55rem;
+            background: var(--card-bg-subtle, rgba(37,99,235,0.05));
+            border: 1px solid var(--border);
+            border-radius: 0.55rem;
         }
         .kpi-num {
             font-family: 'Outfit', sans-serif;
-            font-size: 1.4rem;
+            font-size: 1.35rem;
             font-weight: 800;
             color: var(--text);
-            line-height: 1.1;
-            letter-spacing: -0.02em;
+            line-height: 1.15;
+            letter-spacing: -0.01em;
             white-space: nowrap;
         }
         .kpi-unit {
-            font-size: 0.68rem;
-            font-weight: 700;
+            font-size: 0.7rem;
+            font-weight: 800;
             color: var(--text-secondary);
             text-transform: uppercase;
         }
         .kpi-footer {
             font-size: 0.65rem;
+            font-weight: 600;
             color: var(--text-secondary);
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding-top: 0.4rem;
-            border-top: 1px dashed var(--border-subtle);
+            border-top: 1px dashed var(--border);
         }
         .kpi-badge {
-            font-size: 0.6rem;
+            font-size: 0.62rem;
             font-weight: 700;
-            padding: 0.12rem 0.4rem;
+            padding: 0.12rem 0.45rem;
             border-radius: 999px;
             background: var(--card-bg-subtle, var(--border-subtle));
+            border: 1px solid var(--border);
             color: var(--card-accent, var(--text-secondary));
         }
 
@@ -568,7 +568,7 @@
         .chart-card {
             background: var(--bg-card);
             border-radius: 0.85rem;
-            border: 1px solid var(--border);
+            border: 1.5px solid var(--border);
             box-shadow: var(--shadow-sm);
             padding: 0.75rem 0.85rem;
             display: flex;
@@ -934,10 +934,6 @@
                     <button class="btn-action" onclick="toggleTheme()" id="btn-theme-toggle" title="Passer en Mode Sombre" style="gap:6px;display:inline-flex;align-items:center;border-radius:999px;padding:0.38rem 0.85rem;background:var(--border-subtle);border:1px solid var(--border);">
                         <i class="fas fa-moon text-primary" id="theme-icon" style="font-size:0.85rem;"></i>
                         <span id="theme-label" style="font-size:0.72rem;font-weight:700;">Mode Sombre</span>
-                    </button>
-
-                    <button class="btn-action btn-accent" onclick="exportChartsRecap()" id="btn-export-full" title="Exporter une capture HD des graphiques et du récapitulatif financier" style="gap:6px;border-radius:999px;padding:0.38rem 0.95rem;">
-                        <i class="fas fa-camera"></i> <span style="font-weight:700;font-size:0.72rem;">Exporter Récap HD (PNG)</span>
                     </button>
 
                     <button class="btn-action" onclick="logoutSession()" title="Verrouiller la session">
@@ -2124,8 +2120,13 @@
                             anchor: 'end',
                             align: 'top',
                             offset: 4,
-                            color: isDark ? '#cbd5e1' : '#475569',
-                            font: { weight: 'bold', size: 10 },
+                            color: isDark ? '#f8fafc' : '#0f172a',
+                            backgroundColor: isDark ? 'rgba(30, 41, 59, 0.92)' : 'rgba(255, 255, 255, 0.95)',
+                            borderColor: isDark ? '#475569' : '#94a3b8',
+                            borderWidth: 1,
+                            borderRadius: 4,
+                            padding: { top: 1.5, bottom: 1.5, left: 3.5, right: 3.5 },
+                            font: { weight: '800', size: 9.5 },
                             formatter: (val) => {
                                 if (!val || val === 0) return '';
                                 return isCurrency ? (val >= 1e6 ? (val/1e6).toFixed(1)+'M' : (val/1e3).toFixed(0)+'K') : val;
@@ -2198,8 +2199,13 @@
                             anchor: 'end',
                             align: 'right',
                             offset: 6,
-                            color: isDark ? '#cbd5e1' : '#475569',
-                            font: { weight: 'bold', size: 10 },
+                            color: isDark ? '#f8fafc' : '#0f172a',
+                            backgroundColor: isDark ? 'rgba(30, 41, 59, 0.92)' : 'rgba(255, 255, 255, 0.95)',
+                            borderColor: isDark ? '#475569' : '#94a3b8',
+                            borderWidth: 1,
+                            borderRadius: 4,
+                            padding: { top: 1.5, bottom: 1.5, left: 3.5, right: 3.5 },
+                            font: { weight: '800', size: 9.5 },
                             formatter: (val) => val > 0 ? (val >= 1e6 ? (val/1e6).toFixed(1)+'M' : (val/1e3).toFixed(0)+'K') : ''
                         }
                     },
@@ -2337,9 +2343,14 @@
                             display: showLabels,
                             align: 'top',
                             anchor: 'center',
-                            offset: 4,
-                            color: isDark ? '#f8fafc' : '#334155',
-                            font: { weight: 'bold', size: 10 },
+                            offset: 5,
+                            color: isDark ? '#f8fafc' : '#0f172a',
+                            backgroundColor: isDark ? 'rgba(30, 41, 59, 0.92)' : 'rgba(255, 255, 255, 0.95)',
+                            borderColor: isDark ? '#475569' : '#94a3b8',
+                            borderWidth: 1,
+                            borderRadius: 4,
+                            padding: { top: 1.5, bottom: 1.5, left: 3.5, right: 3.5 },
+                            font: { weight: '800', size: 9.5 },
                             formatter: (v) => v > 0 ? v : ''
                         }
                     },
