@@ -7,6 +7,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const app = express();
+app.set('trust proxy', true);
 const DEV_MODE = (process.env.DEV_MODE || '').trim() === 'true';
 
 // --- CONFIGURATION ---
@@ -81,6 +82,8 @@ if (DEV_MODE) {
         accessLog: [{
             at: { type: Date, default: Date.now },
             ip: String,
+            geo: String,
+            screen: String,
             device: String,
             os: String,
             browser: String,
@@ -332,9 +335,43 @@ function parseDeviceInfo(userAgent) {
 }
 
 function getClientIp(req) {
+    // 1. Client-reported public IP (from browser-side ipify lookup)
+    const clientReported = req.body && req.body.clientPublicIp;
+    if (clientReported && typeof clientReported === 'string') {
+        const trimmed = clientReported.trim();
+        if (/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(trimmed) || trimmed.includes(':')) {
+            if (trimmed !== '127.0.0.1' && trimmed !== '::1' && !trimmed.startsWith('192.168.') && !trimmed.startsWith('10.')) {
+                return trimmed;
+            }
+        }
+    }
+
+    // 2. Cloudflare Connecting IP
+    const cf = req.headers['cf-connecting-ip'];
+    if (cf && typeof cf === 'string' && cf.trim()) return cf.trim();
+
+    // 3. Nginx / reverse proxy X-Real-IP
+    const realIp = req.headers['x-real-ip'];
+    if (realIp && typeof realIp === 'string' && realIp.trim()) return realIp.trim();
+
+    // 4. Standard X-Forwarded-For
     const forwarded = req.headers['x-forwarded-for'];
-    if (forwarded) return forwarded.split(',')[0].trim();
-    return req.socket.remoteAddress || req.ip || 'Inconnu';
+    if (forwarded && typeof forwarded === 'string') {
+        const parts = forwarded.split(',');
+        const first = parts[0].trim();
+        if (first) return first;
+    }
+
+    // 5. req.ip or socket remote address
+    let raw = req.ip || req.socket?.remoteAddress || '';
+    if (raw.startsWith('::ffff:')) raw = raw.replace('::ffff:', '');
+    if (raw === '::1' || raw === '127.0.0.1') {
+        if (clientReported && typeof clientReported === 'string' && clientReported.trim()) {
+            return clientReported.trim();
+        }
+        return '127.0.0.1 (Localhost)';
+    }
+    return raw || 'Inconnu';
 }
 
 app.get('/api/share-links/:token/visitors', async (req, res) => {
@@ -368,13 +405,17 @@ app.post('/api/shared/track/:token', async (req, res) => {
         const { token } = req.params;
         const clientIp = getClientIp(req);
         const devInfo = parseDeviceInfo(req.headers['user-agent']);
+        const clientGeo = (req.body && req.body.clientGeo) || '';
+        const screen = (req.body && req.body.screen) || '';
         const logEntry = {
             at: new Date(),
             ip: clientIp,
+            geo: clientGeo,
+            screen: screen,
             device: devInfo.type,
             os: devInfo.os,
             browser: devInfo.browser,
-            summary: devInfo.summary
+            summary: `${devInfo.summary}${screen ? ' [' + screen + ']' : ''}${clientGeo ? ' • ' + clientGeo : ''}`
         };
 
         if (DEV_MODE) {
@@ -383,18 +424,18 @@ app.post('/api/shared/track/:token', async (req, res) => {
                 sl.accessCount = (sl.accessCount || 0) + 1;
                 sl.lastAccessedAt = new Date();
                 sl.lastIP = clientIp;
-                sl.lastDevice = devInfo.summary;
+                sl.lastDevice = logEntry.summary;
                 if (!sl.accessLog) sl.accessLog = [];
                 sl.accessLog.push(logEntry);
             }
         } else {
             await ShareLink.updateOne({ token }, {
                 $inc: { accessCount: 1 },
-                $set: { lastAccessedAt: new Date(), lastIP: clientIp, lastDevice: devInfo.summary },
+                $set: { lastAccessedAt: new Date(), lastIP: clientIp, lastDevice: logEntry.summary },
                 $push: { accessLog: logEntry }
             });
         }
-        res.json({ success: true, ip: clientIp, device: devInfo.summary });
+        res.json({ success: true, ip: clientIp, device: logEntry.summary });
     } catch(e) {
         res.status(500).json({ error: e.message });
     }
@@ -436,13 +477,17 @@ app.post('/api/shared/auth', async (req, res) => {
         // Track rich access info
         const clientIp = getClientIp(req);
         const devInfo = parseDeviceInfo(req.headers['user-agent']);
+        const clientGeo = (req.body && req.body.clientGeo) || '';
+        const screen = (req.body && req.body.screen) || '';
         const logEntry = {
             at: new Date(),
             ip: clientIp,
+            geo: clientGeo,
+            screen: screen,
             device: devInfo.type,
             os: devInfo.os,
             browser: devInfo.browser,
-            summary: devInfo.summary
+            summary: `${devInfo.summary}${screen ? ' [' + screen + ']' : ''}${clientGeo ? ' • ' + clientGeo : ''}`
         };
 
         if (DEV_MODE) {
@@ -451,14 +496,14 @@ app.post('/api/shared/auth', async (req, res) => {
                 sl.accessCount = (sl.accessCount || 0) + 1;
                 sl.lastAccessedAt = new Date();
                 sl.lastIP = clientIp;
-                sl.lastDevice = devInfo.summary;
+                sl.lastDevice = logEntry.summary;
                 if (!sl.accessLog) sl.accessLog = [];
                 sl.accessLog.push(logEntry);
             }
         } else {
             await ShareLink.updateOne({ token }, {
                 $inc: { accessCount: 1 },
-                $set: { lastAccessedAt: new Date(), lastIP: clientIp, lastDevice: devInfo.summary },
+                $set: { lastAccessedAt: new Date(), lastIP: clientIp, lastDevice: logEntry.summary },
                 $push: { accessLog: logEntry }
             });
         }

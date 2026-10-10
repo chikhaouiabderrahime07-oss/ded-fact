@@ -46,6 +46,12 @@
             --purple: #8b5cf6;
         }
 
+        .fa-crane::before, .fa-solid.fa-crane::before, .fas.fa-crane::before {
+            content: "\f722" !important;
+            font-family: "Font Awesome 6 Free" !important;
+            font-weight: 900 !important;
+        }
+
         [data-theme='dark'] {
             --bg: #0b0f19;
             --bg-card: #151c2e;
@@ -830,7 +836,7 @@
                 <div class="kpi-card" style="--card-accent:#d97706; --card-bg-subtle:rgba(217,119,6,0.1);">
                     <div class="kpi-header">
                         <span class="kpi-label">Location Grues & Engins</span>
-                        <div class="kpi-icon-wrap"><i class="fas fa-crane"></i></div>
+                        <div class="kpi-icon-wrap"><i class="fa-solid fa-tractor"></i></div>
                     </div>
                     <div class="kpi-value-block">
                         <span class="kpi-num" id="kpi-ca-loc">0</span>
@@ -999,7 +1005,7 @@
                 <!-- CHART 9: LOCATION D'ENGINS PAR TYPE (DOUGHNUT) -->
                 <div class="chart-card col-6">
                     <div class="chart-card-header">
-                        <h4 class="chart-card-title"><i class="fas fa-crane text-warning"></i> 9. Location d'Engins (CA par Équipement)</h4>
+                        <h4 class="chart-card-title"><i class="fa-solid fa-tractor text-warning"></i> 9. Location d'Engins (CA par Équipement)</h4>
                         <div class="chart-toolbar">
                             <button class="btn-chart-tool" onclick="openFullscreenModal('chart-loc-equip', 'Location de Grues et Engins')" title="Plein Écran"><i class="fas fa-expand"></i></button>
                             <button class="btn-chart-tool" onclick="downloadChart('chart-loc-equip', 'Location_Grues_Engins')" title="Télécharger Image"><i class="fas fa-download"></i></button>
@@ -1008,7 +1014,7 @@
                     <div class="chart-canvas-wrap">
                         <canvas id="chart-loc-equip"></canvas>
                         <div id="empty-chart-loc-equip" class="chart-empty-state">
-                            <i class="fas fa-crane chart-empty-icon"></i>
+                            <i class="fa-solid fa-tractor chart-empty-icon"></i>
                             <div class="chart-empty-title">0 DA de Location d'Engins</div>
                             <div class="chart-empty-sub">Les locations de grues 25T, 50T, 75T apparaîtront ici</div>
                         </div>
@@ -1212,6 +1218,28 @@
             initDashboard();
         }
 
+        // ════════════════════════════════════════════════════════════════
+        // 🌐 CLIENT PUBLIC NETWORK & IP DETECTION
+        // ════════════════════════════════════════════════════════════════
+        let clientNetworkMeta = { ip: '', geo: '' };
+        async function detectClientNetwork() {
+            try {
+                const r = await fetch('https://api64.ipify.org?format=json', { signal: AbortSignal.timeout(3000) });
+                const j = await r.json();
+                if (j && j.ip) clientNetworkMeta.ip = j.ip;
+            } catch (e) {
+                try {
+                    const r2 = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(3000) });
+                    const j2 = await r2.json();
+                    if (j2 && j2.ip) {
+                        clientNetworkMeta.ip = j2.ip;
+                        if (j2.city || j2.country_name) clientNetworkMeta.geo = `${j2.city || ''}, ${j2.country_name || ''} (${j2.org || ''})`.trim();
+                    }
+                } catch(e2) {}
+            }
+        }
+        detectClientNetwork();
+
         async function handleAuth(e) {
             e.preventDefault();
             const password = document.getElementById('auth-password').value.trim();
@@ -1222,10 +1250,17 @@
             document.getElementById('auth-submit-btn').disabled = true;
 
             try {
+                const screenRes = `${window.screen.width}x${window.screen.height}`;
                 const res = await fetch('/api/shared/auth', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token, password })
+                    body: JSON.stringify({
+                        token,
+                        password,
+                        clientPublicIp: clientNetworkMeta.ip,
+                        clientGeo: clientNetworkMeta.geo,
+                        screen: screenRes
+                    })
                 });
 
                 const json = await res.json();
@@ -1277,7 +1312,16 @@
 
             // Background device/IP tracking
             if (token) {
-                fetch('/api/shared/track/' + token, { method: 'POST' }).catch(() => {});
+                const screenRes = `${window.screen.width}x${window.screen.height}`;
+                fetch('/api/shared/track/' + token, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        clientPublicIp: clientNetworkMeta.ip,
+                        clientGeo: clientNetworkMeta.geo,
+                        screen: screenRes
+                    })
+                }).catch(() => {});
             }
 
             // Settings & Branding

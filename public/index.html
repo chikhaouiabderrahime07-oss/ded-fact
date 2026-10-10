@@ -12,6 +12,13 @@
   <link href="style.css" rel="stylesheet">
 
   <style>
+    /* Icon Mapping for Location / Engin (Grue) */
+    .fa-crane::before, .fa-solid.fa-crane::before, .fas.fa-crane::before {
+      content: "\f722" !important; /* fa-tractor: engin / heavy machinery */
+      font-family: "Font Awesome 6 Free" !important;
+      font-weight: 900 !important;
+    }
+
     /* Professional Invoice Status Cards */
     .invoice-status-cards {
       padding: 10px 0;
@@ -316,7 +323,7 @@ th.sortable.sorted-desc .sort-icon::after {
         <span class="badge badge-immo ms-auto font-monospace" id="sidebarImmoBadge" style="font-size:0.7rem;">0h</span>
     </a>
     <a class="nav-link d-flex align-items-center gap-2" data-view="location" href="#">
-        <i class="fa-solid fa-crane" style="color:#f59e0b;"></i> 
+        <i class="fa-solid fa-tractor" style="color:#f59e0b;"></i> 
         <span>Location</span>
         <span class="badge bg-warning text-dark ms-auto font-monospace" id="sidebarLocationBadge" style="font-size:0.7rem;">0</span>
     </a>
@@ -741,23 +748,23 @@ th.sortable.sorted-desc .sort-icon::after {
   <!-- NAVIGATION TABS -->
   <ul class="nav nav-pills mb-4 gap-2 border-bottom pb-2" id="reportsMainTabs">
     <li class="nav-item">
-      <button class="nav-link active fw-semibold shadow-sm" data-bs-toggle="tab" data-bs-target="#tab-report-main">
+      <button class="nav-link active fw-semibold shadow-sm" id="btn-tab-report-main" data-bs-toggle="tab" data-bs-target="#tab-report-main" onclick="onReportTabChange('main')">
         <i class="fa fa-table me-2"></i>Rapport Global & Encaissements
       </button>
     </li>
     <li class="nav-item">
-      <button class="nav-link fw-semibold shadow-sm" data-bs-toggle="tab" data-bs-target="#tab-report-kpi" onclick="if(typeof renderRptCharts==='function')renderRptCharts('all');">
+      <button class="nav-link fw-semibold shadow-sm" id="btn-tab-report-kpi" data-bs-toggle="tab" data-bs-target="#tab-report-kpi" onclick="onReportTabChange('kpi')">
         <i class="fa fa-chart-pie me-2 text-primary"></i>Graphiques & Analyse KPI
       </button>
     </li>
     <li class="nav-item">
-      <button class="nav-link fw-semibold shadow-sm" style="color:#dc3545;" onclick="showView('immobilisation')">
-        <i class="fa fa-stopwatch me-1"></i> Immobilisation Flotte →
+      <button class="nav-link fw-semibold shadow-sm" id="btn-tab-report-immo" data-bs-toggle="tab" data-bs-target="#tab-report-immo" onclick="onReportTabChange('immo')">
+        <i class="fa-solid fa-truck-ramp-box me-1" style="color:#6366f1;"></i> Immobilisation Flotte
       </button>
     </li>
     <li class="nav-item">
-      <button class="nav-link fw-semibold shadow-sm" style="color:#d97706;" onclick="showView('location')">
-        <i class="fa fa-crane me-1"></i> Location d'Engins →
+      <button class="nav-link fw-semibold shadow-sm" id="btn-tab-report-loc" data-bs-toggle="tab" data-bs-target="#tab-report-loc" onclick="onReportTabChange('loc')">
+        <i class="fa-solid fa-tractor me-1" style="color:#d97706;"></i> Location d'Engins
       </button>
     </li>
   </ul>
@@ -910,48 +917,107 @@ th.sortable.sorted-desc .sort-icon::after {
 
     <!-- TAB 2: GRAPHIQUES & KPI -->
     <div class="tab-pane fade" id="tab-report-kpi">
-      <!-- FILTERS -->
+      <!-- EXTENDED FILTER PANEL -->
       <div class="card mb-4 border-0 shadow-sm">
         <div class="card__body py-3">
           <div class="row g-2 align-items-center">
             <div class="col-md-3">
-              <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-user me-1"></i>Client</label>
+              <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-user me-1 text-primary"></i>Client</label>
               <select id="rptFilterClient" class="form-select form-select-sm" onchange="updateReportsView()">
-                <option value="all">Tous les clients</option>
+                <option value="all">👑 Tous les clients</option>
               </select>
             </div>
             <div class="col-md-2">
-              <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calendar me-1"></i>Année</label>
+              <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calendar me-1 text-primary"></i>Année</label>
               <select id="rptFilterYear" class="form-select form-select-sm" onchange="updateReportsView()">
-                <option value="">Toutes</option>
+                <option value="">Toutes années</option>
                 <option value="2024">2024</option>
                 <option value="2025">2025</option>
                 <option value="2026" selected>2026</option>
               </select>
             </div>
             <div class="col-md-2">
-              <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-filter me-1"></i>Type Prestation</label>
-              <select id="rptFilterType" class="form-select form-select-sm" onchange="updateReportsView()">
-                <option value="all">Toutes prestations</option>
-                <option value="transport">Transport</option>
-                <option value="immobilisation">Immobilisation</option>
-                <option value="location">Location</option>
+              <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calendar-day me-1 text-primary"></i>Mois</label>
+              <select id="rptFilterMonth" class="form-select form-select-sm" onchange="updateReportsView()">
+                <option value="all">Tous les mois</option>
+                <option value="0">01 - Janvier</option>
+                <option value="1">02 - Février</option>
+                <option value="2">03 - Mars</option>
+                <option value="3">04 - Avril</option>
+                <option value="4">05 - Mai</option>
+                <option value="5">06 - Juin</option>
+                <option value="6">07 - Juillet</option>
+                <option value="7">08 - Août</option>
+                <option value="8">09 - Septembre</option>
+                <option value="9">10 - Octobre</option>
+                <option value="10">11 - Novembre</option>
+                <option value="11">12 - Décembre</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calendar-alt me-1 text-primary"></i>Période</label>
+              <select id="rptFilterPeriod" class="form-select form-select-sm" onchange="updateReportsView()">
+                <option value="all">Toute l'année</option>
+                <optgroup label="── Semestres ──">
+                  <option value="S1">S1 (Jan - Juin)</option>
+                  <option value="S2">S2 (Juil - Déc)</option>
+                </optgroup>
+                <optgroup label="── Trimestres ──">
+                  <option value="Q1">T1 (Jan - Mar)</option>
+                  <option value="Q2">T2 (Avr - Juin)</option>
+                  <option value="Q3">T3 (Juil - Sep)</option>
+                  <option value="Q4">T4 (Oct - Déc)</option>
+                </optgroup>
               </select>
             </div>
             <div class="col-md-3">
-              <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calendar-alt me-1"></i>Période</label>
-              <select id="rptFilterPeriod" class="form-select form-select-sm" onchange="updateReportsView()">
-                <option value="all">Toute l'année</option>
-                <option value="S1">S1 (Jan-Juin)</option>
-                <option value="S2">S2 (Juil-Déc)</option>
-                <option value="Q1">T1 (Jan-Mar)</option>
-                <option value="Q2">T2 (Avr-Juin)</option>
-                <option value="Q3">T3 (Juil-Sep)</option>
-                <option value="Q4">T4 (Oct-Déc)</option>
+              <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-circle-check me-1 text-primary"></i>Statut Paiement</label>
+              <select id="rptFilterStatus" class="form-select form-select-sm" onchange="updateReportsView()">
+                <option value="all">Tous statuts (Payées & Créances)</option>
+                <option value="paid">✅ Factures Payées</option>
+                <option value="unpaid">⚠️ Créances Impayées</option>
               </select>
             </div>
-            <div class="col-md-2 d-flex align-items-end">
-              <button class="btn btn-outline-secondary btn-sm w-100" onclick="resetRptFilters()"><i class="fa fa-undo me-1"></i>Reset</button>
+          </div>
+
+          <!-- Extended Filter Row 2: Wilaya, Type, Mode, Dates, Reset -->
+          <div class="row g-2 align-items-center mt-2 pt-2 border-top">
+            <div class="col-md-3">
+              <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-location-dot me-1 text-danger"></i>Wilaya Destination</label>
+              <select id="rptFilterWilaya" class="form-select form-select-sm" onchange="updateReportsView()">
+                <option value="all">📍 Toutes les wilayas</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-filter me-1 text-info"></i>Prestation</label>
+              <select id="rptFilterType" class="form-select form-select-sm" onchange="updateReportsView()">
+                <option value="all">Toutes prestations</option>
+                <option value="transport">🚛 Transport</option>
+                <option value="immobilisation">⏱️ Immobilisation</option>
+                <option value="location">🏗️ Location</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-credit-card me-1 text-success"></i>Mode Règlement</label>
+              <select id="rptFilterPaymentMode" class="form-select form-select-sm" onchange="updateReportsView()">
+                <option value="all">Tous modes</option>
+                <option value="virement">Virement bancaire</option>
+                <option value="cheque">Chèque bancaire</option>
+                <option value="espece">Espèces</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calendar-minus me-1"></i>Du :</label>
+              <input type="date" id="rptFilterStartDate" class="form-control form-control-sm" onchange="updateReportsView()">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calendar-plus me-1"></i>Au :</label>
+              <input type="date" id="rptFilterEndDate" class="form-control form-control-sm" onchange="updateReportsView()">
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+              <button class="btn btn-outline-secondary btn-sm w-100" onclick="resetRptFilters()" title="Réinitialiser tous les filtres">
+                <i class="fa fa-undo"></i>
+              </button>
             </div>
           </div>
         </div>
@@ -960,45 +1026,128 @@ th.sortable.sorted-desc .sort-icon::after {
       <!-- KPI CARDS -->
       <div class="row g-3 mb-4" id="rptKpiContainer"></div>
 
-      <!-- CHARTS -->
+      <!-- 8 CHARTS SUITE -->
       <div class="row g-3 mb-4">
+        <!-- Chart 1: CA Mensuel TTC -->
         <div class="col-lg-8">
           <div class="card h-100 shadow-sm border-0">
-            <div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-chart-bar me-2 text-primary"></i>1. CA Mensuel (TTC)</h6></div>
-            <div class="card__body pt-2"><div style="height:290px;"><canvas id="rptChartRevenue"></canvas></div></div>
+            <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
+              <h6 class="fw-bold mb-0"><i class="fa fa-chart-bar me-2 text-primary"></i>1. Chiffre d'Affaires Mensuel (TTC)</h6>
+            </div>
+            <div class="card__body pt-2"><div style="height:280px;"><canvas id="rptChartRevenue"></canvas></div></div>
           </div>
         </div>
+
+        <!-- Chart 2: Répartition par Type Prestation -->
         <div class="col-lg-4">
           <div class="card h-100 shadow-sm border-0">
-            <div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-chart-pie me-2 text-success"></i>2. Répartition par Type</h6></div>
-            <div class="card__body pt-2"><div style="height:290px;"><canvas id="rptChartTypeBreakdown"></canvas></div></div>
+            <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
+              <h6 class="fw-bold mb-0"><i class="fa fa-chart-pie me-2 text-success"></i>2. Répartition par Type Prestation</h6>
+            </div>
+            <div class="card__body pt-2"><div style="height:280px;"><canvas id="rptChartTypeBreakdown"></canvas></div></div>
           </div>
         </div>
-        <div class="col-lg-4">
+
+        <!-- Chart 3: Top Clients par CA TTC -->
+        <div class="col-lg-6">
           <div class="card h-100 shadow-sm border-0">
-            <div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-users me-2 text-warning"></i>3. Top Clients (CA TTC)</h6></div>
-            <div class="card__body pt-2"><div style="height:260px;"><canvas id="rptChartClients"></canvas></div></div>
+            <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
+              <h6 class="fw-bold mb-0"><i class="fa fa-users me-2 text-warning"></i>3. Top 10 Clients (CA TTC)</h6>
+            </div>
+            <div class="card__body pt-2"><div style="height:270px;"><canvas id="rptChartClients"></canvas></div></div>
           </div>
         </div>
-        <div class="col-lg-4">
+
+        <!-- Chart 4: Top Wilayas de Destination -->
+        <div class="col-lg-6">
           <div class="card h-100 shadow-sm border-0">
-            <div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-hand-holding-dollar me-2 text-danger"></i>4. Créances par Client</h6></div>
-            <div class="card__body pt-2"><div style="height:260px;"><canvas id="rptChartDebt"></canvas></div></div>
+            <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
+              <h6 class="fw-bold mb-0"><i class="fa fa-location-dot me-2 text-danger"></i>4. Top Wilayas de Destination (CA Transport HT)</h6>
+            </div>
+            <div class="card__body pt-2"><div style="height:270px;"><canvas id="rptChartWilayas"></canvas></div></div>
           </div>
         </div>
-        <div class="col-lg-4">
+
+        <!-- Chart 5: Évolution Mensuelle des Créances -->
+        <div class="col-lg-6">
           <div class="card h-100 shadow-sm border-0">
-            <div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-credit-card me-2 text-info"></i>5. Modes de Règlement</h6></div>
-            <div class="card__body pt-2"><div style="height:260px;"><canvas id="rptChartPayment"></canvas></div></div>
+            <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
+              <h6 class="fw-bold mb-0"><i class="fa fa-triangle-exclamation me-2 text-danger"></i>5. Évolution Mensuelle des Créances (TTC)</h6>
+            </div>
+            <div class="card__body pt-2"><div style="height:270px;"><canvas id="rptChartMonthlyDebt"></canvas></div></div>
+          </div>
+        </div>
+
+        <!-- Chart 6: Volume Mensuel des Bons de Livraison -->
+        <div class="col-lg-6">
+          <div class="card h-100 shadow-sm border-0">
+            <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
+              <h6 class="fw-bold mb-0"><i class="fa fa-receipt me-2" style="color:#8b5cf6;"></i>6. Volume Mensuel des Bons de Livraison (BL)</h6>
+            </div>
+            <div class="card__body pt-2"><div style="height:270px;"><canvas id="rptChartBL"></canvas></div></div>
+          </div>
+        </div>
+
+        <!-- Chart 7: Créances par Client -->
+        <div class="col-lg-6">
+          <div class="card h-100 shadow-sm border-0">
+            <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
+              <h6 class="fw-bold mb-0"><i class="fa fa-hand-holding-dollar me-2 text-danger"></i>7. Créances Dues par Client (Top 10)</h6>
+            </div>
+            <div class="card__body pt-2"><div style="height:270px;"><canvas id="rptChartDebt"></canvas></div></div>
+          </div>
+        </div>
+
+        <!-- Chart 8: Modes de Règlement -->
+        <div class="col-lg-6">
+          <div class="card h-100 shadow-sm border-0">
+            <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
+              <h6 class="fw-bold mb-0"><i class="fa fa-credit-card me-2 text-info"></i>8. Répartition des Modes de Règlement</h6>
+            </div>
+            <div class="card__body pt-2"><div style="height:270px;"><canvas id="rptChartPayment"></canvas></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TABLE SUMMARY & EXPORT -->
+      <div class="card shadow-sm border-0 mb-4">
+        <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <h6 class="fw-bold mb-0"><i class="fa fa-table me-2 text-secondary"></i>Synthèse des Factures Filtrées</h6>
+          <div class="d-flex align-items-center gap-2">
+            <input type="text" id="rptTableSearch" class="form-control form-control-sm" placeholder="Recherche rapide..." style="width: 220px;" oninput="renderRptTable()">
+            <button class="btn btn-outline-success btn-sm shadow-sm" onclick="exportFullReportExcel()">
+              <i class="fa fa-file-excel me-1"></i> Export Excel
+            </button>
+          </div>
+        </div>
+        <div class="card__body p-0">
+          <div class="table-responsive" style="max-height: 50vh; overflow-y: auto;">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light sticky-top shadow-sm">
+                <tr class="text-uppercase small text-center" style="font-size: 0.75rem;">
+                  <th>Date</th>
+                  <th>N° Facture</th>
+                  <th style="text-align: left;">Client</th>
+                  <th>Type</th>
+                  <th>Destination</th>
+                  <th>BL(s)</th>
+                  <th>Montant HT</th>
+                  <th>TVA</th>
+                  <th>Montant TTC</th>
+                  <th>Statut</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="rptTableBody"></tbody>
+              <tfoot id="rptTableFoot"></tfoot>
+            </table>
           </div>
         </div>
       </div>
     </div>
-  </div>
-</section>
 
-<!-- IMMOBILISATION & RENTABILITE VIEW -->
-<section id="view-immobilisation" class="app-view d-none">
+    <!-- TAB 3: IMMOBILISATION FLOTTE -->
+    <div class="tab-pane fade" id="tab-report-immo">
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
             <h2 class="mb-0 fw-bold" style="color:var(--text-main);"><i class="fa-solid fa-truck-ramp-box me-2" style="color:#6366f1;"></i>Immobilisation & Rentabilité Flotte</h2>
@@ -1256,13 +1405,13 @@ th.sortable.sorted-desc .sort-icon::after {
             </div>
         </div>
     </div>
-</section>
+    </div>
 
-<!-- LOCATION & RENTAL VIEW -->
-<section id="view-location" class="app-view d-none">
+    <!-- TAB 4: LOCATION D'ENGINS -->
+    <div class="tab-pane fade" id="tab-report-loc">
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
-            <h2 class="mb-0 fw-bold" style="color:var(--text-main);"><i class="fa-solid fa-crane me-2" style="color:#f59e0b;"></i>Location & Rental – Analyse</h2>
+            <h2 class="mb-0 fw-bold" style="color:var(--text-main);"><i class="fa-solid fa-tractor me-2" style="color:#f59e0b;"></i>Location & Rental – Analyse</h2>
             <div class="text-muted small">Suivi des locations d'engins (Grue, etc.) : chiffre d'affaires, durées, types d'équipement et rentabilité par client.</div>
         </div>
         <div class="d-flex gap-2 flex-wrap">
@@ -1423,7 +1572,13 @@ th.sortable.sorted-desc .sort-icon::after {
             </div>
         </div>
     </div>
+    </div>
+  </div>
 </section>
+
+<!-- COMPATIBILITY HOOKS -->
+<section id="view-immobilisation" class="app-view d-none"></section>
+<section id="view-location" class="app-view d-none"></section>
 
 <!-- PROFORMAS VIEW -->
 <section id="view-proformas" class="app-view d-none">
@@ -1636,7 +1791,7 @@ th.sortable.sorted-desc .sort-icon::after {
                             </div>
                             <!-- Location Equipment Types -->
                             <div class="col-md-6 mt-3">
-                                <label for="locationEquipmentTypes" class="form-label fw-bold" style="color: #f59e0b;"><i class="fa fa-crane me-1"></i>Types d'Équipement Location (virgule)</label>
+                                <label for="locationEquipmentTypes" class="form-label fw-bold" style="color: #f59e0b;"><i class="fa-solid fa-tractor me-1"></i>Types d'Équipement Location (virgule)</label>
                                 <input type="text" id="locationEquipmentTypes" class="form-control" placeholder="Ex: Grue 25T, Grue 50T, Grue 75T">
                             </div>
                             <div class="col-md-6 mt-3">
