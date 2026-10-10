@@ -733,7 +733,12 @@ function showView(viewName) {
         if (viewName === 'dashboard') updateDashboard();
         if (viewName === 'invoices') renderInvoices();
         if (viewName === 'clients') renderClients();
-        if (viewName === 'reports') { populateRptClientFilter(); updateReportsView(); }
+        if (viewName === 'reports') {
+            if (typeof populateReportFilters === 'function') populateReportFilters();
+            if (typeof loadReport === 'function') loadReport();
+            if (typeof populateRptClientFilter === 'function') populateRptClientFilter();
+            if (typeof updateReportsView === 'function') updateReportsView();
+        }
         if (viewName === 'settings') loadSettings();
 		if (viewName === 'wilaya-prices') setupWilayaPriceManagement();
         if (viewName === 'immobilisation') updateImmobilisationView();
@@ -8898,29 +8903,127 @@ async function loadShareLinks() {
             const isExp = exp < new Date();
             const views = l.accessCount || 0;
             const lastIP = l.lastIP || '-';
+            const lastDev = l.lastDevice || 'Appareil inconnu';
             const lastAccess = l.lastAccessedAt ? new Date(l.lastAccessedAt).toLocaleString('fr-FR') : 'Jamais';
-            return `<div class="p-2 mb-2 rounded border ${isExp?'bg-light text-muted':'bg-white'}">
-                <div class="d-flex justify-content-between align-items-center">
+            return `<div class="p-3 mb-2 rounded border ${isExp?'bg-light text-muted':'bg-white shadow-sm'}">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div>
-                        <div class="fw-bold small">${l.label||'Dashboard'} ${isExp?'<span class="badge bg-danger">Expiré</span>':'<span class="badge bg-success">Actif</span>'}</div>
-                        <div class="text-muted" style="font-size:0.7rem;">Expire: ${exp.toLocaleDateString('fr-FR')}</div>
+                        <div class="fw-bold small">${l.label||'Dashboard'} ${isExp?'<span class="badge bg-danger ms-1">Expiré</span>':'<span class="badge bg-success ms-1">Actif</span>'}</div>
+                        <div class="text-muted" style="font-size:0.72rem;">Expire le : <b>${exp.toLocaleDateString('fr-FR')}</b></div>
                     </div>
                     <div class="d-flex gap-1">
-                        <button class="btn btn-outline-primary btn-sm" onclick="copyShareLink('${l.token}')" title="Copier"><i class="fa fa-copy"></i></button>
-                        <button class="btn btn-outline-warning btn-sm" onclick="extendShareLink('${l.token}')" title="Prolonger"><i class="fa fa-calendar-plus"></i></button>
+                        <button class="btn btn-outline-primary btn-sm" onclick="copyShareLink('${l.token}')" title="Copier le lien"><i class="fa fa-copy"></i></button>
+                        <button class="btn btn-outline-dark btn-sm fw-bold" onclick="viewShareLinkVisitors('${l.token}')" title="Historique IP et PC"><i class="fa fa-laptop-code me-1 text-primary"></i>Visiteurs (${views})</button>
+                        <button class="btn btn-outline-warning btn-sm" onclick="extendShareLink('${l.token}')" title="Prolonger validité"><i class="fa fa-calendar-plus"></i></button>
                         <button class="btn btn-outline-info btn-sm" onclick="changeShareLinkPassword('${l.token}')" title="Changer mot de passe"><i class="fa fa-key"></i></button>
-                        <button class="btn btn-outline-danger btn-sm" onclick="deleteShareLink('${l.token}')" title="Supprimer"><i class="fa fa-trash"></i></button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="deleteShareLink('${l.token}')" title="Supprimer ce lien"><i class="fa fa-trash"></i></button>
                     </div>
                 </div>
-                <div class="d-flex gap-3 mt-1 small text-muted" style="font-size:0.7rem;">
-                    <span><i class="fa fa-eye me-1"></i>${views} visite${views>1?'s':''}</span>
-                    <span><i class="fa fa-globe me-1"></i>${lastIP}</span>
-                    <span><i class="fa fa-clock me-1"></i>${lastAccess}</span>
+                <div class="d-flex flex-wrap gap-3 mt-2 small text-muted pt-2 border-top" style="font-size:0.72rem;">
+                    <span><i class="fa fa-eye text-primary me-1"></i><b>${views}</b> visite${views>1?'s':''}</span>
+                    <span><i class="fa fa-network-wired text-info me-1"></i>Dernière IP : <code class="text-dark fw-bold">${lastIP}</code></span>
+                    <span class="text-truncate" style="max-width:240px;"><i class="fa fa-desktop text-secondary me-1"></i>${lastDev}</span>
+                    <span><i class="fa fa-clock text-muted me-1"></i>${lastAccess}</span>
                 </div>
             </div>`;
         }).join('');
     } catch(e) { console.error(e); }
 }
+
+window.viewShareLinkVisitors = async function(token) {
+    let modalEl = document.getElementById('modalShareLinkVisitors');
+    if (!modalEl) { alert("Erreur: modal introuvable"); return; }
+    const bsModal = new bootstrap.Modal(modalEl);
+    bsModal.show();
+    
+    const content = document.getElementById('modalShareLinkVisitorsContent');
+    content.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div><div class="mt-2 small text-muted">Chargement des connexions et appareils...</div></div>';
+
+    try {
+        const resp = await fetch(API_URL + '/api/share-links/' + token + '/visitors');
+        const data = await resp.json();
+
+        if (!data || !data.visitors) {
+            content.innerHTML = '<div class="alert alert-warning">Impossible de charger les visiteurs.</div>';
+            return;
+        }
+
+        const totalVisits = data.accessCount || data.visitors.length || 0;
+        const lastIP = data.lastIP || 'Aucune';
+        const lastDevice = data.lastDevice || 'Inconnu';
+
+        let html = `
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="p-3 bg-light rounded border text-center">
+                        <div class="text-muted small text-uppercase fw-bold">Consultations</div>
+                        <div class="fs-4 fw-bold text-primary">${totalVisits}</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 bg-light rounded border text-center">
+                        <div class="text-muted small text-uppercase fw-bold">Dernière Adresse IP</div>
+                        <div class="fs-5 fw-bold font-monospace text-dark text-truncate">${lastIP}</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 bg-light rounded border text-center">
+                        <div class="text-muted small text-uppercase fw-bold">Dernier Appareil (PC)</div>
+                        <div class="fs-6 fw-bold text-dark text-truncate" title="${lastDevice}">${lastDevice}</div>
+                    </div>
+                </div>
+            </div>
+
+            <h6 class="fw-bold mb-3"><i class="fa fa-list-check me-2 text-primary"></i>Journal Détaillé des Connexions (IP & Postes Clients)</h6>
+        `;
+
+        if (data.visitors.length === 0) {
+            html += '<div class="alert alert-info py-3 text-center"><i class="fa fa-info-circle me-1"></i>Aucune visite enregistrée pour ce lien pour le moment.</div>';
+        } else {
+            html += `
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-hover table-sm align-middle mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr class="small text-uppercase">
+                                <th>Date & Heure</th>
+                                <th>Adresse IP</th>
+                                <th>Poste / Appareil</th>
+                                <th>Navigateur</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.visitors.map(v => {
+                                const dt = v.at ? new Date(v.at).toLocaleString('fr-FR') : '-';
+                                const ip = v.ip || 'Inconnu';
+                                const os = v.os || '-';
+                                const browser = v.browser || '-';
+                                const dev = v.device || '💻 PC';
+                                return `
+                                    <tr class="small">
+                                        <td class="font-monospace text-muted">${dt}</td>
+                                        <td>
+                                            <span class="badge bg-light text-dark border font-monospace px-2 py-1">${ip}</span>
+                                        </td>
+                                        <td>
+                                            <span class="fw-semibold">${dev}</span> <small class="text-muted">(${os})</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary-subtle text-secondary">${browser}</span>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        content.innerHTML = html;
+    } catch(err) {
+        content.innerHTML = `<div class="alert alert-danger">Erreur: ${err.message}</div>`;
+    }
+};
 window.copyShareLink = function(token) {
     const url = window.location.origin + '/shared/' + token;
     navigator.clipboard.writeText(url).then(() => alert('\u2705 Lien copié !')).catch(() => prompt('Copiez ce lien:', url));

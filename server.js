@@ -7,7 +7,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const app = express();
-const DEV_MODE = process.env.DEV_MODE === 'true';
+const DEV_MODE = (process.env.DEV_MODE || '').trim() === 'true';
 
 // --- CONFIGURATION ---
 app.use(cors());
@@ -77,7 +77,15 @@ if (DEV_MODE) {
         accessCount: { type: Number, default: 0 },
         lastAccessedAt: Date,
         lastIP: String,
-        accessLog: [{ at: Date, ip: String }]
+        lastDevice: String,
+        accessLog: [{
+            at: { type: Date, default: Date.now },
+            ip: String,
+            device: String,
+            os: String,
+            browser: String,
+            summary: String
+        }]
     });
     ShareLink = mongoose.model('ShareLink', shareLinkSchema);
 
@@ -290,6 +298,108 @@ app.put('/api/share-links/:token/extend', async (req, res) => {
     }
 });
 
+function parseDeviceInfo(userAgent) {
+    if (!userAgent) return { type: '💻 PC', os: 'Inconnu', browser: 'Inconnu', summary: 'Appareil Inconnu' };
+    const ua = userAgent.toLowerCase();
+    
+    let os = 'Système inconnu';
+    if (ua.includes('windows nt 10.0')) os = 'Windows 10/11';
+    else if (ua.includes('windows nt 6.3')) os = 'Windows 8.1';
+    else if (ua.includes('windows nt 6.1')) os = 'Windows 7';
+    else if (ua.includes('macintosh') || ua.includes('mac os x')) os = 'macOS';
+    else if (ua.includes('android')) os = 'Android';
+    else if (ua.includes('iphone')) os = 'iOS (iPhone)';
+    else if (ua.includes('ipad')) os = 'iPadOS';
+    else if (ua.includes('linux')) os = 'Linux';
+
+    let type = '💻 PC / Ordinateur';
+    if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone')) type = '📱 Smartphone';
+    else if (ua.includes('ipad') || ua.includes('tablet')) type = '📱 Tablette';
+
+    let browser = 'Inconnu';
+    if (ua.includes('edg/')) browser = 'Edge';
+    else if (ua.includes('chrome/')) browser = 'Chrome';
+    else if (ua.includes('firefox/')) browser = 'Firefox';
+    else if (ua.includes('safari/') && !ua.includes('chrome/')) browser = 'Safari';
+    else if (ua.includes('opr/') || ua.includes('opera/')) browser = 'Opera';
+
+    return {
+        type,
+        os,
+        browser,
+        summary: `${type} • ${os} (${browser})`
+    };
+}
+
+function getClientIp(req) {
+    const forwarded = req.headers['x-forwarded-for'];
+    if (forwarded) return forwarded.split(',')[0].trim();
+    return req.socket.remoteAddress || req.ip || 'Inconnu';
+}
+
+app.get('/api/share-links/:token/visitors', async (req, res) => {
+    try {
+        const { token } = req.params;
+        let link;
+        if (DEV_MODE) {
+            link = devStore.shareLinks.find(l => l.token === token);
+        } else {
+            link = await ShareLink.findOne({ token });
+        }
+
+        if (!link) return res.status(404).json({ error: 'Lien introuvable' });
+
+        res.json({
+            token: link.token,
+            label: link.label || 'Tableau de Bord',
+            accessCount: link.accessCount || 0,
+            lastAccessedAt: link.lastAccessedAt,
+            lastIP: link.lastIP,
+            lastDevice: link.lastDevice || 'Appareil inconnu',
+            visitors: (link.accessLog || []).slice(-100).reverse()
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/shared/track/:token', async (req, res) => {
+    try {
+        const { token } = req.params;
+        const clientIp = getClientIp(req);
+        const devInfo = parseDeviceInfo(req.headers['user-agent']);
+        const logEntry = {
+            at: new Date(),
+            ip: clientIp,
+            device: devInfo.type,
+            os: devInfo.os,
+            browser: devInfo.browser,
+            summary: devInfo.summary
+        };
+
+        if (DEV_MODE) {
+            const sl = devStore.shareLinks.find(l => l.token === token);
+            if (sl) {
+                sl.accessCount = (sl.accessCount || 0) + 1;
+                sl.lastAccessedAt = new Date();
+                sl.lastIP = clientIp;
+                sl.lastDevice = devInfo.summary;
+                if (!sl.accessLog) sl.accessLog = [];
+                sl.accessLog.push(logEntry);
+            }
+        } else {
+            await ShareLink.updateOne({ token }, {
+                $inc: { accessCount: 1 },
+                $set: { lastAccessedAt: new Date(), lastIP: clientIp, lastDevice: devInfo.summary },
+                $push: { accessLog: logEntry }
+            });
+        }
+        res.json({ success: true, ip: clientIp, device: devInfo.summary });
+    } catch(e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.post('/api/shared/auth', async (req, res) => {
     try {
         const { token, password } = req.body;
@@ -314,24 +424,56 @@ app.post('/api/shared/auth', async (req, res) => {
             data = devStore;
         } else {
             data = await AppData.findOne({ accessKey: link.accessKey });
+            if (!data) {
+                data = await AppData.findOne({});
+            }
         }
 
-        if (!data && !DEV_MODE) return res.status(404).json({ error: 'Aucune donnée trouvée' });
+        if (!data) {
+            data = { clients: [], invoices: [], settings: {} };
+        }
         
-        // Track access
+        // Track rich access info
+        const clientIp = getClientIp(req);
+        const devInfo = parseDeviceInfo(req.headers['user-agent']);
+        const logEntry = {
+            at: new Date(),
+            ip: clientIp,
+            device: devInfo.type,
+            os: devInfo.os,
+            browser: devInfo.browser,
+            summary: devInfo.summary
+        };
+
         if (DEV_MODE) {
             const sl = devStore.shareLinks.find(l => l.token === token);
-            if (sl) { sl.accessCount = (sl.accessCount || 0) + 1; sl.lastAccessedAt = new Date(); sl.lastIP = req.ip || req.connection.remoteAddress || 'unknown'; if (!sl.accessLog) sl.accessLog = []; sl.accessLog.push({ at: new Date(), ip: req.ip || 'unknown' }); }
+            if (sl) {
+                sl.accessCount = (sl.accessCount || 0) + 1;
+                sl.lastAccessedAt = new Date();
+                sl.lastIP = clientIp;
+                sl.lastDevice = devInfo.summary;
+                if (!sl.accessLog) sl.accessLog = [];
+                sl.accessLog.push(logEntry);
+            }
         } else {
-            await ShareLink.updateOne({ token }, { $inc: { accessCount: 1 }, $set: { lastAccessedAt: new Date(), lastIP: req.ip || 'unknown' }, $push: { accessLog: { at: new Date(), ip: req.ip || 'unknown' } } });
+            await ShareLink.updateOne({ token }, {
+                $inc: { accessCount: 1 },
+                $set: { lastAccessedAt: new Date(), lastIP: clientIp, lastDevice: devInfo.summary },
+                $push: { accessLog: logEntry }
+            });
         }
 
         res.json({
             success: true,
             data: {
-                clients: data.clients,
-                invoices: data.invoices,
-                settings: data.settings
+                clients: data.clients || [],
+                invoices: data.invoices || [],
+                settings: data.settings || {},
+                linkInfo: {
+                    label: link.label || '',
+                    expiresAt: link.expiresAt || null,
+                    createdAt: link.createdAt || null
+                }
             }
         });
     } catch (e) {

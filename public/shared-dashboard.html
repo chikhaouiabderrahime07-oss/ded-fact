@@ -3,1137 +3,2069 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DOUROUB EL DJAZAIR - Tableau de Bord KPI</title>
+    <title>SPA DOUROUB EL DJAZAIR — Tableau de Bord Exécutif & KPI</title>
     
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome 6 -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
     
+    <!-- Chart.js & Plugins -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <!-- html2canvas for high quality screenshots -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
     <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        
         :root {
             --bg: #f8fafc;
             --bg-card: #ffffff;
-            --text: #1e293b;
+            --bg-glass: rgba(255, 255, 255, 0.85);
+            --text: #0f172a;
             --text-secondary: #64748b;
             --border: #e2e8f0;
-            --accent: #3b82f6;
-            --accent-hover: #2563eb;
-            --shadow: rgba(0, 0, 0, 0.08);
+            --border-subtle: #f1f5f9;
+            --accent: #2563eb;
+            --accent-gradient: linear-gradient(135deg, #2563eb, #1d4ed8);
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+            
             --success: #10b981;
+            --success-bg: rgba(16, 185, 129, 0.1);
             --danger: #ef4444;
+            --danger-bg: rgba(239, 68, 68, 0.1);
             --warning: #f59e0b;
+            --warning-bg: rgba(245, 158, 11, 0.1);
+            --info: #06b6d4;
+            --purple: #8b5cf6;
         }
 
         [data-theme='dark'] {
-            --bg: #0f172a;
-            --bg-card: #1e293b;
-            --text: #f1f5f9;
+            --bg: #0b0f19;
+            --bg-card: #151c2e;
+            --bg-glass: rgba(21, 28, 46, 0.85);
+            --text: #f8fafc;
             --text-secondary: #94a3b8;
-            --border: #334155;
-            --accent: #60a5fa;
-            --accent-hover: #93c5fd;
-            --shadow: rgba(0, 0, 0, 0.3);
+            --border: #1e293b;
+            --border-subtle: #1e293b;
+            --accent: #3b82f6;
+            --accent-gradient: linear-gradient(135deg, #3b82f6, #2563eb);
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
+            
+            --success-bg: rgba(16, 185, 129, 0.15);
+            --danger-bg: rgba(239, 68, 68, 0.15);
+            --warning-bg: rgba(245, 158, 11, 0.15);
         }
 
         body {
             background-color: var(--bg);
             color: var(--text);
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            transition: background-color 0.3s ease, color 0.3s ease;
             margin: 0;
             padding: 0;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            -webkit-font-smoothing: antialiased;
         }
-        
-        .kpi-value { font-size: 1.5rem; font-weight: 700; }
-        .kpi-label, .kpi-title { font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
 
-        /* Authentication View */
+        /* TYPOGRAPHY */
+        h1, h2, h3, h4, .brand-title {
+            font-family: 'Outfit', 'Inter', sans-serif;
+            letter-spacing: -0.02em;
+        }
+
+        /* AUTH SCREEN */
         #auth-view {
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, var(--bg) 0%, var(--border) 100%);
+            background: radial-gradient(circle at 50% 20%, rgba(37, 99, 235, 0.08) 0%, transparent 60%), var(--bg);
+            padding: 1.5rem;
         }
         .auth-card {
             background: var(--bg-card);
-            border-radius: 1rem;
-            box-shadow: 0 10px 25px var(--shadow);
-            padding: 3rem;
+            border-radius: 1.5rem;
+            box-shadow: var(--shadow-xl);
+            padding: 3rem 2.5rem;
             width: 100%;
-            max-width: 450px;
+            max-width: 480px;
             border: 1px solid var(--border);
             text-align: center;
-        }
-        .auth-brand {
-            font-weight: 700;
-            font-size: 1.5rem;
-            color: var(--text);
-            margin-bottom: 2rem;
-            letter-spacing: -0.5px;
-        }
-        .auth-input {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            color: var(--text);
-            border-radius: 0.5rem;
-            padding: 0.75rem 1rem;
-            margin-bottom: 1.5rem;
-            width: 100%;
-            transition: border-color 0.2s;
-        }
-        .auth-input:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
-        .auth-btn {
-            background: var(--accent);
-            color: white;
-            border: none;
-            border-radius: 0.5rem;
-            padding: 0.75rem 1rem;
-            width: 100%;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .auth-btn:hover {
-            background: var(--accent-hover);
-        }
-
-        /* Dashboard Wrapper */
-        #dashboard-view {
-            display: none;
-            padding-bottom: 3rem;
-        }
-
-        /* Topbar */
-        .topbar {
-            background: var(--bg-card);
-            border-bottom: 1px solid var(--border);
-            padding: 1rem 2rem;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 4px var(--shadow);
-        }
-        .topbar-brand {
-            font-weight: 700;
-            font-size: 1.25rem;
-            color: var(--text);
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-        .expiry-badge {
-            font-size: 0.8rem;
-            padding: 0.25rem 0.75rem;
-            border-radius: 999px;
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--danger);
-            font-weight: 600;
-        }
-        .topbar-controls {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-        .filter-select {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            color: var(--text);
-            border-radius: 0.5rem;
-            padding: 0.5rem 1rem;
-            font-size: 0.9rem;
-            outline: none;
-        }
-        .btn-icon {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text);
-            border-radius: 0.5rem;
-            width: 38px;
-            height: 38px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .btn-icon:hover {
-            background: var(--bg);
-            color: var(--accent);
-            border-color: var(--accent);
-        }
-        .btn-primary-action {
-            background: var(--accent);
-            color: white;
-            border: none;
-            border-radius: 0.5rem;
-            padding: 0.5rem 1rem;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .btn-primary-action:hover {
-            background: var(--accent-hover);
-        }
-
-        /* Container */
-        .content-container {
-            padding: 2rem;
-            max-width: 1600px;
-            margin: 0 auto;
-        }
-
-        /* KPI Cards */
-        .kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .kpi-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 1rem;
-            padding: 1.5rem;
-            box-shadow: 0 4px 6px -1px var(--shadow);
-            transition: transform 0.2s, box-shadow 0.2s;
             position: relative;
             overflow: hidden;
         }
+        .auth-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 5px;
+            background: var(--accent-gradient);
+        }
+        .auth-logos {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-bottom: 1.75rem;
+        }
+        .auth-logo-img {
+            max-height: 60px;
+            object-fit: contain;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.08));
+        }
+
+        /* HEADER & TOPBAR */
+        .topbar {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-sm);
+            backdrop-filter: blur(12px);
+        }
+        .topbar-inner {
+            padding: 0.85rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .company-brand-block {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+        .brand-logo-left, .brand-logo-right {
+            max-height: 48px;
+            object-fit: contain;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.08));
+            border-radius: 6px;
+        }
+        .company-info-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .brand-title {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin: 0;
+            line-height: 1.2;
+        }
+        .company-legal-strip {
+            font-size: 0.73rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            line-height: 1.3;
+        }
+        .company-legal-strip span {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .badge-verified {
+            background: #dbeafe;
+            color: #1e40af;
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 0.15rem 0.45rem;
+            border-radius: 999px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        [data-theme='dark'] .badge-verified {
+            background: rgba(59, 130, 246, 0.2);
+            color: #93c5fd;
+        }
+
+        .expiry-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 0.25rem 0.65rem;
+            border-radius: 999px;
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid currentColor;
+            letter-spacing: 0.02em;
+        }
+        .expiry-pill.warning {
+            background: var(--warning-bg);
+            color: var(--warning);
+        }
+        .expiry-pill.expired {
+            background: var(--danger-bg);
+            color: var(--danger);
+        }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+        .filter-control {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.4rem 0.75rem;
+            border-radius: 0.6rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .filter-control:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+        }
+        .btn-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.45rem 0.85rem;
+            border-radius: 0.6rem;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-action:hover {
+            background: var(--border-subtle);
+            border-color: var(--accent);
+            color: var(--accent);
+            transform: translateY(-1px);
+        }
+        .btn-action.btn-accent {
+            background: var(--accent-gradient);
+            color: white;
+            border: none;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+        }
+        .btn-action.btn-accent:hover {
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+            color: white;
+        }
+
+        /* MAIN CONTENT */
+        .dashboard-container {
+            padding: 1.5rem;
+            max-width: 1680px;
+            margin: 0 auto;
+        }
+
+        /* KPI CARDS (MIND-BLOWING DESIGN) */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .kpi-card {
+            background: var(--bg-card);
+            border-radius: 1.15rem;
+            padding: 1.25rem 1.15rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
         .kpi-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 15px -3px var(--shadow);
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--card-accent, var(--accent));
         }
         .kpi-card::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 4px;
-            background: var(--accent);
-            opacity: 0.8;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: var(--card-accent, var(--accent));
         }
-        .kpi-title {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-            font-weight: 600;
+        .kpi-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+        }
+        .kpi-label {
+            font-size: 0.72rem;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+        .kpi-icon-wrap {
+            width: 36px;
+            height: 36px;
+            border-radius: 0.65rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--card-bg-subtle, rgba(37, 99, 235, 0.1));
+            color: var(--card-accent, var(--accent));
+            font-size: 0.95rem;
+        }
+        .kpi-value-block {
+            display: flex;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 0.35rem;
             margin-bottom: 0.5rem;
         }
-        .kpi-value {
-            font-size: 1.75rem;
+        .kpi-num {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.55rem;
+            font-weight: 800;
+            color: var(--text);
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+            white-space: nowrap;
+        }
+        .kpi-unit {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+        .kpi-footer {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 0.5rem;
+            border-top: 1px dashed var(--border-subtle);
+        }
+        .kpi-badge {
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 0.15rem 0.45rem;
+            border-radius: 999px;
+            background: var(--border-subtle);
+            color: var(--text-secondary);
+        }
+
+        /* CHARTS GRID */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        .col-12 { grid-column: span 12; }
+        .col-8 { grid-column: span 8; }
+        .col-6 { grid-column: span 6; }
+        .col-4 { grid-column: span 4; }
+
+        @media (max-width: 1200px) {
+            .col-8 { grid-column: span 12; }
+            .col-4 { grid-column: span 6; }
+        }
+        @media (max-width: 768px) {
+            .col-6, .col-4 { grid-column: span 12; }
+        }
+
+        .chart-card {
+            background: var(--bg-card);
+            border-radius: 1.15rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            transition: box-shadow 0.2s, border-color 0.2s;
+            position: relative;
+        }
+        .chart-card:hover {
+            box-shadow: var(--shadow-md);
+            border-color: rgba(37, 99, 235, 0.3);
+        }
+        .chart-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            gap: 0.5rem;
+        }
+        .chart-card-title {
+            font-size: 0.95rem;
             font-weight: 700;
             color: var(--text);
             margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .chart-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .btn-chart-tool {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            width: 28px;
+            height: 28px;
+            border-radius: 0.45rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .btn-chart-tool:hover {
+            background: var(--border-subtle);
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+        .btn-chart-tool.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
         }
 
-        /* Chart Grid */
-        .chart-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        @media (max-width: 1200px) {
-            .chart-grid { grid-template-columns: 1fr; }
-        }
-        .chart-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 1rem;
-            padding: 1.5rem;
-            box-shadow: 0 4px 6px -1px var(--shadow);
-            display: flex;
-            flex-direction: column;
-        }
-        .chart-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 0.75rem;
-        }
-        .chart-title {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--text);
-            margin: 0;
-        }
-        .chart-download {
-            background: transparent;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            transition: color 0.2s;
-            font-size: 1.1rem;
-        }
-        .chart-download:hover {
-            color: var(--accent);
-        }
-        .chart-container {
+        .chart-canvas-wrap {
             position: relative;
-            flex: 1;
-            min-height: 300px;
+            flex-grow: 1;
+            min-height: 260px;
             width: 100%;
         }
 
-        /* Table */
+        /* EMPTY STATE FOR CHARTS */
+        .chart-empty-state {
+            position: absolute;
+            inset: 0;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-card);
+            border-radius: 0.75rem;
+            z-index: 5;
+            text-align: center;
+            padding: 1.5rem;
+        }
+        .chart-empty-state.show {
+            display: flex;
+        }
+        .chart-empty-icon {
+            font-size: 2.25rem;
+            color: var(--text-secondary);
+            opacity: 0.35;
+            margin-bottom: 0.5rem;
+        }
+        .chart-empty-title {
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+        }
+        .chart-empty-sub {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            opacity: 0.8;
+            max-width: 240px;
+        }
+
+        /* TABLE SECTION */
         .table-card {
             background: var(--bg-card);
+            border-radius: 1.15rem;
             border: 1px solid var(--border);
-            border-radius: 1rem;
-            padding: 1.5rem;
-            box-shadow: 0 4px 6px -1px var(--shadow);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+            margin-bottom: 2rem;
         }
-        .table-header {
+        .table-card-header {
+            padding: 1.1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
         }
-        .table-search {
+        .table-search-input {
+            max-width: 300px;
+            font-size: 0.82rem;
+            padding: 0.4rem 0.85rem;
+            border-radius: 0.6rem;
             background: var(--bg);
             border: 1px solid var(--border);
             color: var(--text);
-            border-radius: 0.5rem;
-            padding: 0.5rem 1rem;
-            width: 300px;
             outline: none;
         }
-        table {
+        .table-search-input:focus {
+            border-color: var(--accent);
+        }
+        .table-scroll {
+            max-height: 440px;
+            overflow-y: auto;
+        }
+        .table-custom {
             width: 100%;
+            margin: 0;
             border-collapse: collapse;
+            font-size: 0.82rem;
         }
-        th, td {
-            padding: 1rem;
-            text-align: left;
-            border-bottom: 1px solid var(--border);
-            color: var(--text);
-        }
-        th {
-            font-weight: 600;
+        .table-custom th {
+            background: var(--border-subtle);
             color: var(--text-secondary);
+            font-weight: 700;
             text-transform: uppercase;
-            font-size: 0.75rem;
-            letter-spacing: 0.05em;
+            font-size: 0.7rem;
+            letter-spacing: 0.04em;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
-        .badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 999px;
-            font-size: 0.75rem;
-            font-weight: 600;
+        .table-custom td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-subtle);
+            vertical-align: middle;
         }
-        .badge-success { background: rgba(16, 185, 129, 0.1); color: var(--success); }
-        .badge-danger { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
-        
-        .loader {
-            border: 4px solid var(--border);
-            border-top: 4px solid var(--accent);
-            border-radius: 50%;
+        .table-custom tr:hover td {
+            background: var(--border-subtle);
+        }
+
+        /* FULLSCREEN MODAL */
+        .fullscreen-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 99999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        .fullscreen-modal.show {
+            display: flex;
+        }
+        .fullscreen-modal-box {
+            background: var(--bg-card);
+            border-radius: 1.25rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 1200px;
+            height: 85vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            animation: modalPop 0.2s ease-out;
+        }
+        @keyframes modalPop {
+            from { transform: scale(0.96); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .fullscreen-modal-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .fullscreen-modal-body {
+            flex-grow: 1;
+            padding: 1.5rem;
+            position: relative;
+        }
+
+        /* SPINNER */
+        .spinner-pulse {
             width: 40px;
             height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
+            border: 3px solid rgba(37, 99, 235, 0.15);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
         }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
 
-        /* Loader Overlay */
-        #loader-overlay {
-            position: fixed;
-            top:0; left:0; right:0; bottom:0;
-            background: rgba(0,0,0,0.5);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            color: white;
-            flex-direction: column;
-            gap: 1rem;
+        /* FOOTER BRAND */
+        .dashboard-footer {
+            padding: 1.5rem;
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            border-top: 1px solid var(--border);
+            margin-top: 2rem;
         }
     </style>
 </head>
 <body>
 
-    <!-- Auth View -->
+    <!-- 1. AUTHENTICATION VIEW -->
     <div id="auth-view">
         <div class="auth-card">
-            <div class="auth-brand">
-                <i class="fas fa-chart-pie" style="color: var(--accent); margin-right: 0.5rem;"></i>
-                DOUROUB EL DJAZAIR
+            <div class="auth-logos">
+                <img src="/LOGO-GIBA.png" alt="Logo Principal" class="auth-logo-img" onerror="this.style.display='none'">
+                <img src="/T.png" alt="Logo Secondaire" class="auth-logo-img" onerror="this.style.display='none'">
             </div>
-            <p style="color: var(--text-secondary); margin-bottom: 2rem;">Accès au Tableau de Bord Partagé</p>
             
-            <div id="auth-error" class="alert alert-danger" style="display:none; font-size:0.9rem; padding:0.5rem; margin-bottom:1rem;"></div>
+            <h2 class="brand-title justify-content-center mb-1">DOUROUB EL DJAZAIR</h2>
+            <div class="text-muted small mb-4">Tableau de Bord Partagé & Rapports KPI</div>
             
             <form id="auth-form" onsubmit="handleAuth(event)">
-                <input type="password" id="auth-password" class="auth-input" placeholder="Mot de passe" required>
-                <button type="submit" class="auth-btn">
-                    <i class="fas fa-lock" style="margin-right: 0.5rem;"></i> Accéder
+                <div class="mb-3 text-start">
+                    <label class="form-label small fw-bold text-muted">Mot de passe d'accès</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0"><i class="fas fa-lock text-muted"></i></span>
+                        <input type="password" id="auth-password" class="form-control border-start-0" placeholder="Entrez le mot de passe reçu..." required autofocus>
+                    </div>
+                </div>
+
+                <div id="auth-error" class="alert alert-danger py-2 small mb-3" style="display:none;"></div>
+                
+                <button type="submit" id="auth-submit-btn" class="btn btn-action btn-accent w-100 py-2 justify-content-center">
+                    <i class="fas fa-arrow-right-to-bracket"></i> Accéder au Tableau de Bord
                 </button>
             </form>
             
-            <div id="auth-loading" style="display:none; margin-top:1rem;">
-                <div class="loader"></div>
+            <div id="auth-loading" class="mt-4" style="display:none;">
+                <div class="spinner-pulse mx-auto mb-2"></div>
+                <div class="small text-muted">Vérification de la clé d'accès...</div>
+            </div>
+
+            <div class="mt-4 pt-3 border-top text-muted" style="font-size:0.7rem;">
+                SPA DOUROUB EL DJAZAIR • Agrément N° AT/03/30/00/1016
             </div>
         </div>
     </div>
 
-    <!-- Dashboard View -->
-    <div id="dashboard-view">
-        <div class="topbar">
-            <div class="topbar-brand" style="flex-direction: column; align-items: flex-start; gap: 0;">
-                <div style="display: flex; align-items: center; gap: 1rem;">
-                    <i class="fas fa-chart-pie" style="color: var(--accent);"></i>
-                    <span id="header-company-name">SPA DOUROUB EL DJAZAIR</span>
-                    <span id="expiry-badge" class="expiry-badge">Expiré</span>
-                </div>
-                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px; font-weight: normal; line-height: 1.2;">
-                    Agrément N°AT/03/30/00/1016<br>
-                    Mr. GUETTAFI Younes - Gérant
-                </div>
-            </div>
-            <div class="topbar-controls">
-                <select id="filter-year" class="filter-select" onchange="applyFilters()">
-                    <option value="all">Toutes les années</option>
-                </select>
-                <select id="filter-client" class="filter-select" onchange="applyFilters()">
-                    <option value="all">Tous les clients</option>
-                </select>
-                <button class="btn-icon" onclick="toggleTheme()" title="Basculer le thème">
-                    <i class="fas fa-moon" id="theme-icon"></i>
-                </button>
-                <button class="btn-primary-action" onclick="downloadFullDashboard()">
-                    <i class="fas fa-camera"></i> Exporter Dashboard
-                </button>
-            </div>
-        </div>
+    <!-- 2. MAIN DASHBOARD VIEW -->
+    <div id="dashboard-view" style="display:none;">
+        
+        <!-- TOPBAR WITH CORPORATE BRANDING -->
+        <header class="topbar">
+            <div class="topbar-inner">
+                <!-- Left: Branding with 2 logos and legal info -->
+                <div class="company-brand-block">
+                    <img src="/LOGO-GIBA.png" alt="Logo" class="brand-logo-left" id="header-logo-left" onerror="this.style.display='none'">
+                    
+                    <div class="company-info-text">
+                        <div class="brand-title">
+                            <span id="header-company-name">SPA DOUROUB EL DJAZAIR</span>
+                            <span class="badge-verified"><i class="fas fa-check-circle me-1"></i>Certifié</span>
+                            <span id="expiry-badge" class="expiry-pill">
+                                <i class="fas fa-shield-alt"></i> <span id="expiry-text">Accès Sécurisé</span>
+                            </span>
+                        </div>
+                        <div class="company-legal-strip">
+                            <span><i class="fas fa-building text-primary"></i> <b id="header-legal-info">Capital: 200.000.000 DA</b></span>
+                            <span>•</span>
+                            <span>NIF : 002407024437672</span>
+                            <span>•</span>
+                            <span>RC : 07/00 024437672 B24</span>
+                            <span>•</span>
+                            <span>Agrément N° AT/03/30/00/1016</span>
+                        </div>
+                    </div>
 
-        <div class="content-container" id="dashboard-content">
-            <!-- KPI Cards -->
+                    <img src="/T.png" alt="Logo Secondaire" class="brand-logo-right" id="header-logo-right" onerror="this.style.display='none'">
+                </div>
+
+                <!-- Right: Filters & Action Buttons -->
+                <div class="topbar-actions">
+                    <select id="filter-year" class="filter-control" onchange="applyFilters()">
+                        <option value="all">Toutes les années</option>
+                    </select>
+
+                    <select id="filter-client" class="filter-control" onchange="applyFilters()" style="max-width:220px;">
+                        <option value="all">Tous les clients</option>
+                    </select>
+
+                    <button class="btn-action" onclick="toggleTheme()" title="Basculer Mode Clair / Sombre">
+                        <i class="fas fa-moon" id="theme-icon"></i>
+                    </button>
+
+                    <button class="btn-action btn-accent" onclick="downloadFullDashboard()" id="btn-export-full">
+                        <i class="fas fa-camera"></i> Exporter HD (PNG)
+                    </button>
+
+                    <button class="btn-action" onclick="logoutSession()" title="Verrouiller la session">
+                        <i class="fas fa-lock"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- DASHBOARD BODY -->
+        <main class="dashboard-container" id="dashboard-content">
+            
+            <!-- SECTION 1: EXECUTIVE KPI CARDS -->
             <div class="kpi-grid">
-                <div class="kpi-card" style="--accent: #3b82f6;">
-                    <div class="kpi-title">CA Total TTC</div>
-                    <div class="kpi-value"><span class="counter" data-target="0" data-format="currency" id="kpi-ca-total">0</span></div>
+                <!-- 1. CA TOTAL TTC -->
+                <div class="kpi-card" style="--card-accent:#2563eb; --card-bg-subtle:rgba(37,99,235,0.1);">
+                    <div class="kpi-header">
+                        <span class="kpi-label">Chiffre d'Affaires Total</span>
+                        <div class="kpi-icon-wrap"><i class="fas fa-wallet"></i></div>
+                    </div>
+                    <div class="kpi-value-block">
+                        <span class="kpi-num" id="kpi-ca-total">0</span>
+                        <span class="kpi-unit">DA TTC</span>
+                    </div>
+                    <div class="kpi-footer">
+                        <span>Montant HT : <b id="kpi-ca-ht">0 DA</b></span>
+                        <span class="kpi-badge" id="kpi-badge-ca">Année Globale</span>
+                    </div>
                 </div>
-                <div class="kpi-card" style="--accent: #10b981;">
-                    <div class="kpi-title">Nombre de Factures</div>
-                    <div class="kpi-value"><span class="counter" data-target="0" data-format="number" id="kpi-nb-factures">0</span></div>
+
+                <!-- 2. TOTAL FACTURES -->
+                <div class="kpi-card" style="--card-accent:#10b981; --card-bg-subtle:rgba(16,185,129,0.1);">
+                    <div class="kpi-header">
+                        <span class="kpi-label">Factures Émises</span>
+                        <div class="kpi-icon-wrap"><i class="fas fa-file-invoice"></i></div>
+                    </div>
+                    <div class="kpi-value-block">
+                        <span class="kpi-num" id="kpi-nb-factures">0</span>
+                        <span class="kpi-unit">Docs</span>
+                    </div>
+                    <div class="kpi-footer">
+                        <span>Payées : <b id="kpi-paid-count" class="text-success">0</b> • Impayées : <b id="kpi-unpaid-count" class="text-danger">0</b></span>
+                    </div>
                 </div>
-                <div class="kpi-card" style="--accent: #f59e0b;">
-                    <div class="kpi-title">Nombre de BL</div>
-                    <div class="kpi-value"><span class="counter" data-target="0" data-format="number" id="kpi-nb-bl">0</span></div>
+
+                <!-- 3. BONS DE LIVRAISON -->
+                <div class="kpi-card" style="--card-accent:#f59e0b; --card-bg-subtle:rgba(245,158,11,0.1);">
+                    <div class="kpi-header">
+                        <span class="kpi-label">Bons de Livraison (BL)</span>
+                        <div class="kpi-icon-wrap"><i class="fas fa-boxes-stacked"></i></div>
+                    </div>
+                    <div class="kpi-value-block">
+                        <span class="kpi-num" id="kpi-nb-bl">0</span>
+                        <span class="kpi-unit">BLs</span>
+                    </div>
+                    <div class="kpi-footer">
+                        <span>Rotations de transport</span>
+                        <span class="kpi-badge" id="kpi-bl-ratio">0 BL / fact.</span>
+                    </div>
                 </div>
-                <div class="kpi-card" style="--accent: #ef4444;">
-                    <div class="kpi-title">Créance Total</div>
-                    <div class="kpi-value"><span class="counter" data-target="0" data-format="currency" id="kpi-creance">0</span></div>
+
+                <!-- 4. CRÉANCE TOTALE -->
+                <div class="kpi-card" style="--card-accent:#ef4444; --card-bg-subtle:rgba(239,68,68,0.1);">
+                    <div class="kpi-header">
+                        <span class="kpi-label">Créances en Attente</span>
+                        <div class="kpi-icon-wrap"><i class="fas fa-hand-holding-dollar"></i></div>
+                    </div>
+                    <div class="kpi-value-block">
+                        <span class="kpi-num" id="kpi-creance">0</span>
+                        <span class="kpi-unit">DA TTC</span>
+                    </div>
+                    <div class="kpi-footer">
+                        <span>Encaissé : <b id="kpi-encaisse-val" class="text-success">0 DA</b></span>
+                        <span class="kpi-badge text-danger fw-bold" id="kpi-badge-creance">À percevoir</span>
+                    </div>
                 </div>
-                <div class="kpi-card" style="--accent: #8b5cf6;">
-                    <div class="kpi-title">Taux de Créance %</div>
-                    <div class="kpi-value"><span class="counter" data-target="0" data-format="percent" id="kpi-taux-creance">0</span></div>
+
+                <!-- 5. TAUX DE CRÉANCE -->
+                <div class="kpi-card" style="--card-accent:#8b5cf6; --card-bg-subtle:rgba(139,92,246,0.1);">
+                    <div class="kpi-header">
+                        <span class="kpi-label">Taux d'Impayés</span>
+                        <div class="kpi-icon-wrap"><i class="fas fa-chart-pie"></i></div>
+                    </div>
+                    <div class="kpi-value-block">
+                        <span class="kpi-num" id="kpi-taux-creance">0.00</span>
+                        <span class="kpi-unit">%</span>
+                    </div>
+                    <div class="kpi-footer">
+                        <span>Taux de recouvrement : <b id="kpi-recouvrement-rate" class="text-success">0%</b></span>
+                    </div>
                 </div>
-                <div class="kpi-card" style="--accent: #ec4899;">
-                    <div class="kpi-title">CA Immobilisation</div>
-                    <div class="kpi-value"><span class="counter" data-target="0" data-format="currency" id="kpi-ca-immo">0</span></div>
+
+                <!-- 6. CA IMMOBILISATION -->
+                <div class="kpi-card" style="--card-accent:#dc2626; --card-bg-subtle:rgba(220,38,38,0.1);">
+                    <div class="kpi-header">
+                        <span class="kpi-label">Frais Immobilisation</span>
+                        <div class="kpi-icon-wrap"><i class="fas fa-stopwatch"></i></div>
+                    </div>
+                    <div class="kpi-value-block">
+                        <span class="kpi-num" id="kpi-ca-immo">0</span>
+                        <span class="kpi-unit">DA</span>
+                    </div>
+                    <div class="kpi-footer">
+                        <span id="kpi-immo-sub">0 heures facturées</span>
+                        <span class="kpi-badge" id="kpi-immo-status">Actif</span>
+                    </div>
                 </div>
-                <div class="kpi-card" style="--accent: #06b6d4;">
-                    <div class="kpi-title">CA Location</div>
-                    <div class="kpi-value"><span class="counter" data-target="0" data-format="currency" id="kpi-ca-loc">0</span></div>
+
+                <!-- 7. CA LOCATION D'ENGINS -->
+                <div class="kpi-card" style="--card-accent:#d97706; --card-bg-subtle:rgba(217,119,6,0.1);">
+                    <div class="kpi-header">
+                        <span class="kpi-label">Location Grues & Engins</span>
+                        <div class="kpi-icon-wrap"><i class="fas fa-crane"></i></div>
+                    </div>
+                    <div class="kpi-value-block">
+                        <span class="kpi-num" id="kpi-ca-loc">0</span>
+                        <span class="kpi-unit">DA</span>
+                    </div>
+                    <div class="kpi-footer">
+                        <span id="kpi-loc-sub">Grues 25T, 50T, 75T</span>
+                        <span class="kpi-badge" id="kpi-loc-status">Actif</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- Charts -->
-            <div class="chart-grid">
-                <!-- Row 1 -->
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h3 class="chart-title">CA par Mois</h3>
-                        <button class="chart-download" onclick="downloadChart('chart-ca-mois', 'CA_par_Mois')" title="Télécharger"><i class="fas fa-download"></i></button>
-                    </div>
-                    <div class="chart-container"><canvas id="chart-ca-mois"></canvas></div>
-                </div>
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h3 class="chart-title">Répartition CA par Mois</h3>
-                        <button class="chart-download" onclick="downloadChart('chart-repart-ca', 'Repartition_CA')" title="Télécharger"><i class="fas fa-download"></i></button>
-                    </div>
-                    <div class="chart-container"><canvas id="chart-repart-ca"></canvas></div>
-                </div>
+            <!-- SECTION 2: CHARTS GRID WITH INDEPENDENT TOOLBARS -->
+            <div class="charts-grid">
                 
-                <!-- Row 2 -->
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h3 class="chart-title">CA par Mode de Paiement</h3>
-                        <button class="chart-download" onclick="downloadChart('chart-mode-paiement', 'Mode_Paiement')" title="Télécharger"><i class="fas fa-download"></i></button>
+                <!-- CHART 1: CA PAR MOIS (BAR) -->
+                <div class="chart-card col-8">
+                    <div class="chart-card-header">
+                        <h4 class="chart-card-title"><i class="fas fa-chart-column text-primary"></i> 1. Chiffre d'Affaires Mensuel (TTC)</h4>
+                        <div class="chart-toolbar">
+                            <button class="btn-chart-tool" onclick="toggleDataLabels('chart-ca-mois')" title="Afficher/Masquer Chiffres"><i class="fas fa-tag"></i></button>
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-ca-mois', 'Chiffre d\'Affaires Mensuel (TTC)')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-ca-mois', 'CA_Mensuel_TTC')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                        </div>
                     </div>
-                    <div class="chart-container"><canvas id="chart-mode-paiement"></canvas></div>
-                </div>
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h3 class="chart-title">Créance par Mois</h3>
-                        <button class="chart-download" onclick="downloadChart('chart-creance-mois', 'Creance_Mois')" title="Télécharger"><i class="fas fa-download"></i></button>
+                    <div class="chart-canvas-wrap">
+                        <canvas id="chart-ca-mois"></canvas>
+                        <div id="empty-chart-ca-mois" class="chart-empty-state">
+                            <i class="fas fa-chart-column chart-empty-icon"></i>
+                            <div class="chart-empty-title">Aucun chiffre d'affaires enregistré</div>
+                            <div class="chart-empty-sub">Aucune facture émise pour les filtres sélectionnés</div>
+                        </div>
                     </div>
-                    <div class="chart-container"><canvas id="chart-creance-mois"></canvas></div>
-                </div>
-
-                <!-- Row 3 -->
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h3 class="chart-title">Créance par Client</h3>
-                        <button class="chart-download" onclick="downloadChart('chart-creance-client', 'Creance_Client')" title="Télécharger"><i class="fas fa-download"></i></button>
-                    </div>
-                    <div class="chart-container"><canvas id="chart-creance-client"></canvas></div>
-                </div>
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h3 class="chart-title">Nombre de BL par Mois</h3>
-                        <button class="chart-download" onclick="downloadChart('chart-nb-bl-mois', 'NB_BL_Mois')" title="Télécharger"><i class="fas fa-download"></i></button>
-                    </div>
-                    <div class="chart-container"><canvas id="chart-nb-bl-mois"></canvas></div>
                 </div>
 
-                <!-- Row 4 -->
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h3 class="chart-title">PU Moyenne par BL par Client</h3>
-                        <button class="chart-download" onclick="downloadChart('chart-pu-bl-client', 'PU_Moyenne_BL_Client')" title="Télécharger"><i class="fas fa-download"></i></button>
+                <!-- CHART 2: RÉPARTITION PAR TYPE (DOUGHNUT) -->
+                <div class="chart-card col-4">
+                    <div class="chart-card-header">
+                        <h4 class="chart-card-title"><i class="fas fa-chart-pie text-success"></i> 2. Répartition par Type</h4>
+                        <div class="chart-toolbar">
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-repart-type', 'Répartition du CA par Type de Prestation')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-repart-type', 'Repartition_Type')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                        </div>
                     </div>
-                    <div class="chart-container"><canvas id="chart-pu-bl-client"></canvas></div>
-                </div>
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h3 class="chart-title">Situation des BL</h3>
-                        <button class="chart-download" onclick="downloadChart('chart-situation-bl', 'Situation_BL')" title="Télécharger"><i class="fas fa-download"></i></button>
+                    <div class="chart-canvas-wrap">
+                        <canvas id="chart-repart-type"></canvas>
+                        <div id="empty-chart-repart-type" class="chart-empty-state">
+                            <i class="fas fa-chart-pie chart-empty-icon"></i>
+                            <div class="chart-empty-title">Aucune prestation trouvée</div>
+                        </div>
                     </div>
-                    <div class="chart-container"><canvas id="chart-situation-bl"></canvas></div>
-                </div>
-
-                <!-- Row 5 -->
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h3 class="chart-title">Immobilisation: Heures par Client</h3>
-                        <button class="chart-download" onclick="downloadChart('chart-immo-heures-client', 'Immo_Heures_Client')" title="Télécharger"><i class="fas fa-download"></i></button>
-                    </div>
-                    <div class="chart-container"><canvas id="chart-immo-heures-client"></canvas></div>
-                </div>
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h3 class="chart-title">Immobilisation: Heures par Mois</h3>
-                        <button class="chart-download" onclick="downloadChart('chart-immo-heures-mois', 'Immo_Heures_Mois')" title="Télécharger"><i class="fas fa-download"></i></button>
-                    </div>
-                    <div class="chart-container"><canvas id="chart-immo-heures-mois"></canvas></div>
                 </div>
 
-                <!-- Row 6 -->
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h3 class="chart-title">Location: CA par Type</h3>
-                        <button class="chart-download" onclick="downloadChart('chart-loc-ca-type', 'Loc_CA_Type')" title="Télécharger"><i class="fas fa-download"></i></button>
+                <!-- CHART 3: CRÉANCES PAR CLIENT (HORIZONTAL BAR) -->
+                <div class="chart-card col-6">
+                    <div class="chart-card-header">
+                        <h4 class="chart-card-title"><i class="fas fa-hand-holding-dollar text-danger"></i> 3. Top Créances par Client (Impayés)</h4>
+                        <div class="chart-toolbar">
+                            <button class="btn-chart-tool" onclick="toggleDataLabels('chart-creance-client')" title="Afficher/Masquer Chiffres"><i class="fas fa-tag"></i></button>
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-creance-client', 'Top Créances par Client')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-creance-client', 'Creances_Par_Client')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                        </div>
                     </div>
-                    <div class="chart-container"><canvas id="chart-loc-ca-type"></canvas></div>
-                </div>
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h3 class="chart-title">Location: CA par Mois</h3>
-                        <button class="chart-download" onclick="downloadChart('chart-loc-ca-mois', 'Loc_CA_Mois')" title="Télécharger"><i class="fas fa-download"></i></button>
+                    <div class="chart-canvas-wrap">
+                        <canvas id="chart-creance-client"></canvas>
+                        <div id="empty-chart-creance-client" class="chart-empty-state">
+                            <i class="fas fa-check-circle text-success chart-empty-icon" style="opacity:0.6;"></i>
+                            <div class="chart-empty-title">Toutes les factures sont réglées !</div>
+                            <div class="chart-empty-sub">Aucune créance en attente pour cette sélection</div>
+                        </div>
                     </div>
-                    <div class="chart-container"><canvas id="chart-loc-ca-mois"></canvas></div>
                 </div>
+
+                <!-- CHART 4: CRÉANCE PAR MOIS (BAR) -->
+                <div class="chart-card col-6">
+                    <div class="chart-card-header">
+                        <h4 class="chart-card-title"><i class="fas fa-calendar-xmark text-danger"></i> 4. Évolution des Créances par Mois</h4>
+                        <div class="chart-toolbar">
+                            <button class="btn-chart-tool" onclick="toggleDataLabels('chart-creance-mois')" title="Afficher/Masquer Chiffres"><i class="fas fa-tag"></i></button>
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-creance-mois', 'Créances par Mois')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-creance-mois', 'Creances_Par_Mois')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-wrap">
+                        <canvas id="chart-creance-mois"></canvas>
+                        <div id="empty-chart-creance-mois" class="chart-empty-state">
+                            <i class="fas fa-calendar-check text-success chart-empty-icon" style="opacity:0.6;"></i>
+                            <div class="chart-empty-title">Aucune créance mensuelle</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CHART 5: MODES DE PAIEMENT (DOUGHNUT) -->
+                <div class="chart-card col-4">
+                    <div class="chart-card-header">
+                        <h4 class="chart-card-title"><i class="fas fa-credit-card text-info"></i> 5. Modes de Règlement</h4>
+                        <div class="chart-toolbar">
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-mode-paiement', 'Modes de Paiement')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-mode-paiement', 'Modes_Paiement')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-wrap">
+                        <canvas id="chart-mode-paiement"></canvas>
+                        <div id="empty-chart-mode-paiement" class="chart-empty-state">
+                            <i class="fas fa-credit-card chart-empty-icon"></i>
+                            <div class="chart-empty-title">Aucun encaissement enregistré</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CHART 6: NOMBRE DE BL PAR MOIS (LINE) -->
+                <div class="chart-card col-4">
+                    <div class="chart-card-header">
+                        <h4 class="chart-card-title"><i class="fas fa-truck-fast text-warning"></i> 6. Volume de BL par Mois</h4>
+                        <div class="chart-toolbar">
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-nb-bl-mois', 'Volume de BL par Mois')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-nb-bl-mois', 'BL_Par_Mois')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-wrap">
+                        <canvas id="chart-nb-bl-mois"></canvas>
+                        <div id="empty-chart-nb-bl-mois" class="chart-empty-state">
+                            <i class="fas fa-boxes-stacked chart-empty-icon"></i>
+                            <div class="chart-empty-title">Aucun bon de livraison</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CHART 7: TOP CLIENTS PAR CHIFFRE D'AFFAIRES (BAR) -->
+                <div class="chart-card col-4">
+                    <div class="chart-card-header">
+                        <h4 class="chart-card-title"><i class="fas fa-users text-primary"></i> 7. Top Clients (CA TTC)</h4>
+                        <div class="chart-toolbar">
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-top-clients', 'Top Clients par Chiffre d\'Affaires')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-top-clients', 'Top_Clients_CA')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-wrap">
+                        <canvas id="chart-top-clients"></canvas>
+                        <div id="empty-chart-top-clients" class="chart-empty-state">
+                            <i class="fas fa-users chart-empty-icon"></i>
+                            <div class="chart-empty-title">Aucune donnée client</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CHART 8: IMMOBILISATION HEURES PAR MOIS (BAR) -->
+                <div class="chart-card col-6">
+                    <div class="chart-card-header">
+                        <h4 class="chart-card-title"><i class="fas fa-stopwatch text-danger"></i> 8. Immobilisation Camions (Heures / Mois)</h4>
+                        <div class="chart-toolbar">
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-immo-mois', 'Heures d\'Immobilisation par Mois')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-immo-mois', 'Immo_Par_Mois')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-wrap">
+                        <canvas id="chart-immo-mois"></canvas>
+                        <div id="empty-chart-immo-mois" class="chart-empty-state">
+                            <i class="fas fa-stopwatch chart-empty-icon"></i>
+                            <div class="chart-empty-title">0 Heure d'Immobilisation</div>
+                            <div class="chart-empty-sub">Aucune attente facturée pour cette sélection</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CHART 9: LOCATION D'ENGINS PAR TYPE (DOUGHNUT) -->
+                <div class="chart-card col-6">
+                    <div class="chart-card-header">
+                        <h4 class="chart-card-title"><i class="fas fa-crane text-warning"></i> 9. Location d'Engins (CA par Équipement)</h4>
+                        <div class="chart-toolbar">
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-loc-equip', 'Location de Grues et Engins')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-loc-equip', 'Location_Grues_Engins')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-wrap">
+                        <canvas id="chart-loc-equip"></canvas>
+                        <div id="empty-chart-loc-equip" class="chart-empty-state">
+                            <i class="fas fa-crane chart-empty-icon"></i>
+                            <div class="chart-empty-title">0 DA de Location d'Engins</div>
+                            <div class="chart-empty-sub">Les locations de grues 25T, 50T, 75T apparaîtront ici</div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
-            <!-- Table -->
+            <!-- SECTION 3: INVOICES DATA TABLE -->
             <div class="table-card">
-                <div class="table-header">
-                    <h3 class="chart-title" style="margin:0;">Liste des Factures</h3>
-                    <input type="text" id="table-search" class="table-search" placeholder="Rechercher..." onkeyup="filterTable()">
+                <div class="table-card-header">
+                    <div>
+                        <h4 class="chart-card-title"><i class="fas fa-table-list text-primary"></i> Journal Récapitulatif des Factures</h4>
+                        <div class="text-muted small" id="table-summary-count">Chargement des données...</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <input type="text" id="table-search" class="table-search-input" placeholder="Filtrer (N°, Client, Date...)" oninput="filterTableRows()">
+                    </div>
                 </div>
-                <div style="overflow-x:auto; max-height: 400px; overflow-y: auto;">
-                    <table id="invoices-table">
+                <div class="table-scroll">
+                    <table class="table-custom">
                         <thead>
                             <tr>
-                                <th>N°</th>
                                 <th>Date</th>
-                                <th>Client</th>
-                                <th>Montant HT</th>
-                                <th>TVA</th>
-                                <th>TTC</th>
-                                <th>Statut</th>
+                                <th>N° Facture</th>
+                                <th style="text-align:left;">Client</th>
+                                <th>Type Prestation</th>
+                                <th>BLs</th>
+                                <th style="text-align:right;">Montant HT</th>
+                                <th style="text-align:right;">Total TTC</th>
+                                <th style="text-align:center;">Statut</th>
                             </tr>
                         </thead>
-                        <tbody id="invoices-tbody">
-                            <!-- Populated via JS -->
-                        </tbody>
+                        <tbody id="invoices-tbody"></tbody>
                     </table>
                 </div>
             </div>
+
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="dashboard-footer">
+            <div class="container">
+                <div class="fw-bold mb-1">SPA DOUROUB EL DJAZAIR • Capital Social 200.000.000,00 DA</div>
+                <div>Siège Social : Appart N° 8 Bloc A cité Halimi Biskra • Tél : +213 560 608 404 • Agrément N° AT/03/30/00/1016</div>
+                <div class="mt-2 text-muted" style="font-size:0.7rem;">Document certifié généré par la plateforme de facturation DED. Tous droits réservés © 2026.</div>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- 3. FULLSCREEN MODAL LIGHTBOX (CLEAN & NON-DESTRUCTIVE) -->
+    <div id="chartFullscreenModal" class="fullscreen-modal" onclick="if(event.target===this)closeFullscreenModal()">
+        <div class="fullscreen-modal-box">
+            <div class="fullscreen-modal-header">
+                <h4 class="chart-card-title fs-5" id="modal-chart-title"><i class="fas fa-chart-line text-primary me-2"></i>Graphique Détaillé</h4>
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-sm btn-outline-primary" id="modal-btn-download">
+                        <i class="fas fa-download me-1"></i> Télécharger HD
+                    </button>
+                    <button class="btn btn-sm btn-danger fw-bold" onclick="closeFullscreenModal()">
+                        <i class="fas fa-times me-1"></i> Fermer (Échap)
+                    </button>
+                </div>
+            </div>
+            <div class="fullscreen-modal-body">
+                <canvas id="modal-canvas"></canvas>
+            </div>
         </div>
     </div>
 
-    <!-- Loader -->
-    <div id="loader-overlay">
-        <div class="loader"></div>
-        <div>Génération de l'export...</div>
-    </div>
-
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
     <script>
-        // Global State
+        // ════════════════════════════════════════════════════════════════
+        // 🚀 CLIENT ENGINE FOR SHARED DASHBOARD
+        // ════════════════════════════════════════════════════════════════
+
         let token = window.location.pathname.split('/').pop();
-        if(token === 'shared-dashboard.html' || !token) token = new URLSearchParams(window.location.search).get('token'); // fallback for local testing
+        if(!token || token === 'shared-dashboard.html') {
+            token = new URLSearchParams(window.location.search).get('token');
+        }
+
+        const SESSION_STORAGE_KEY = 'ded_shared_auth_' + token;
+        const SESSION_DURATION_MS = 12 * 60 * 60 * 1000; // 12 Hours
+
         let globalData = null;
         let filteredInvoices = [];
         let chartInstances = {};
+        let modalChartInstance = null;
+        let dataLabelsEnabled = {}; // chartId -> boolean
 
-        const palette = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#84cc16','#f97316','#14b8a6','#a855f7','#6366f1'];
+        const palette = [
+            '#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', 
+            '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#14b8a6', 
+            '#6366f1', '#a855f7'
+        ];
         const monthsFr = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 
-        // Register Plugin
-        Chart.register(ChartDataLabels);
-        Chart.defaults.color = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim();
-        Chart.defaults.font.family = "'Inter', sans-serif";
+        // Currency Formatter
+        function formatCurrency(n) {
+            return (n || 0).toLocaleString('fr-DZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' DA';
+        }
+        function formatCompactNumber(n) {
+            if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M DA';
+            if (n >= 1000) return (n / 1000).toFixed(0) + 'K DA';
+            return (n || 0).toLocaleString('fr-DZ') + ' DA';
+        }
 
-        // Initialization
-        window.onload = async () => {
-            if(!token) {
-                showAuthError("Jeton manquant ou invalide.");
+        // Animated Counters
+        function animateCounter(el, target, isCurrency = false) {
+            if (!el) return;
+            const duration = 1200;
+            const startTime = performance.now();
+            function step(now) {
+                const progress = Math.min((now - startTime) / duration, 1);
+                const current = target * progress;
+                el.textContent = isCurrency 
+                    ? (current).toLocaleString('fr-DZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    : Math.floor(current).toLocaleString('fr-DZ');
+                if (progress < 1) requestAnimationFrame(step);
+                else {
+                    el.textContent = isCurrency 
+                        ? (target).toLocaleString('fr-DZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                        : Math.floor(target).toLocaleString('fr-DZ');
+                }
+            }
+            requestAnimationFrame(step);
+        }
+
+        // Helper: get client name safely
+        function getClientName(inv) {
+            if (!inv) return 'Client Inconnu';
+            if (inv.clientId && globalData && globalData.clients) {
+                const found = globalData.clients.find(c => c.id === inv.clientId || c._id === inv.clientId || String(c.id) === String(inv.clientId));
+                if (found) return found.nom || found.name || 'Client';
+            }
+            if (inv.client && inv.client.nom) return inv.client.nom;
+            return 'Client Inconnu';
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        // 🔒 AUTHENTICATION & 12-HOUR SESSION PERSISTENCE
+        // ════════════════════════════════════════════════════════════════
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            if (!token) {
+                showAuthError("Jeton de sécurité absent dans l'URL.");
                 return;
             }
+
+            // 1. Check for valid 12-Hour session in localStorage
             try {
-                const res = await fetch(`/api/shared/verify/${token}`);
-                if(res.ok) {
-                    const data = await res.json();
-                    if(!data.valid) showAuthError("Jeton expiré ou invalide.");
-                    // We just wait for user to login
+                const saved = localStorage.getItem(SESSION_STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    const age = Date.now() - (parsed.timestamp || 0);
+                    if (age < SESSION_DURATION_MS && parsed.data) {
+                        // Session is valid! Verify link validity in background
+                        verifyTokenAndInit(parsed.data);
+                        return;
+                    } else {
+                        localStorage.removeItem(SESSION_STORAGE_KEY);
+                    }
                 }
             } catch (e) {
-                console.error(e);
+                localStorage.removeItem(SESSION_STORAGE_KEY);
             }
-        };
 
-        // UI Helpers
-        function formatCurrency(n) { return (n||0).toLocaleString('fr-DZ', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' DA'; }
-        
-        function animateCounter(el, target, format, duration=1500) {
-            let start = 0;
-            const step = target / (duration / 16);
-            if(target === 0) {
-                el.textContent = formatVal(0, format);
-                return;
-            }
-            const timer = setInterval(() => {
-                start += step; 
-                if (start >= target) { 
-                    start = target; 
-                    clearInterval(timer); 
+            // 2. Pre-verify link
+            try {
+                const res = await fetch(`/api/shared/verify/${token}`);
+                if (res.ok) {
+                    const v = await res.json();
+                    if (!v.valid) {
+                        showAuthError(v.expired ? "Ce lien de partage a expiré." : "Lien de partage non reconnu.");
+                        document.getElementById('auth-submit-btn').disabled = true;
+                    }
                 }
-                el.textContent = formatVal(start, format);
-            }, 16);
-        }
+            } catch (err) {
+                console.warn('Verify check failed, will prompt password:', err);
+            }
+        });
 
-        function formatVal(val, format) {
-            if(format === 'currency') return formatCurrency(val);
-            if(format === 'percent') return val.toFixed(2) + ' %';
-            return Math.floor(val).toLocaleString('fr-DZ');
-        }
-
-        function toggleTheme() {
-            const html = document.documentElement;
-            const isDark = html.getAttribute('data-theme') === 'dark';
-            html.setAttribute('data-theme', isDark ? 'light' : 'dark');
-            document.getElementById('theme-icon').className = isDark ? 'fas fa-moon' : 'fas fa-sun';
+        async function verifyTokenAndInit(cachedData) {
+            try {
+                const res = await fetch(`/api/shared/verify/${token}`);
+                if (res.ok) {
+                    const v = await res.json();
+                    if (!v.valid) {
+                        localStorage.removeItem(SESSION_STORAGE_KEY);
+                        showAuthError("Ce lien a expiré.");
+                        return;
+                    }
+                    if (v.expiresAt) {
+                        if (!cachedData.linkInfo) cachedData.linkInfo = {};
+                        cachedData.linkInfo.expiresAt = v.expiresAt;
+                    }
+                }
+            } catch(e) {}
             
-            Chart.defaults.color = getComputedStyle(html).getPropertyValue('--text-secondary').trim();
-            updateChartsTheme();
+            globalData = cachedData;
+            initDashboard();
         }
 
-        function updateChartsTheme() {
-            Object.values(chartInstances).forEach(chart => {
-                chart.options.scales && Object.keys(chart.options.scales).forEach(scale => {
-                    if(chart.options.scales[scale].grid) {
-                        chart.options.scales[scale].grid.color = getComputedStyle(document.documentElement).getPropertyValue('--border').trim();
-                    }
-                    if(chart.options.scales[scale].ticks) {
-                        chart.options.scales[scale].ticks.color = Chart.defaults.color;
-                    }
-                });
-                if(chart.options.plugins.legend.labels) {
-                    chart.options.plugins.legend.labels.color = Chart.defaults.color;
-                }
-                chart.update();
-            });
-        }
-
-        // Auth Logic
         async function handleAuth(e) {
             e.preventDefault();
-            const password = document.getElementById('auth-password').value;
+            const password = document.getElementById('auth-password').value.trim();
+            if (!password) return;
+
             document.getElementById('auth-error').style.display = 'none';
             document.getElementById('auth-loading').style.display = 'block';
+            document.getElementById('auth-submit-btn').disabled = true;
 
             try {
                 const res = await fetch('/api/shared/auth', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ token, password })
                 });
-                
+
                 const json = await res.json();
-                if(json.success && json.data) {
+                if (json.success && json.data) {
                     globalData = json.data;
+                    
+                    // Save 12-Hour session
+                    try {
+                        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+                            timestamp: Date.now(),
+                            data: json.data
+                        }));
+                    } catch(err) {}
+
                     initDashboard();
                 } else {
-                    showAuthError(json.message || "Mot de passe incorrect.");
+                    showAuthError(json.error || json.message || "Mot de passe incorrect.");
                 }
-            } catch(e) {
-                showAuthError("Erreur de connexion serveur.");
+            } catch (err) {
+                showAuthError("Erreur lors de la communication avec le serveur.");
             } finally {
                 document.getElementById('auth-loading').style.display = 'none';
+                document.getElementById('auth-submit-btn').disabled = false;
             }
         }
 
         function showAuthError(msg) {
             const el = document.getElementById('auth-error');
-            el.textContent = msg;
-            el.style.display = 'block';
+            if (el) {
+                el.textContent = msg;
+                el.style.display = 'block';
+            }
         }
 
-        // Dashboard Init
+        function logoutSession() {
+            if (confirm("Voulez-vous verrouiller cette session ? Vous devrez saisir le mot de passe pour y accéder à nouveau.")) {
+                localStorage.removeItem(SESSION_STORAGE_KEY);
+                window.location.reload();
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        // 📊 DASHBOARD INITIALIZATION
+        // ════════════════════════════════════════════════════════════════
+
         function initDashboard() {
             document.getElementById('auth-view').style.display = 'none';
             document.getElementById('dashboard-view').style.display = 'block';
-            
-            // Setup Header
-            if(globalData.settings && globalData.settings.companyName) {
-                document.getElementById('header-company-name').textContent = globalData.settings.companyName;
+
+            // Background device/IP tracking
+            if (token) {
+                fetch('/api/shared/track/' + token, { method: 'POST' }).catch(() => {});
             }
 
-            // Expiry
-            if(globalData.sharedSettings && globalData.sharedSettings.expiresAt) {
-                const expiry = new Date(globalData.sharedSettings.expiresAt);
-                const now = new Date();
-                const badge = document.getElementById('expiry-badge');
-                if(expiry > now) {
-                    const diffDays = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
-                    badge.textContent = `Expire dans ${diffDays}j`;
-                    badge.style.background = 'rgba(16, 185, 129, 0.1)';
-                    badge.style.color = 'var(--success)';
+            // Settings & Branding
+            const s = globalData.settings || {};
+            if (s.companyName || s.name) {
+                document.getElementById('header-company-name').textContent = s.companyName || s.name;
+            }
+            if (s.capital) {
+                document.getElementById('header-legal-info').textContent = `Capital: ${s.capital}`;
+            }
+
+            // Expiry status
+            updateExpiryBadge();
+
+            // Populate Year & Client Filters
+            populateFilters();
+
+            // Initial Filter Run & Render
+            applyFilters();
+        }
+
+        function updateExpiryBadge() {
+            const badge = document.getElementById('expiry-badge');
+            const text = document.getElementById('expiry-text');
+            const expStr = globalData.linkInfo?.expiresAt;
+
+            if (!expStr) {
+                badge.className = 'expiry-pill';
+                text.textContent = 'Accès Permanent';
+                return;
+            }
+
+            const exp = new Date(expStr);
+            const now = new Date();
+            const diffMs = exp - now;
+
+            if (diffMs <= 0) {
+                badge.className = 'expiry-pill expired';
+                text.textContent = 'Accès Expiré';
+            } else {
+                const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                const diffHours = Math.ceil(diffMs / (1000 * 60 * 60));
+                
+                if (diffDays > 2) {
+                    badge.className = 'expiry-pill';
+                    text.textContent = `Expire dans ${diffDays}j (${exp.toLocaleDateString('fr-FR')})`;
+                } else if (diffHours > 1) {
+                    badge.className = 'expiry-pill warning';
+                    text.textContent = `Expire dans ${diffHours}h`;
+                } else {
+                    badge.className = 'expiry-pill warning';
+                    text.textContent = `Expire sous peu`;
                 }
             }
-
-            // Populate Filters
-            populateFilters();
-            
-            // Filter Data initially
-            applyFilters();
-
-            // Double click to fullscreen charts
-            document.querySelectorAll('.chart-card').forEach(card => {
-                card.addEventListener('dblclick', () => {
-                    if (card.classList.contains('chart-fullscreen')) {
-                        card.classList.remove('chart-fullscreen');
-                        card.style = '';
-                    } else {
-                        card.classList.add('chart-fullscreen');
-                        card.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;background:var(--bg-card);padding:20px;overflow:auto;';
-                    }
-                    // Resize charts inside
-                    const canvas = card.querySelector('canvas');
-                    if (canvas) {
-                        if (canvas.chart) canvas.chart.resize();
-                        // For this implementation context where chart instances are in an object
-                        const id = canvas.id;
-                        if (id && chartInstances && chartInstances[id]) {
-                            chartInstances[id].resize();
-                        }
-                    }
-                });
-            });
         }
 
         function populateFilters() {
-            const yearSelect = document.getElementById('filter-year');
-            const clientSelect = document.getElementById('filter-client');
+            const ySel = document.getElementById('filter-year');
+            const cSel = document.getElementById('filter-client');
             
+            const invoices = (globalData.invoices || []).filter(i => i.documentType !== 'proforma');
+            
+            // Years
             const years = new Set();
-            globalData.invoices.forEach(inv => {
-                if(inv.date) years.add(new Date(inv.date).getFullYear());
-            });
-            Array.from(years).sort().reverse().forEach(y => {
-                const opt = document.createElement('option');
-                opt.value = y; opt.textContent = y;
-                yearSelect.appendChild(opt);
+            invoices.forEach(i => {
+                if (i.date) {
+                    const y = new Date(i.date).getFullYear();
+                    if (!isNaN(y)) years.add(y);
+                }
             });
 
-            globalData.clients.forEach(c => {
+            ySel.innerHTML = '<option value="all">Toutes les années</option>';
+            Array.from(years).sort((a,b) => b - a).forEach(y => {
                 const opt = document.createElement('option');
-                opt.value = c.id || c._id; opt.textContent = c.nom || c.name;
-                clientSelect.appendChild(opt);
+                opt.value = y;
+                opt.textContent = `Année ${y}`;
+                if (y === 2026) opt.selected = true; // default current active year
+                ySel.appendChild(opt);
+            });
+
+            // Clients
+            cSel.innerHTML = '<option value="all">Tous les clients</option>';
+            const clients = globalData.clients || [];
+            clients.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id || c._id;
+                opt.textContent = c.nom || c.name;
+                cSel.appendChild(opt);
             });
         }
 
         function applyFilters() {
-            const year = document.getElementById('filter-year').value;
-            const clientId = document.getElementById('filter-client').value;
-            
-            filteredInvoices = globalData.invoices.filter(inv => inv.documentType !== 'proforma');
-            
-            if(year !== 'all') {
-                filteredInvoices = filteredInvoices.filter(inv => new Date(inv.date).getFullYear().toString() === year);
-            }
-            if(clientId !== 'all') {
-                filteredInvoices = filteredInvoices.filter(inv => String(inv.clientId) === String(clientId) || (inv.client && String(inv.client._id) === String(clientId)));
-            }
+            const yearVal = document.getElementById('filter-year').value;
+            const clientVal = document.getElementById('filter-client').value;
+
+            const allInvoices = (globalData.invoices || []).filter(i => i.documentType !== 'proforma');
+
+            filteredInvoices = allInvoices.filter(inv => {
+                // Year filter
+                if (yearVal !== 'all' && inv.date) {
+                    const y = new Date(inv.date).getFullYear().toString();
+                    if (y !== yearVal) return false;
+                }
+                // Client filter
+                if (clientVal !== 'all') {
+                    const idMatch = String(inv.clientId) === String(clientVal);
+                    const objMatch = inv.client && String(inv.client._id || inv.client.id) === String(clientVal);
+                    if (!idMatch && !objMatch) return false;
+                }
+                return true;
+            });
 
             updateKPIs();
-            updateCharts();
-            updateTable();
+            renderAllCharts();
+            renderTable();
         }
 
-        // Helper: resolve client name from clientId
-        function getClientName(inv) {
-            if (!inv) return 'Inconnu';
-            if (inv.clientId) {
-                const c = globalData.clients.find(cl => cl.id === inv.clientId || cl._id === inv.clientId || String(cl.id) === String(inv.clientId));
-                if (c) return c.nom || c.name || 'Client';
-            }
-            if (inv.client && inv.client.nom) return inv.client.nom;
-            return 'Inconnu';
-        }
+        // ════════════════════════════════════════════════════════════════
+        // 💎 KPI CALCULATIONS
+        // ════════════════════════════════════════════════════════════════
 
-        // Data processing and calculations
         function updateKPIs() {
-            let caTotal = 0;
-            let nbFactures = filteredInvoices.length;
-            let blSet = new Set();
-            let creance = 0;
+            let caTotalTTC = 0;
+            let caTotalHT = 0;
+            let countFactures = filteredInvoices.length;
+            let paidFactures = 0;
+            let unpaidFactures = 0;
+            let totalBL = 0;
+            let creanceTotal = 0;
+            let encaisseTotal = 0;
             let caImmo = 0;
+            let hoursImmo = 0;
             let caLoc = 0;
 
             filteredInvoices.forEach(inv => {
-                if(inv.totals && inv.totals.ttc) caTotal += inv.totals.ttc;
-                if(!inv.paid) creance += (inv.totals ? inv.totals.ttc : 0) - (inv.amountPaid || 0);
-                
-                if(inv.blReferences) {
-                    inv.blReferences.split(',').forEach(bl => {
-                        if(bl.trim()) blSet.add(bl.trim());
-                    });
-                }
-
-                if(inv.articles) {
-                    inv.articles.forEach(art => {
-                        const lineTotal = art.montantHT || ((art.qte || 0) * (art.prixUHT || art.pu || 0));
-                        if(art.isImmobilisation) caImmo += lineTotal;
-                        if(art.isLocation) caLoc += lineTotal;
-                    });
-                }
-            });
-
-            const tauxCreance = caTotal > 0 ? (creance / caTotal) * 100 : 0;
-            const nbBl = blSet.size;
-
-            animateCounter(document.getElementById('kpi-ca-total'), caTotal, 'currency');
-            animateCounter(document.getElementById('kpi-nb-factures'), nbFactures, 'number');
-            animateCounter(document.getElementById('kpi-nb-bl'), nbBl, 'number');
-            animateCounter(document.getElementById('kpi-creance'), creance, 'currency');
-            animateCounter(document.getElementById('kpi-taux-creance'), tauxCreance, 'percent');
-            animateCounter(document.getElementById('kpi-ca-immo'), caImmo, 'currency');
-            animateCounter(document.getElementById('kpi-ca-loc'), caLoc, 'currency');
-        }
-
-        function updateTable() {
-            const tbody = document.getElementById('invoices-tbody');
-            tbody.innerHTML = '';
-            
-            filteredInvoices.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(inv => {
-                const tr = document.createElement('tr');
-                const dateStr = inv.date ? new Date(inv.date).toLocaleDateString('fr-DZ') : '';
-                const clientName = getClientName(inv);
-                const statusBadge = inv.paid 
-                    ? '<span class="badge badge-success">Payée</span>' 
-                    : '<span class="badge badge-danger">Impayée</span>';
-                
-                tr.innerHTML = `
-                    <td>${inv.numero || '-'}</td>
-                    <td>${dateStr}</td>
-                    <td>${clientName}</td>
-                    <td>${formatCurrency(inv.totals?.ht)}</td>
-                    <td>${formatCurrency(inv.totals?.tva)}</td>
-                    <td>${formatCurrency(inv.totals?.ttc)}</td>
-                    <td>${statusBadge}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function filterTable() {
-            const query = document.getElementById('table-search').value.toLowerCase();
-            const rows = document.getElementById('invoices-tbody').getElementsByTagName('tr');
-            
-            Array.from(rows).forEach(row => {
-                const text = row.innerText.toLowerCase();
-                row.style.display = text.includes(query) ? '' : 'none';
-            });
-        }
-
-        // Chart Rendering Helpers
-        function createOrUpdateChart(id, type, data, options = {}) {
-            const ctx = document.getElementById(id).getContext('2d');
-            if(chartInstances[id]) {
-                chartInstances[id].destroy();
-            }
-            
-            const defaultOptions = {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'bottom', labels: { color: Chart.defaults.color } },
-                    datalabels: {
-                        display: type === 'doughnut' || type === 'pie',
-                        color: '#fff',
-                        font: { weight: 'bold' },
-                        formatter: (val, ctx) => {
-                            if(val === 0) return '';
-                            let sum = 0;
-                            let dataArr = ctx.chart.data.datasets[0].data;
-                            dataArr.map(data => { sum += data; });
-                            let percentage = (val*100 / sum).toFixed(1)+"%";
-                            return percentage;
-                        }
-                    }
-                }
-            };
-            
-            if(type === 'bar' || type === 'line') {
-                defaultOptions.scales = {
-                    x: { grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() }, ticks: { maxRotation: 45, font: { size: 11 } } },
-                    y: { grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() }, beginAtZero: true, ticks: { callback: function(v) { if(v >= 1000000) return (v/1000000).toFixed(1)+'M'; if(v >= 1000) return (v/1000).toFixed(0)+'K'; return v; }, font: { size: 11 } } }
-                };
-            }
-
-            chartInstances[id] = new Chart(ctx, {
-                type: type,
-                data: data,
-                options: { ...defaultOptions, ...options }
-            });
-        }
-
-        function updateCharts() {
-            // Data grouping helpers
-            const byMonth = Array(12).fill(0);
-            const creanceByMonth = Array(12).fill(0);
-            const blByMonth = Array(12).fill(0);
-            
-            const creanceByClient = {};
-            let virementCa = 0; let chequeCa = 0; let creanceCa = 0;
-            
-            const blDetails = {}; // client -> {blCount, totalAmount}
-            
-            const immoByClient = {};
-            const immoByMonth = Array(12).fill(0);
-            
-            const locByType = {};
-            const locByMonth = Array(12).fill(0);
-
-            filteredInvoices.forEach(inv => {
-                const m = new Date(inv.date).getMonth();
                 const ttc = inv.totals?.ttc || 0;
-                
-                // Monthly Revenue
-                byMonth[m] += ttc;
+                const ht = inv.totals?.ht || 0;
+                caTotalTTC += ttc;
+                caTotalHT += ht;
 
-                // Creance
-                const unpaid = inv.paid ? 0 : ttc - (inv.amountPaid || 0);
-                creanceByMonth[m] += unpaid;
-                
-                const cName = getClientName(inv);
-                if(!creanceByClient[cName]) creanceByClient[cName] = 0;
-                creanceByClient[cName] += unpaid;
-
-                // Payment modes
-                if(inv.paid) {
-                    const mode = (inv.paymentDetails?.mode || '').toLowerCase();
-                    if(mode.includes('virement')) virementCa += ttc;
-                    else if(mode.includes('cheque') || mode.includes('chèque')) chequeCa += ttc;
-                    else virementCa += ttc; // default to virement if unknown but paid
+                const isPaid = inv.paid || inv.paymentStatus === 'encaissee';
+                if (isPaid) {
+                    paidFactures++;
+                    encaisseTotal += ttc;
                 } else {
-                    creanceCa += unpaid;
-                    if(inv.amountPaid > 0) {
-                        const mode = (inv.paymentDetails?.mode || '').toLowerCase();
-                        if(mode.includes('cheque') || mode.includes('chèque')) chequeCa += inv.amountPaid;
-                        else virementCa += inv.amountPaid;
-                    }
+                    unpaidFactures++;
+                    const debt = ttc - (inv.amountPaid || 0);
+                    creanceTotal += debt;
+                    encaisseTotal += (inv.amountPaid || 0);
                 }
 
                 // BLs
-                let nbBl = 0;
-                if(inv.blReferences) {
-                    const bls = inv.blReferences.split(',').filter(x => x.trim().length > 0);
-                    nbBl = bls.length;
-                    blByMonth[m] += nbBl;
+                if (inv.blReferences) {
+                    totalBL += inv.blReferences.split(',').filter(b => b.trim().length > 0).length;
                 }
 
-                if(!blDetails[cName]) blDetails[cName] = { bls: 0, total: 0 };
-                blDetails[cName].bls += nbBl;
-                blDetails[cName].total += ttc;
-
-                // Articles
-                if(inv.articles) {
+                // Articles (Immo & Location)
+                if (inv.articles && Array.isArray(inv.articles)) {
                     inv.articles.forEach(art => {
-                        if(art.isImmobilisation) {
-                            if(!immoByClient[cName]) immoByClient[cName] = 0;
-                            immoByClient[cName] += art.qte || 0;
-                            immoByMonth[m] += art.qte || 0;
+                        const lineHT = art.montantHT || ((art.qte || 0) * (art.prixUHT || art.pu || 0));
+                        if (art.isImmobilisation) {
+                            caImmo += lineHT;
+                            hoursImmo += (art.qte || 0);
                         }
-                        if(art.isLocation) {
-                            const type = art.locEquipment || 'Autre';
-                            const lineTotal = art.montantHT || ((art.qte || 0) * (art.prixUHT || art.pu || 0));
-                            if(!locByType[type]) locByType[type] = 0;
-                            locByType[type] += lineTotal;
-                            locByMonth[m] += lineTotal;
+                        if (art.isLocation) {
+                            caLoc += lineHT;
                         }
                     });
                 }
             });
 
-            // 1. CA par Mois (Bar)
-            createOrUpdateChart('chart-ca-mois', 'bar', {
-                labels: monthsFr,
-                datasets: [{ label: 'Chiffre d\'Affaires (TTC)', data: byMonth, backgroundColor: palette[0], borderRadius: 4 }]
-            }, { plugins: { tooltip: { callbacks: { label: (ctx) => formatCurrency(ctx.raw) } } } });
+            const tauxCreance = caTotalTTC > 0 ? (creanceTotal / caTotalTTC) * 100 : 0;
+            const tauxRecouv = caTotalTTC > 0 ? (encaisseTotal / caTotalTTC) * 100 : 0;
+            const blRatio = countFactures > 0 ? (totalBL / countFactures).toFixed(1) : '0';
 
-            // 2. Repart CA (Doughnut)
-            createOrUpdateChart('chart-repart-ca', 'doughnut', {
-                labels: monthsFr.filter((_, i) => byMonth[i] > 0),
-                datasets: [{ data: byMonth.filter(v => v > 0), backgroundColor: palette }]
-            });
+            // Animated Updates
+            animateCounter(document.getElementById('kpi-ca-total'), caTotalTTC, true);
+            document.getElementById('kpi-ca-ht').textContent = formatCompactNumber(caTotalHT);
+            
+            animateCounter(document.getElementById('kpi-nb-factures'), countFactures, false);
+            document.getElementById('kpi-paid-count').textContent = paidFactures;
+            document.getElementById('kpi-unpaid-count').textContent = unpaidFactures;
 
-            // 3. Mode Paiement
-            createOrUpdateChart('chart-mode-paiement', 'doughnut', {
-                labels: ['Virement', 'Chèque', 'Créance'],
-                datasets: [{ data: [virementCa, chequeCa, creanceCa], backgroundColor: [palette[1], palette[2], palette[3]] }]
-            });
+            animateCounter(document.getElementById('kpi-nb-bl'), totalBL, false);
+            document.getElementById('kpi-bl-ratio').textContent = `${blRatio} BL / fact.`;
 
-            // 4. Creance par Mois
-            createOrUpdateChart('chart-creance-mois', 'bar', {
-                labels: monthsFr,
-                datasets: [{ label: 'Créance', data: creanceByMonth, backgroundColor: palette[3], borderRadius: 4 }]
-            }, { indexAxis: 'y', plugins: { tooltip: { callbacks: { label: (ctx) => formatCurrency(ctx.raw) } } } });
+            animateCounter(document.getElementById('kpi-creance'), creanceTotal, true);
+            document.getElementById('kpi-encaisse-val').textContent = formatCompactNumber(encaisseTotal);
 
-            // 5. Creance par client
-            const cKeys = Object.keys(creanceByClient).filter(k => creanceByClient[k] > 0).sort((a,b) => creanceByClient[b] - creanceByClient[a]).slice(0, 10);
-            createOrUpdateChart('chart-creance-client', 'bar', {
-                labels: cKeys.map(k => k.substring(0, 15) + (k.length > 15 ? '...' : '')),
-                datasets: [{ label: 'Créance par Client', data: cKeys.map(k => creanceByClient[k]), backgroundColor: palette[4], borderRadius: 4 }]
-            }, { indexAxis: 'y' });
+            animateCounter(document.getElementById('kpi-taux-creance'), tauxCreance, true);
+            document.getElementById('kpi-recouvrement-rate').textContent = `${tauxRecouv.toFixed(1)}%`;
 
-            // 6. NB BL Mois
-            createOrUpdateChart('chart-nb-bl-mois', 'line', {
-                labels: monthsFr,
-                datasets: [{ label: 'Nombre de BL', data: blByMonth, borderColor: palette[5], backgroundColor: palette[5]+'33', fill: true, tension: 0.4 }]
-            });
+            animateCounter(document.getElementById('kpi-ca-immo'), caImmo, true);
+            document.getElementById('kpi-immo-sub').textContent = hoursImmo > 0 ? `${hoursImmo}h facturées` : 'Aucune immobilisation';
+            document.getElementById('kpi-immo-status').textContent = caImmo > 0 ? `${((caImmo/caTotalTTC)*100).toFixed(1)}% du CA` : '0 prestation';
 
-            // 7. PU Moyenne par BL Client
-            const blClients = Object.keys(blDetails).filter(k => blDetails[k].bls > 0);
-            const puByBl = blClients.map(k => blDetails[k].total / blDetails[k].bls);
-            createOrUpdateChart('chart-pu-bl-client', 'bar', {
-                labels: blClients.map(k => k.substring(0, 15)),
-                datasets: [{ label: 'Montant Moyen par BL', data: puByBl, backgroundColor: palette[6], borderRadius: 4 }]
-            });
-
-            // 8. Situation BL
-            createOrUpdateChart('chart-situation-bl', 'doughnut', {
-                labels: ['Payés', 'Impayés'],
-                datasets: [{ data: [virementCa+chequeCa, creanceCa], backgroundColor: [palette[1], palette[3]] }]
-            });
-
-            // 9. Immo Client
-            const iClients = Object.keys(immoByClient);
-            createOrUpdateChart('chart-immo-heures-client', 'bar', {
-                labels: iClients.map(k => k.substring(0, 15)),
-                datasets: [{ label: 'Heures Immobilisation', data: iClients.map(k => immoByClient[k]), backgroundColor: palette[7], borderRadius: 4 }]
-            });
-
-            // 10. Immo Mois
-            createOrUpdateChart('chart-immo-heures-mois', 'line', {
-                labels: monthsFr,
-                datasets: [{ label: 'Heures Immo/Mois', data: immoByMonth, borderColor: palette[8], backgroundColor: palette[8]+'33', fill: true, tension: 0.4 }]
-            });
-
-            // 11. Loc Type
-            const lTypes = Object.keys(locByType);
-            createOrUpdateChart('chart-loc-ca-type', 'doughnut', {
-                labels: lTypes,
-                datasets: [{ data: lTypes.map(k => locByType[k]), backgroundColor: palette }]
-            });
-
-            // 12. Loc Mois
-            createOrUpdateChart('chart-loc-ca-mois', 'bar', {
-                labels: monthsFr,
-                datasets: [{ label: 'CA Location', data: locByMonth, backgroundColor: palette[10], borderRadius: 4 }]
-            }, { plugins: { tooltip: { callbacks: { label: (ctx) => formatCurrency(ctx.raw) } } } });
-
+            animateCounter(document.getElementById('kpi-ca-loc'), caLoc, true);
+            document.getElementById('kpi-loc-sub').textContent = caLoc > 0 ? 'Grues & Engins' : 'Aucune location';
+            document.getElementById('kpi-loc-status').textContent = caLoc > 0 ? `${((caLoc/caTotalTTC)*100).toFixed(1)}% du CA` : '0 prestation';
         }
 
-        // Export Functions
+        // ════════════════════════════════════════════════════════════════
+        // 📈 CHART RENDERING ENGINE (ZERO NUMBER OVERLAP)
+        // ════════════════════════════════════════════════════════════════
+
+        function renderAllCharts() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const textColor = isDark ? '#94a3b8' : '#64748b';
+            const gridColor = isDark ? '#1e293b' : '#f1f5f9';
+
+            // Common Data Aggregations
+            const caByMonth = Array(12).fill(0);
+            const creanceByMonth = Array(12).fill(0);
+            const blByMonth = Array(12).fill(0);
+            const immoByMonth = Array(12).fill(0);
+            const clientCA = {};
+            const clientCreance = {};
+            let virAmount = 0, chqAmount = 0, unpaidAmount = 0;
+            let caTransport = 0, caImmoTotal = 0, caLocTotal = 0;
+            const equipCA = {};
+
+            filteredInvoices.forEach(inv => {
+                const m = inv.date ? new Date(inv.date).getMonth() : 0;
+                const ttc = inv.totals?.ttc || 0;
+                const ht = inv.totals?.ht || 0;
+                const isPaid = inv.paid || inv.paymentStatus === 'encaissee';
+                const debt = isPaid ? 0 : ttc - (inv.amountPaid || 0);
+
+                if (m >= 0 && m < 12) {
+                    caByMonth[m] += ttc;
+                    creanceByMonth[m] += debt;
+                }
+
+                const cName = getClientName(inv);
+                clientCA[cName] = (clientCA[cName] || 0) + ttc;
+                if (debt > 0) clientCreance[cName] = (clientCreance[cName] || 0) + debt;
+
+                // Payment
+                if (!isPaid) {
+                    unpaidAmount += debt;
+                    if (inv.amountPaid > 0) chqAmount += inv.amountPaid;
+                } else {
+                    const mode = (inv.paymentDetails?.mode || inv.paymentDetails?.method || inv.modePaiement || '').toLowerCase();
+                    if (mode.includes('virement')) virAmount += ttc;
+                    else chqAmount += ttc;
+                }
+
+                // BLs
+                if (inv.blReferences && m >= 0 && m < 12) {
+                    blByMonth[m] += inv.blReferences.split(',').filter(b => b.trim().length > 0).length;
+                }
+
+                // Articles
+                if (inv.articles && Array.isArray(inv.articles)) {
+                    inv.articles.forEach(art => {
+                        const lineHT = art.montantHT || ((art.qte || 0) * (art.prixUHT || art.pu || 0));
+                        if (art.isImmobilisation) {
+                            caImmoTotal += lineHT;
+                            if (m >= 0 && m < 12) immoByMonth[m] += (art.qte || 0);
+                        } else if (art.isLocation) {
+                            caLocTotal += lineHT;
+                            const eq = art.locEquipment || 'Grue';
+                            equipCA[eq] = (equipCA[eq] || 0) + lineHT;
+                        } else {
+                            caTransport += lineHT;
+                        }
+                    });
+                }
+            });
+
+            // 1. CA PAR MOIS (BAR)
+            buildBarChart('chart-ca-mois', monthsFr, [{
+                label: 'CA TTC (DA)',
+                data: caByMonth,
+                backgroundColor: '#2563eb',
+                borderRadius: 6
+            }], 'empty-chart-ca-mois');
+
+            // 2. RÉPARTITION PAR TYPE (DOUGHNUT)
+            const typeLabels = [];
+            const typeData = [];
+            const typeColors = [];
+            if (caTransport > 0) { typeLabels.push('Transport Routier'); typeData.push(caTransport); typeColors.push('#2563eb'); }
+            if (caImmoTotal > 0) { typeLabels.push('Immobilisation'); typeData.push(caImmoTotal); typeColors.push('#dc2626'); }
+            if (caLocTotal > 0) { typeLabels.push('Location d\'Engins'); typeData.push(caLocTotal); typeColors.push('#d97706'); }
+            
+            buildDoughnutChart('chart-repart-type', typeLabels, typeData, typeColors, 'empty-chart-repart-type');
+
+            // 3. TOP CRÉANCES CLIENTS (HORIZONTAL BAR)
+            const sortedCreance = Object.entries(clientCreance).sort((a,b) => b[1] - a[1]).slice(0, 8);
+            buildHorizontalBarChart('chart-creance-client', 
+                sortedCreance.map(c => c[0].length > 18 ? c[0].substring(0, 16) + '…' : c[0]),
+                sortedCreance.map(c => c[1]),
+                '#ef4444',
+                'empty-chart-creance-client'
+            );
+
+            // 4. CRÉANCES PAR MOIS (BAR)
+            buildBarChart('chart-creance-mois', monthsFr, [{
+                label: 'Créances (DA)',
+                data: creanceByMonth,
+                backgroundColor: '#f87171',
+                borderRadius: 6
+            }], 'empty-chart-creance-mois');
+
+            // 5. MODES DE PAIEMENT (DOUGHNUT)
+            const payLabels = ['Virement Bancaire', 'Chèque Bancaire', 'Créances Impayées'];
+            const payData = [virAmount, chqAmount, unpaidAmount];
+            const payColors = ['#10b981', '#3b82f6', '#ef4444'];
+            buildDoughnutChart('chart-mode-paiement', payLabels, payData, payColors, 'empty-chart-mode-paiement');
+
+            // 6. VOLUME BL PAR MOIS (LINE)
+            buildLineChart('chart-nb-bl-mois', monthsFr, blByMonth, '#f59e0b', 'empty-chart-nb-bl-mois');
+
+            // 7. TOP CLIENTS (CA TTC) (HORIZONTAL BAR)
+            const sortedCA = Object.entries(clientCA).sort((a,b) => b[1] - a[1]).slice(0, 8);
+            buildHorizontalBarChart('chart-top-clients',
+                sortedCA.map(c => c[0].length > 18 ? c[0].substring(0, 16) + '…' : c[0]),
+                sortedCA.map(c => c[1]),
+                '#3b82f6',
+                'empty-chart-top-clients'
+            );
+
+            // 8. IMMOBILISATION PAR MOIS (BAR)
+            buildBarChart('chart-immo-mois', monthsFr, [{
+                label: 'Heures Immobilisées',
+                data: immoByMonth,
+                backgroundColor: '#dc2626',
+                borderRadius: 6
+            }], 'empty-chart-immo-mois', false);
+
+            // 9. LOCATION D'ENGINS (DOUGHNUT)
+            const eqLabels = Object.keys(equipCA);
+            const eqData = Object.values(equipCA);
+            buildDoughnutChart('chart-loc-equip', eqLabels, eqData, palette, 'empty-chart-loc-equip');
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        // 🛠️ CHART BUILDERS (CLEAN DATALABELS & TOOLTIPS)
+        // ════════════════════════════════════════════════════════════════
+
+        function checkEmptyState(dataArr, emptyElemId) {
+            const hasData = Array.isArray(dataArr) && dataArr.some(v => v > 0);
+            const el = document.getElementById(emptyElemId);
+            if (el) el.classList.toggle('show', !hasData);
+            return hasData;
+        }
+
+        function buildBarChart(canvasId, labels, datasets, emptyElemId, isCurrency = true) {
+            checkEmptyState(datasets[0]?.data || [], emptyElemId);
+            const ctx = document.getElementById(canvasId);
+            if (!ctx) return;
+            if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const showLabels = dataLabelsEnabled[canvasId] || false;
+
+            chartInstances[canvasId] = new Chart(ctx, {
+                type: 'bar',
+                data: { labels, datasets },
+                plugins: [ChartDataLabels],
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                            titleColor: isDark ? '#f8fafc' : '#0f172a',
+                            bodyColor: isDark ? '#cbd5e1' : '#334155',
+                            borderColor: isDark ? '#334155' : '#e2e8f0',
+                            borderWidth: 1,
+                            padding: 10,
+                            callbacks: {
+                                label: (ctx) => ` ${ctx.dataset.label} : ${isCurrency ? formatCurrency(ctx.raw) : ctx.raw + ' h'}`
+                            }
+                        },
+                        datalabels: {
+                            display: showLabels,
+                            anchor: 'end',
+                            align: 'top',
+                            offset: 4,
+                            color: isDark ? '#cbd5e1' : '#475569',
+                            font: { weight: 'bold', size: 10 },
+                            formatter: (val) => {
+                                if (!val || val === 0) return '';
+                                return isCurrency ? (val >= 1e6 ? (val/1e6).toFixed(1)+'M' : (val/1e3).toFixed(0)+'K') : val;
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 10 }, color: isDark ? '#94a3b8' : '#64748b' }
+                        },
+                        y: {
+                            grid: { color: isDark ? '#1e293b' : '#f1f5f9' },
+                            ticks: {
+                                font: { size: 10 },
+                                color: isDark ? '#94a3b8' : '#64748b',
+                                callback: (v) => isCurrency ? (v >= 1e6 ? (v/1e6).toFixed(0)+'M' : (v>=1e3 ? (v/1e3).toFixed(0)+'K' : v)) : v
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function buildHorizontalBarChart(canvasId, labels, data, color, emptyElemId) {
+            checkEmptyState(data, emptyElemId);
+            const ctx = document.getElementById(canvasId);
+            if (!ctx) return;
+            if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const showLabels = dataLabelsEnabled[canvasId] || false;
+
+            chartInstances[canvasId] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        data,
+                        backgroundColor: color,
+                        borderRadius: 6
+                    }]
+                },
+                plugins: [ChartDataLabels],
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                            titleColor: isDark ? '#f8fafc' : '#0f172a',
+                            bodyColor: isDark ? '#cbd5e1' : '#334155',
+                            borderColor: isDark ? '#334155' : '#e2e8f0',
+                            borderWidth: 1,
+                            padding: 10,
+                            callbacks: {
+                                label: (ctx) => ` Montant : ${formatCurrency(ctx.raw)}`
+                            }
+                        },
+                        datalabels: {
+                            display: showLabels,
+                            anchor: 'end',
+                            align: 'right',
+                            offset: 6,
+                            color: isDark ? '#cbd5e1' : '#475569',
+                            font: { weight: 'bold', size: 10 },
+                            formatter: (val) => val > 0 ? (val >= 1e6 ? (val/1e6).toFixed(1)+'M' : (val/1e3).toFixed(0)+'K') : ''
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: isDark ? '#1e293b' : '#f1f5f9' },
+                            ticks: {
+                                font: { size: 10 },
+                                color: isDark ? '#94a3b8' : '#64748b',
+                                callback: (v) => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : (v>=1e3 ? (v/1e3).toFixed(0)+'K' : v)
+                            }
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: { font: { size: 10, weight: '600' }, color: isDark ? '#94a3b8' : '#64748b' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function buildDoughnutChart(canvasId, labels, data, colors, emptyElemId) {
+            checkEmptyState(data, emptyElemId);
+            const ctx = document.getElementById(canvasId);
+            if (!ctx) return;
+            if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const total = data.reduce((a,b) => a + b, 0);
+
+            chartInstances[canvasId] = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels,
+                    datasets: [{
+                        data,
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: isDark ? '#151c2e' : '#ffffff'
+                    }]
+                },
+                plugins: [ChartDataLabels],
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: { size: 10, weight: '600' },
+                                color: isDark ? '#94a3b8' : '#64748b',
+                                padding: 12,
+                                boxWidth: 10
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                            titleColor: isDark ? '#f8fafc' : '#0f172a',
+                            bodyColor: isDark ? '#cbd5e1' : '#334155',
+                            borderColor: isDark ? '#334155' : '#e2e8f0',
+                            borderWidth: 1,
+                            padding: 10,
+                            callbacks: {
+                                label: (ctx) => {
+                                    const val = ctx.raw || 0;
+                                    const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                                    return ` ${ctx.label} : ${formatCurrency(val)} (${pct}%)`;
+                                }
+                            }
+                        },
+                        datalabels: {
+                            color: '#ffffff',
+                            font: { weight: 'bold', size: 11 },
+                            formatter: (val) => {
+                                if (!val || total === 0) return '';
+                                const pct = (val / total) * 100;
+                                return pct >= 6 ? `${pct.toFixed(0)}%` : '';
+                            }
+                        }
+                    },
+                    cutout: '62%'
+                }
+            });
+        }
+
+        function buildLineChart(canvasId, labels, data, color, emptyElemId) {
+            checkEmptyState(data, emptyElemId);
+            const ctx = document.getElementById(canvasId);
+            if (!ctx) return;
+            if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+            chartInstances[canvasId] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Nombre de BL',
+                        data,
+                        borderColor: color,
+                        backgroundColor: color + '22',
+                        borderWidth: 2.5,
+                        pointBackgroundColor: color,
+                        pointRadius: 3.5,
+                        pointHoverRadius: 6,
+                        fill: true,
+                        tension: 0.35
+                    }]
+                },
+                plugins: [ChartDataLabels],
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                            titleColor: isDark ? '#f8fafc' : '#0f172a',
+                            bodyColor: isDark ? '#cbd5e1' : '#334155',
+                            borderColor: isDark ? '#334155' : '#e2e8f0',
+                            borderWidth: 1,
+                            callbacks: { label: (ctx) => ` ${ctx.raw} BLs livrés` }
+                        },
+                        datalabels: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 10 }, color: isDark ? '#94a3b8' : '#64748b' }
+                        },
+                        y: {
+                            grid: { color: isDark ? '#1e293b' : '#f1f5f9' },
+                            ticks: { font: { size: 10 }, color: isDark ? '#94a3b8' : '#64748b', precision: 0 }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Toggle DataLabels per chart
+        function toggleDataLabels(chartId) {
+            dataLabelsEnabled[chartId] = !dataLabelsEnabled[chartId];
+            const chart = chartInstances[chartId];
+            if (chart) {
+                if (chart.options.plugins.datalabels) {
+                    chart.options.plugins.datalabels.display = dataLabelsEnabled[chartId];
+                }
+                chart.update();
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        // 🔍 FULLSCREEN MODAL LIGHTBOX (ZERO LAYOUT CORRUPTION)
+        // ════════════════════════════════════════════════════════════════
+
+        function openFullscreenModal(sourceChartId, title) {
+            const srcChart = chartInstances[sourceChartId];
+            if (!srcChart) return;
+
+            const modal = document.getElementById('chartFullscreenModal');
+            const modalTitle = document.getElementById('modal-chart-title');
+            const modalCanvas = document.getElementById('modal-canvas');
+            const downloadBtn = document.getElementById('modal-btn-download');
+
+            modalTitle.innerHTML = `<i class="fas fa-chart-pie text-primary me-2"></i> ${title}`;
+            modal.classList.add('show');
+
+            if (modalChartInstance) modalChartInstance.destroy();
+
+            // Clone Chart configuration cleanly
+            const cfg = {
+                type: srcChart.config.type,
+                data: JSON.parse(JSON.stringify(srcChart.config.data)),
+                plugins: [ChartDataLabels],
+                options: JSON.parse(JSON.stringify(srcChart.config.options))
+            };
+            cfg.options.responsive = true;
+            cfg.options.maintainAspectRatio = false;
+            if (cfg.options.plugins?.datalabels) {
+                cfg.options.plugins.datalabels.display = true; // Always show in HD Fullscreen
+            }
+
+            modalChartInstance = new Chart(modalCanvas.getContext('2d'), cfg);
+
+            downloadBtn.onclick = () => downloadChart('modal-canvas', title.replace(/[^a-zA-Z0-9]/g, '_'));
+
+            // Keydown Escape support
+            window.onkeydown = (e) => {
+                if (e.key === 'Escape') closeFullscreenModal();
+            };
+        }
+
+        function closeFullscreenModal() {
+            const modal = document.getElementById('chartFullscreenModal');
+            modal.classList.remove('show');
+            if (modalChartInstance) {
+                modalChartInstance.destroy();
+                modalChartInstance = null;
+            }
+            window.onkeydown = null;
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        // 💾 HIGH RESOLUTION EXPORT (PNG)
+        // ════════════════════════════════════════════════════════════════
+
         function downloadChart(canvasId, filename) {
             const canvas = document.getElementById(canvasId);
-            
-            // Create a temp canvas to add white background (important for transparent PNGs)
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = canvas.width;
-            tempCanvas.height = canvas.height;
-            const ctx = tempCanvas.getContext('2d');
-            
+            if (!canvas) return;
+
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            ctx.fillStyle = isDark ? '#1e293b' : '#ffffff';
-            ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            const temp = document.createElement('canvas');
+            temp.width = canvas.width;
+            temp.height = canvas.height;
+            const ctx = temp.getContext('2d');
+
+            ctx.fillStyle = isDark ? '#151c2e' : '#ffffff';
+            ctx.fillRect(0, 0, temp.width, temp.height);
             ctx.drawImage(canvas, 0, 0);
 
             const link = document.createElement('a');
-            link.download = filename + '_' + new Date().toISOString().slice(0,10) + '.png';
-            link.href = tempCanvas.toDataURL('image/png', 1.0);
+            link.download = `DED_${filename}_${new Date().toISOString().slice(0,10)}.png`;
+            link.href = temp.toDataURL('image/png', 1.0);
             link.click();
         }
 
         function downloadFullDashboard() {
-            const el = document.getElementById('dashboard-content') || document.getElementById('dashboard-screen');
-            if (!el) { alert('Aucun contenu à exporter'); return; }
-            if (typeof html2canvas === 'undefined') { alert('html2canvas non chargé. Rechargez la page.'); return; }
-            const btn = document.querySelector('.export-btn') || document.querySelector('.btn-primary-action');
-            if (btn) { btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>Export en cours...'; btn.disabled = true; }
-            html2canvas(el, { scale: 2, useCORS: true, backgroundColor: document.documentElement.getAttribute('data-theme') === 'dark' ? '#0f172a' : '#f8fafc' }).then(canvas => {
+            const el = document.getElementById('dashboard-content');
+            if (!el) return;
+            if (typeof html2canvas === 'undefined') {
+                alert("Librairie d'exportation indisponible. Rechargez la page.");
+                return;
+            }
+
+            const btn = document.getElementById('btn-export-full');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Génération HD...';
+            btn.disabled = true;
+
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+            html2canvas(el, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: isDark ? '#0b0f19' : '#f8fafc',
+                logging: false
+            }).then(canvas => {
                 const link = document.createElement('a');
-                link.download = 'Dashboard_KPI_' + new Date().toISOString().slice(0,10) + '.png';
-                link.href = canvas.toDataURL('image/png');
+                link.download = `Douroub_Dashboard_KPI_${new Date().toISOString().slice(0,10)}.png`;
+                link.href = canvas.toDataURL('image/png', 1.0);
                 link.click();
-                if (btn) { btn.innerHTML = '<i class="fa fa-camera me-1"></i>Exporter PNG'; btn.disabled = false; }
             }).catch(err => {
-                console.error(err);
-                alert('Erreur export: ' + err.message);
-                if (btn) { btn.innerHTML = '<i class="fa fa-camera me-1"></i>Exporter PNG'; btn.disabled = false; }
+                alert("Erreur lors de la capture : " + err.message);
+            }).finally(() => {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
             });
         }
 
+        // ════════════════════════════════════════════════════════════════
+        // 📋 INVOICES TABLE
+        // ════════════════════════════════════════════════════════════════
+
+        function renderTable() {
+            const tbody = document.getElementById('invoices-tbody');
+            const summary = document.getElementById('table-summary-count');
+            if (!tbody) return;
+
+            if (summary) {
+                summary.textContent = `Affichage de ${filteredInvoices.length} facture(s) enregistrée(s)`;
+            }
+
+            if (filteredInvoices.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Aucune facture ne correspond aux filtres.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filteredInvoices.map(inv => {
+                const clientName = getClientName(inv);
+                const isPaid = inv.paid || inv.paymentStatus === 'encaissee';
+                const statusBadge = isPaid 
+                    ? '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2">Payée</span>'
+                    : '<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2">Impayée</span>';
+
+                let typeBadge = '<span class="badge bg-primary-subtle text-primary border rounded-pill">Transport</span>';
+                if (inv.articles && inv.articles.some(a => a.isImmobilisation)) {
+                    typeBadge = '<span class="badge bg-danger-subtle text-danger border rounded-pill">Immobilisation</span>';
+                } else if (inv.articles && inv.articles.some(a => a.isLocation)) {
+                    typeBadge = '<span class="badge bg-warning-subtle text-warning border rounded-pill">Location</span>';
+                }
+
+                const bls = inv.blReferences || '-';
+                const dateStr = inv.date ? new Date(inv.date).toLocaleDateString('fr-FR') : '-';
+
+                return `
+                    <tr>
+                        <td class="font-monospace text-muted">${dateStr}</td>
+                        <td class="fw-bold text-primary">${inv.number || '-'}</td>
+                        <td class="fw-semibold text-start">${clientName}</td>
+                        <td>${typeBadge}</td>
+                        <td class="small text-muted">${bls}</td>
+                        <td class="font-monospace fw-bold text-end">${formatCurrency(inv.totals?.ht || 0)}</td>
+                        <td class="font-monospace fw-bold text-end" style="color:var(--text);">${formatCurrency(inv.totals?.ttc || 0)}</td>
+                        <td class="text-center">${statusBadge}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterTableRows() {
+            const query = (document.getElementById('table-search')?.value || '').toLowerCase().trim();
+            const rows = document.getElementById('invoices-tbody')?.getElementsByTagName('tr');
+            if (!rows) return;
+
+            Array.from(rows).forEach(tr => {
+                const text = tr.innerText.toLowerCase();
+                tr.style.display = text.includes(query) ? '' : 'none';
+            });
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        // 🌓 THEME TOGGLE
+        // ════════════════════════════════════════════════════════════════
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme') || 'light';
+            const next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+
+            const icon = document.getElementById('theme-icon');
+            if (icon) icon.className = next === 'dark' ? 'fas fa-sun text-warning' : 'fas fa-moon';
+
+            renderAllCharts();
+        }
     </script>
 </body>
 </html>

@@ -730,138 +730,271 @@ th.sortable.sorted-desc .sort-icon::after {
         </section>
 
 <!-- REPORTS VIEW -->
-<!-- RAPPORT & KPI VIEW -->
 <section id="view-reports" class="app-view d-none">
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-        <div>
-            <h2 class="mb-0 fw-bold" style="color:var(--text-main);"><i class="fa fa-chart-pie me-2 text-primary"></i>Rapport & KPI</h2>
-            <div class="text-muted small">Analyse complète de l'activité : Transport, Immobilisation, Location</div>
-        </div>
-        <div class="d-flex gap-2">
-            <button class="btn btn-success shadow-sm" onclick="exportFullReportExcel()"><i class="fa fa-file-excel me-1"></i>Export Excel</button>
-            <button class="btn shadow-sm fw-bold" style="background:linear-gradient(135deg,#dc3545,#b91c1c);color:white;" onclick="showView('immobilisation')">
-                <i class="fa fa-stopwatch me-1"></i> Immobilisation
-            </button>
-            <button class="btn shadow-sm fw-bold" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:white;" onclick="showView('location')">
-                <i class="fa fa-crane me-1"></i> Location
-            </button>
-        </div>
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+      <h2 class="mb-0 fw-bold" style="color:var(--text-main);"><i class="fa fa-chart-column me-2 text-primary"></i>Rapports d'Activité</h2>
+      <div class="text-muted small">Suivi détaillé des factures, encaissements, créances et performances globales</div>
     </div>
+  </div>
 
-    <!-- FILTERS -->
-    <div class="card mb-4 border-0 shadow-sm">
-        <div class="card__body py-3">
-            <div class="row g-2 align-items-center">
-                <div class="col-md-3">
-                    <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-user me-1"></i>Client</label>
-                    <select id="rptFilterClient" class="form-select form-select-sm" onchange="updateReportsView()">
-                        <option value="all">Tous les clients</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calendar me-1"></i>Année</label>
-                    <select id="rptFilterYear" class="form-select form-select-sm" onchange="updateReportsView()">
-                        <option value="">Toutes</option>
-                        <option value="2024">2024</option>
-                        <option value="2025">2025</option>
-                        <option value="2026" selected>2026</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-filter me-1"></i>Type</label>
-                    <select id="rptFilterType" class="form-select form-select-sm" onchange="updateReportsView()">
-                        <option value="all">Tous</option>
-                        <option value="transport">Transport</option>
-                        <option value="immobilisation">Immobilisation</option>
-                        <option value="location">Location</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calendar-alt me-1"></i>Période</label>
-                    <select id="rptFilterPeriod" class="form-select form-select-sm" onchange="updateReportsView()">
-                        <option value="all">Toute l'année</option>
-                        <option value="S1">S1 (Jan-Juin)</option>
-                        <option value="S2">S2 (Juil-Déc)</option>
-                        <option value="Q1">T1</option><option value="Q2">T2</option>
-                        <option value="Q3">T3</option><option value="Q4">T4</option>
-                    </select>
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button class="btn btn-outline-secondary btn-sm w-100" onclick="resetRptFilters()"><i class="fa fa-undo me-1"></i>Reset</button>
-                </div>
-            </div>
-        </div>
-    </div>
+  <!-- NAVIGATION TABS -->
+  <ul class="nav nav-pills mb-4 gap-2 border-bottom pb-2" id="reportsMainTabs">
+    <li class="nav-item">
+      <button class="nav-link active fw-semibold shadow-sm" data-bs-toggle="tab" data-bs-target="#tab-report-main">
+        <i class="fa fa-table me-2"></i>Rapport Global & Encaissements
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link fw-semibold shadow-sm" data-bs-toggle="tab" data-bs-target="#tab-report-kpi" onclick="if(typeof renderRptCharts==='function')renderRptCharts('all');">
+        <i class="fa fa-chart-pie me-2 text-primary"></i>Graphiques & Analyse KPI
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link fw-semibold shadow-sm" style="color:#dc3545;" onclick="showView('immobilisation')">
+        <i class="fa fa-stopwatch me-1"></i> Immobilisation Flotte →
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link fw-semibold shadow-sm" style="color:#d97706;" onclick="showView('location')">
+        <i class="fa fa-crane me-1"></i> Location d'Engins →
+      </button>
+    </li>
+  </ul>
 
-    <!-- KPI CARDS -->
-    <div class="row g-3 mb-4" id="rptKpiContainer"></div>
+  <div class="tab-content" id="reportsTabContent">
+    <!-- TAB 1: ORIGINAL FULL REPORT TABLE -->
+    <div class="tab-pane fade show active" id="tab-report-main">
+      <div class="card mb-4 border-0 shadow-sm">
+        <div class="card__header bg-light py-3 border-0">
+          <h5 class="mb-0 fw-bold"><i class="fa fa-filter me-2 text-primary"></i>Générer un rapport détaillé</h5>
+        </div>
+        <div class="card__body">
+          <form class="row g-3 align-items-end p-2" style="background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+            <div class="col-md-8">
+              <label class="form-label fw-bold text-uppercase small text-muted">1. Filtrer par Client</label>
+              <div class="elegant-client-picker shadow-sm border-0">
+                <div id="selectedClientsContainer" class="selected-clients-container" style="min-height: 45px;"></div>
+                <div id="clientDropdown" class="client-dropdown">
+                  <div class="dropdown-header">
+                    <input id="clientSearch" type="text" class="client-search" placeholder="Chercher un client...">
+                  </div>
+                  <div id="clientOptions" class="dropdown-options"></div>
+                </div>
+                <button id="clientPickerTrigger" type="button" class="client-picker-trigger border-0 bg-light text-primary fw-bold">
+                  <i class="fas fa-plus-circle"></i> Sélectionner des clients
+                </button>
+              </div>
+            </div>
 
-    <!-- CHARTS -->
-    <div class="row g-3 mb-4">
-        <div class="col-lg-8">
-            <div class="card h-100 shadow-sm border-0">
-                <div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-chart-bar me-2 text-primary"></i>CA par Mois</h6></div>
-                <div class="card__body pt-2"><div style="height:300px;"><canvas id="rptChartRevenue"></canvas></div></div>
+            <div class="col-md-4">
+               <label class="form-label fw-bold text-uppercase small text-muted">2. Statut</label>
+               <div id="reportStatus" class="d-flex flex-wrap gap-2">
+                <button type="button" class="status-btn all active flex-grow-1" data-value="all">Tout</button>
+                <button type="button" class="status-btn paid flex-grow-1" data-value="paid">Payée</button>
+                <button type="button" class="status-btn overdue flex-grow-1" data-value="overdue">Retard</button>
+              </div>
             </div>
-        </div>
-        <div class="col-lg-4">
-            <div class="card h-100 shadow-sm border-0">
-                <div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-chart-pie me-2 text-success"></i>Répartition par Type</h6></div>
-                <div class="card__body pt-2"><div style="height:300px;"><canvas id="rptChartTypeBreakdown"></canvas></div></div>
-            </div>
-        </div>
-        <div class="col-lg-4">
-            <div class="card h-100 shadow-sm border-0">
-                <div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-users me-2 text-warning"></i>CA par Client</h6></div>
-                <div class="card__body pt-2"><div style="height:260px;"><canvas id="rptChartClients"></canvas></div></div>
-            </div>
-        </div>
-        <div class="col-lg-4">
-            <div class="card h-100 shadow-sm border-0">
-                <div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-hand-holding-dollar me-2 text-danger"></i>Créance par Client</h6></div>
-                <div class="card__body pt-2"><div style="height:260px;"><canvas id="rptChartDebt"></canvas></div></div>
-            </div>
-        </div>
-        <div class="col-lg-4">
-            <div class="card h-100 shadow-sm border-0">
-                <div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-credit-card me-2 text-info"></i>Mode de Paiement</h6></div>
-                <div class="card__body pt-2"><div style="height:260px;"><canvas id="rptChartPayment"></canvas></div></div>
-            </div>
-        </div>
-    </div>
 
-    <!-- DETAILED TABLE (ORIGINAL STYLE) -->
-    <div class="card shadow-sm border-0">
-        <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h6 class="fw-bold mb-0"><i class="fa fa-table me-2"></i>Détail des Factures</h6>
-            <div class="d-flex gap-2">
-                <input type="text" id="rptTableSearch" class="form-control form-control-sm" placeholder="Recherche..." style="width:220px;" oninput="renderRptTable()">
+            <div class="col-md-3">
+                <label class="form-label fw-bold text-uppercase small text-muted">Date Début (J/M/A)</label>
+                <input id="reportStartDate" type="date" class="form-control shadow-sm">
             </div>
-        </div>
-        <div class="card__body p-0">
-            <div class="table-responsive" style="max-height:60vh;overflow-y:auto;">
-                <table class="table table-hover align-middle mb-0">
+            <div class="col-md-3">
+                <label class="form-label fw-bold text-uppercase small text-muted">Date Fin (J/M/A)</label>
+                <input id="reportEndDate" type="date" class="form-control shadow-sm">
+            </div>
+            
+            <div class="col-md-2">
+                 <label class="form-label fw-bold text-uppercase small text-muted">Paiement</label>
+                 <div class="dropdown">
+                    <button class="btn btn-light border w-100 dropdown-toggle text-start text-truncate" type="button" data-bs-toggle="dropdown">
+                        Mode de paiement
+                    </button>
+                    <div class="dropdown-menu p-3" id="reportPaymentMethods" style="width: 250px;">
+                        <label class="d-block mb-2"><input type="checkbox" class="form-check-input me-2" value="Virement bancaire"> Virement</label>
+                        <label class="d-block mb-2"><input type="checkbox" class="form-check-input me-2" value="Chèque bancaire"> Chèque</label>
+                        <label class="d-block"><input type="checkbox" class="form-check-input me-2" value="Espèces"> Espèces</label>
+                    </div>
+                 </div>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label fw-bold text-uppercase small text-muted">Banque</label>
+                <select id="reportBankFilter" class="form-select shadow-sm">
+                    <option value="">Toutes banques</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+              <button id="btnLoadReport" type="button" class="btn btn--primary btn-lg w-100 btn-pulse shadow">
+                <i class="fa fa-search me-1"></i>CHARGER
+              </button>
+            </div>
+          </form>
+
+          <!-- Hidden container for PDF export -->
+          <div id="reportPDFContainer" style="position: absolute; top: -9999px; left: -9999px; width: 800px;">
+            <div id="reportPDFContent"></div>
+          </div>
+
+          <!-- Report Table: place it here, right after the form -->
+          <div id="reportWrapper" class="mt-4 d-none">
+            <div class="row g-3 mb-4" id="reportSummaryCards"></div>
+            <div class="card border-0 shadow-sm">
+              <div class="card__header d-flex justify-content-between align-items-center bg-white py-3 border-bottom">
+                <h5 class="mb-0 fw-bold"><i class="fa fa-list-check me-2 text-primary"></i>Résultats du rapport</h5>
+                <div class="d-flex gap-2">
+                  <button onclick="exportReportXLS()" class="btn btn--primary shadow-sm">
+                    <i class="fa fa-file-excel me-2"></i>Export Excel
+                  </button>
+                </div>
+              </div>
+              <div class="card__body p-3">
+                <!-- Quick Filter Bar -->
+                <div class="p-2 mb-3 bg-light rounded border d-flex gap-2 align-items-center flex-wrap">
+                  <div class="input-group input-group-sm" style="max-width: 280px;">
+                    <span class="input-group-text"><i class="fa fa-search"></i></span>
+                    <input id="reportQuickSearch" type="text" class="form-control" placeholder="Recherche rapide (N°, Client, Ref...)" oninput="if(typeof applyReportQuickFilter==='function')applyReportQuickFilter()">
+                  </div>
+                  <select id="reportQuickBank" class="form-select form-select-sm" style="max-width: 200px;" onchange="if(typeof applyReportQuickFilter==='function')applyReportQuickFilter()">
+                    <option value="">Toutes banques</option>
+                  </select>
+                  <select id="reportQuickMode" class="form-select form-select-sm" style="max-width: 170px;" onchange="if(typeof applyReportQuickFilter==='function')applyReportQuickFilter()">
+                    <option value="">Tous modes</option>
+                    <option value="virement">Virement</option>
+                    <option value="cheque">Chèque</option>
+                    <option value="espece">Espèces</option>
+                  </select>
+                  <select id="reportQuickStatus" class="form-select form-select-sm" style="max-width: 150px;" onchange="if(typeof applyReportQuickFilter==='function')applyReportQuickFilter()">
+                    <option value="">Tous statuts</option>
+                    <option value="paid">Payée</option>
+                    <option value="unpaid">Impayée</option>
+                  </select>
+                  <button class="btn btn-sm btn-outline-secondary" onclick="if(typeof resetReportQuickFilter==='function')resetReportQuickFilter()" title="Réinitialiser filtre rapide"><i class="fa fa-undo"></i></button>
+                  <span id="reportQuickCount" class="ms-auto small text-muted"></span>
+                </div>
+
+                <div class="table-responsive" style="max-height: 65vh; overflow: auto; border: 1px solid #dee2e6; border-radius: 6px;">
+                  <table id="tableReport" class="table table-hover align-middle mb-0" style="border-collapse: separate; border-spacing: 0;">
                     <thead class="table-light sticky-top shadow-sm">
-                        <tr class="text-uppercase small text-center" style="font-size:0.75rem;">
-                            <th>Date</th>
-                            <th>N° Facture</th>
-                            <th style="text-align:left;">Client</th>
-                            <th>Type</th>
-                            <th>Destination</th>
-                            <th>BL</th>
-                            <th>Montant HT</th>
-                            <th>TVA</th>
-                            <th>Montant TTC</th>
-                            <th>Statut</th>
-                            <th>Action</th>
-                        </tr>
+                      <tr class="text-uppercase small fw-bold text-center align-middle" style="font-size: 0.75rem; border-bottom: 2px solid #333;">
+                        <th class="sortable" data-sort="status" style="width: 80px; border-right: 1px solid #dee2e6;">État</th>
+                        <th class="sortable" data-sort="ref" style="border-right: 1px solid #dee2e6; min-width: 120px;">Ref. Paiement</th>
+                        <th class="sortable" data-sort="bank" style="border-right: 1px solid #dee2e6;">Banque</th>
+                        <th class="sortable" data-sort="mode" style="border-right: 1px solid #dee2e6;">Mode</th>
+                        <th class="sortable" data-sort="datePay" style="border-right: 1px solid #dee2e6;">Date Paiement</th>
+                        <th class="sortable" data-sort="month" style="border-right: 1px solid #dee2e6;">Mois</th>
+                        <th class="sortable" data-sort="bl" style="border-right: 1px solid #dee2e6;">BL (Qté)</th>
+                        <th class="sortable" data-sort="date" style="border-right: 1px solid #dee2e6;">Date</th>
+                        <th class="sortable" data-sort="number" style="border-right: 1px solid #dee2e6;">N° Facture</th>
+                        <th class="sortable" data-sort="client" style="text-align:left; border-right: 1px solid #dee2e6; min-width: 150px;">Client</th>
+                        <th class="sortable" data-sort="ht" style="background-color: #e9ecef; border-left: 2px solid #adb5bd; border-right: 2px solid #adb5bd;">Montant<br>HT</th>
+                        <th class="sortable" data-sort="ttc" style="background-color: #e9ecef; border-right: 2px solid #adb5bd;">Total<br>TTC</th>
+                        <th class="sortable" data-sort="paid" style="background-color: #d1e7dd; color: #0f5132; border-right: 2px solid #adb5bd;">Encaissé<br>TTC</th>
+                        <th class="sortable" data-sort="debtHT" style="background-color: #f8d7da; color: #842029; border-right: 1px solid #f5c2c7;">Créance<br>HT</th>
+                        <th class="sortable" data-sort="debtTTC" style="background-color: #f8d7da; color: #842029; border-right: 2px solid #dee2e6;">Créance<br>TTC</th>
+                        <th style="width: 60px;">Voir</th>
+                      </tr>
                     </thead>
-                    <tbody id="rptTableBody"></tbody>
-                    <tfoot id="rptTableFoot"></tfoot>
-                </table>
+                    <tbody></tbody>
+                    <tfoot></tfoot>
+                  </table>
+                </div>
+              </div>
             </div>
+          </div>
         </div>
+      </div>
     </div>
+
+    <!-- TAB 2: GRAPHIQUES & KPI -->
+    <div class="tab-pane fade" id="tab-report-kpi">
+      <!-- FILTERS -->
+      <div class="card mb-4 border-0 shadow-sm">
+        <div class="card__body py-3">
+          <div class="row g-2 align-items-center">
+            <div class="col-md-3">
+              <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-user me-1"></i>Client</label>
+              <select id="rptFilterClient" class="form-select form-select-sm" onchange="updateReportsView()">
+                <option value="all">Tous les clients</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calendar me-1"></i>Année</label>
+              <select id="rptFilterYear" class="form-select form-select-sm" onchange="updateReportsView()">
+                <option value="">Toutes</option>
+                <option value="2024">2024</option>
+                <option value="2025">2025</option>
+                <option value="2026" selected>2026</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-filter me-1"></i>Type Prestation</label>
+              <select id="rptFilterType" class="form-select form-select-sm" onchange="updateReportsView()">
+                <option value="all">Toutes prestations</option>
+                <option value="transport">Transport</option>
+                <option value="immobilisation">Immobilisation</option>
+                <option value="location">Location</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calendar-alt me-1"></i>Période</label>
+              <select id="rptFilterPeriod" class="form-select form-select-sm" onchange="updateReportsView()">
+                <option value="all">Toute l'année</option>
+                <option value="S1">S1 (Jan-Juin)</option>
+                <option value="S2">S2 (Juil-Déc)</option>
+                <option value="Q1">T1 (Jan-Mar)</option>
+                <option value="Q2">T2 (Avr-Juin)</option>
+                <option value="Q3">T3 (Juil-Sep)</option>
+                <option value="Q4">T4 (Oct-Déc)</option>
+              </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+              <button class="btn btn-outline-secondary btn-sm w-100" onclick="resetRptFilters()"><i class="fa fa-undo me-1"></i>Reset</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI CARDS -->
+      <div class="row g-3 mb-4" id="rptKpiContainer"></div>
+
+      <!-- CHARTS -->
+      <div class="row g-3 mb-4">
+        <div class="col-lg-8">
+          <div class="card h-100 shadow-sm border-0">
+            <div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-chart-bar me-2 text-primary"></i>1. CA Mensuel (TTC)</h6></div>
+            <div class="card__body pt-2"><div style="height:290px;"><canvas id="rptChartRevenue"></canvas></div></div>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="card h-100 shadow-sm border-0">
+            <div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-chart-pie me-2 text-success"></i>2. Répartition par Type</h6></div>
+            <div class="card__body pt-2"><div style="height:290px;"><canvas id="rptChartTypeBreakdown"></canvas></div></div>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="card h-100 shadow-sm border-0">
+            <div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-users me-2 text-warning"></i>3. Top Clients (CA TTC)</h6></div>
+            <div class="card__body pt-2"><div style="height:260px;"><canvas id="rptChartClients"></canvas></div></div>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="card h-100 shadow-sm border-0">
+            <div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-hand-holding-dollar me-2 text-danger"></i>4. Créances par Client</h6></div>
+            <div class="card__body pt-2"><div style="height:260px;"><canvas id="rptChartDebt"></canvas></div></div>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="card h-100 shadow-sm border-0">
+            <div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-credit-card me-2 text-info"></i>5. Modes de Règlement</h6></div>
+            <div class="card__body pt-2"><div style="height:260px;"><canvas id="rptChartPayment"></canvas></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- IMMOBILISATION & RENTABILITE VIEW -->
@@ -2003,6 +2136,26 @@ document.addEventListener('DOMContentLoaded', function() {
     <option value="Attente documents / Bon de livraison">
     <option value="Panne / Réparation sur site client">
 </datalist>
+
+<!-- MODAL AUDIT VISITEURS & APPAREILS LIEN PARTAGÉ -->
+<div class="modal fade" id="modalShareLinkVisitors" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:1rem;">
+            <div class="modal-header bg-light py-3 border-0">
+                <h5 class="modal-title fw-bold">
+                    <i class="fa fa-users-viewfinder text-primary me-2"></i>Historique des Visiteurs & Appareils Connectés
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4" id="modalShareLinkVisitorsContent">
+                <div class="text-center py-4"><div class="spinner-border text-primary"></div></div>
+            </div>
+            <div class="modal-footer bg-light py-2 border-0">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 </body>
 </html>
