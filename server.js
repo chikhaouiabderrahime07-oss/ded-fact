@@ -339,6 +339,20 @@ app.post('/api/shared/auth', async (req, res) => {
     }
 });
 
+app.put('/api/share-links/:token/password', async (req, res) => {
+    try {
+        const { token } = req.params;
+        const { password } = req.body;
+        if (DEV_MODE) {
+            const link = devStore.shareLinks.find(l => l.token === token);
+            if (link) { link.password = password; return res.json({ success: true }); }
+            return res.status(404).json({ error: 'Not found' });
+        }
+        await ShareLink.updateOne({ token }, { $set: { password } });
+        res.json({ success: true });
+    } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/shared/verify/:token', async (req, res) => {
     try {
         const { token } = req.params;

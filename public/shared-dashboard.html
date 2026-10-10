@@ -13,6 +13,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
         :root {
             --bg: #f8fafc;
             --bg-card: #ffffff;
@@ -41,11 +43,14 @@
         body {
             background-color: var(--bg);
             color: var(--text);
-            font-family: 'Inter', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             transition: background-color 0.3s ease, color 0.3s ease;
             margin: 0;
             padding: 0;
         }
+        
+        .kpi-value { font-size: 1.5rem; font-weight: 700; }
+        .kpi-label, .kpi-title { font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
 
         /* Authentication View */
         #auth-view {
@@ -393,10 +398,16 @@
     <!-- Dashboard View -->
     <div id="dashboard-view">
         <div class="topbar">
-            <div class="topbar-brand">
-                <i class="fas fa-chart-pie" style="color: var(--accent);"></i>
-                <span id="header-company-name">DOUROUB EL DJAZAIR</span>
-                <span id="expiry-badge" class="expiry-badge">Expiré</span>
+            <div class="topbar-brand" style="flex-direction: column; align-items: flex-start; gap: 0;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <i class="fas fa-chart-pie" style="color: var(--accent);"></i>
+                    <span id="header-company-name">SPA DOUROUB EL DJAZAIR</span>
+                    <span id="expiry-badge" class="expiry-badge">Expiré</span>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px; font-weight: normal; line-height: 1.2;">
+                    Agrément N°AT/03/30/00/1016<br>
+                    Mr. GUETTAFI Younes - Gérant
+                </div>
             </div>
             <div class="topbar-controls">
                 <select id="filter-year" class="filter-select" onchange="applyFilters()">
@@ -552,7 +563,7 @@
                     <h3 class="chart-title" style="margin:0;">Liste des Factures</h3>
                     <input type="text" id="table-search" class="table-search" placeholder="Rechercher..." onkeyup="filterTable()">
                 </div>
-                <div style="overflow-x:auto;">
+                <div style="overflow-x:auto; max-height: 400px; overflow-y: auto;">
                     <table id="invoices-table">
                         <thead>
                             <tr>
@@ -734,6 +745,29 @@
             
             // Filter Data initially
             applyFilters();
+
+            // Double click to fullscreen charts
+            document.querySelectorAll('.chart-card').forEach(card => {
+                card.addEventListener('dblclick', () => {
+                    if (card.classList.contains('chart-fullscreen')) {
+                        card.classList.remove('chart-fullscreen');
+                        card.style = '';
+                    } else {
+                        card.classList.add('chart-fullscreen');
+                        card.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;background:var(--bg-card);padding:20px;overflow:auto;';
+                    }
+                    // Resize charts inside
+                    const canvas = card.querySelector('canvas');
+                    if (canvas) {
+                        if (canvas.chart) canvas.chart.resize();
+                        // For this implementation context where chart instances are in an object
+                        const id = canvas.id;
+                        if (id && chartInstances && chartInstances[id]) {
+                            chartInstances[id].resize();
+                        }
+                    }
+                });
+            });
         }
 
         function populateFilters() {
@@ -752,7 +786,7 @@
 
             globalData.clients.forEach(c => {
                 const opt = document.createElement('option');
-                opt.value = c._id; opt.textContent = c.nom;
+                opt.value = c.id || c._id; opt.textContent = c.nom || c.name;
                 clientSelect.appendChild(opt);
             });
         }
@@ -767,12 +801,23 @@
                 filteredInvoices = filteredInvoices.filter(inv => new Date(inv.date).getFullYear().toString() === year);
             }
             if(clientId !== 'all') {
-                filteredInvoices = filteredInvoices.filter(inv => inv.client && inv.client._id === clientId);
+                filteredInvoices = filteredInvoices.filter(inv => String(inv.clientId) === String(clientId) || (inv.client && String(inv.client._id) === String(clientId)));
             }
 
             updateKPIs();
             updateCharts();
             updateTable();
+        }
+
+        // Helper: resolve client name from clientId
+        function getClientName(inv) {
+            if (!inv) return 'Inconnu';
+            if (inv.clientId) {
+                const c = globalData.clients.find(cl => cl.id === inv.clientId || cl._id === inv.clientId || String(cl.id) === String(inv.clientId));
+                if (c) return c.nom || c.name || 'Client';
+            }
+            if (inv.client && inv.client.nom) return inv.client.nom;
+            return 'Inconnu';
         }
 
         // Data processing and calculations
@@ -796,7 +841,7 @@
 
                 if(inv.articles) {
                     inv.articles.forEach(art => {
-                        const lineTotal = (art.qte || 0) * (art.pu || 0);
+                        const lineTotal = art.montantHT || ((art.qte || 0) * (art.prixUHT || art.pu || 0));
                         if(art.isImmobilisation) caImmo += lineTotal;
                         if(art.isLocation) caLoc += lineTotal;
                     });
@@ -822,7 +867,7 @@
             filteredInvoices.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(inv => {
                 const tr = document.createElement('tr');
                 const dateStr = inv.date ? new Date(inv.date).toLocaleDateString('fr-DZ') : '';
-                const clientName = inv.client ? inv.client.nom : 'Inconnu';
+                const clientName = getClientName(inv);
                 const statusBadge = inv.paid 
                     ? '<span class="badge badge-success">Payée</span>' 
                     : '<span class="badge badge-danger">Impayée</span>';
@@ -880,8 +925,8 @@
             
             if(type === 'bar' || type === 'line') {
                 defaultOptions.scales = {
-                    x: { grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() } },
-                    y: { grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() }, beginAtZero: true }
+                    x: { grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() }, ticks: { maxRotation: 45, font: { size: 11 } } },
+                    y: { grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim() }, beginAtZero: true, ticks: { callback: function(v) { if(v >= 1000000) return (v/1000000).toFixed(1)+'M'; if(v >= 1000) return (v/1000).toFixed(0)+'K'; return v; }, font: { size: 11 } } }
                 };
             }
 
@@ -920,7 +965,7 @@
                 const unpaid = inv.paid ? 0 : ttc - (inv.amountPaid || 0);
                 creanceByMonth[m] += unpaid;
                 
-                const cName = inv.client ? inv.client.nom : 'Inconnu';
+                const cName = getClientName(inv);
                 if(!creanceByClient[cName]) creanceByClient[cName] = 0;
                 creanceByClient[cName] += unpaid;
 
@@ -961,7 +1006,7 @@
                         }
                         if(art.isLocation) {
                             const type = art.locEquipment || 'Autre';
-                            const lineTotal = (art.qte || 0) * (art.pu || 0);
+                            const lineTotal = art.montantHT || ((art.qte || 0) * (art.prixUHT || art.pu || 0));
                             if(!locByType[type]) locByType[type] = 0;
                             locByType[type] += lineTotal;
                             locByMonth[m] += lineTotal;
@@ -1071,26 +1116,22 @@
         }
 
         function downloadFullDashboard() {
-            document.getElementById('loader-overlay').style.display = 'flex';
-            
-            setTimeout(() => {
-                const target = document.getElementById('dashboard-content');
-                html2canvas(target, {
-                    scale: 2,
-                    useCORS: true,
-                    backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()
-                }).then(canvas => {
-                    const link = document.createElement('a');
-                    link.download = 'Dashboard_KPI_Douroub_' + new Date().toISOString().slice(0,10) + '.png';
-                    link.href = canvas.toDataURL('image/png', 1.0);
-                    link.click();
-                    document.getElementById('loader-overlay').style.display = 'none';
-                }).catch(err => {
-                    console.error("Erreur html2canvas:", err);
-                    document.getElementById('loader-overlay').style.display = 'none';
-                    alert("Une erreur est survenue lors de l'export.");
-                });
-            }, 500); // give loader time to render
+            const el = document.getElementById('dashboard-content') || document.getElementById('dashboard-screen');
+            if (!el) { alert('Aucun contenu à exporter'); return; }
+            if (typeof html2canvas === 'undefined') { alert('html2canvas non chargé. Rechargez la page.'); return; }
+            const btn = document.querySelector('.export-btn') || document.querySelector('.btn-primary-action');
+            if (btn) { btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>Export en cours...'; btn.disabled = true; }
+            html2canvas(el, { scale: 2, useCORS: true, backgroundColor: document.documentElement.getAttribute('data-theme') === 'dark' ? '#0f172a' : '#f8fafc' }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'Dashboard_KPI_' + new Date().toISOString().slice(0,10) + '.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                if (btn) { btn.innerHTML = '<i class="fa fa-camera me-1"></i>Exporter PNG'; btn.disabled = false; }
+            }).catch(err => {
+                console.error(err);
+                alert('Erreur export: ' + err.message);
+                if (btn) { btn.innerHTML = '<i class="fa fa-camera me-1"></i>Exporter PNG'; btn.disabled = false; }
+            });
         }
 
     </script>

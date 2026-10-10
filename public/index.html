@@ -730,14 +730,21 @@ th.sortable.sorted-desc .sort-icon::after {
         </section>
 
 <!-- REPORTS VIEW -->
+<!-- RAPPORT & KPI VIEW -->
 <section id="view-reports" class="app-view d-none">
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
             <h2 class="mb-0 fw-bold" style="color:var(--text-main);"><i class="fa fa-chart-pie me-2 text-primary"></i>Rapport & KPI</h2>
-            <div class="text-muted small">Vue unifiée de toutes les activités : Transport, Immobilisation et Location.</div>
+            <div class="text-muted small">Analyse complète de l'activité : Transport, Immobilisation, Location</div>
         </div>
         <div class="d-flex gap-2">
             <button class="btn btn-success shadow-sm" onclick="exportFullReportExcel()"><i class="fa fa-file-excel me-1"></i>Export Excel</button>
+            <button class="btn shadow-sm fw-bold" style="background:linear-gradient(135deg,#dc3545,#b91c1c);color:white;" onclick="showView('immobilisation')">
+                <i class="fa fa-stopwatch me-1"></i> Immobilisation
+            </button>
+            <button class="btn shadow-sm fw-bold" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:white;" onclick="showView('location')">
+                <i class="fa fa-crane me-1"></i> Location
+            </button>
         </div>
     </div>
 
@@ -746,13 +753,13 @@ th.sortable.sorted-desc .sort-icon::after {
         <div class="card__body py-3">
             <div class="row g-2 align-items-center">
                 <div class="col-md-3">
-                    <label class="form-label small fw-bold text-muted mb-1">Client</label>
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-user me-1"></i>Client</label>
                     <select id="rptFilterClient" class="form-select form-select-sm" onchange="updateReportsView()">
                         <option value="all">Tous les clients</option>
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label small fw-bold text-muted mb-1">Année</label>
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calendar me-1"></i>Année</label>
                     <select id="rptFilterYear" class="form-select form-select-sm" onchange="updateReportsView()">
                         <option value="">Toutes</option>
                         <option value="2024">2024</option>
@@ -761,7 +768,7 @@ th.sortable.sorted-desc .sort-icon::after {
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label small fw-bold text-muted mb-1">Type</label>
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-filter me-1"></i>Type</label>
                     <select id="rptFilterType" class="form-select form-select-sm" onchange="updateReportsView()">
                         <option value="all">Tous</option>
                         <option value="transport">Transport</option>
@@ -770,7 +777,7 @@ th.sortable.sorted-desc .sort-icon::after {
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label small fw-bold text-muted mb-1">Période</label>
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calendar-alt me-1"></i>Période</label>
                     <select id="rptFilterPeriod" class="form-select form-select-sm" onchange="updateReportsView()">
                         <option value="all">Toute l'année</option>
                         <option value="S1">S1 (Jan-Juin)</option>
@@ -786,33 +793,74 @@ th.sortable.sorted-desc .sort-icon::after {
         </div>
     </div>
 
-    <!-- GLOBAL KPI CARDS -->
+    <!-- KPI CARDS -->
     <div class="row g-3 mb-4" id="rptKpiContainer"></div>
-
-    <!-- TABS: Transport / Immobilisation / Location -->
-    <ul class="nav nav-pills mb-4 gap-2" id="rptTabs">
-        <li class="nav-item"><a class="nav-link active" data-bs-toggle="pill" href="#rptTabAll" onclick="renderRptCharts('all')"><i class="fa fa-chart-pie me-1"></i>Vue Globale</a></li>
-        <li class="nav-item"><a class="nav-link" data-bs-toggle="pill" href="#rptTabTransport" onclick="renderRptCharts('transport')"><i class="fa fa-truck me-1"></i>Transport</a></li>
-        <li class="nav-item"><a class="nav-link" data-bs-toggle="pill" href="#rptTabImmo" onclick="renderRptCharts('immobilisation')" style="color:#dc3545;"><i class="fa fa-stopwatch me-1"></i>Immobilisation</a></li>
-        <li class="nav-item"><a class="nav-link" data-bs-toggle="pill" href="#rptTabLoc" onclick="renderRptCharts('location')" style="color:#f59e0b;"><i class="fa fa-crane me-1"></i>Location</a></li>
-    </ul>
 
     <!-- CHARTS -->
     <div class="row g-3 mb-4">
-        <div class="col-lg-6"><div class="card h-100 shadow-sm border-0"><div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-chart-bar me-2 text-primary"></i>CA par Mois</h6></div><div class="card__body pt-2"><div style="height:280px;"><canvas id="rptChartRevenue"></canvas></div></div></div></div>
-        <div class="col-lg-6"><div class="card h-100 shadow-sm border-0"><div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-chart-pie me-2 text-success"></i>Répartition par Type de Service</h6></div><div class="card__body pt-2"><div style="height:280px;"><canvas id="rptChartTypeBreakdown"></canvas></div></div></div></div>
-        <div class="col-lg-4"><div class="card h-100 shadow-sm border-0"><div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-money-bill me-2 text-warning"></i>CA par Client</h6></div><div class="card__body pt-2"><div style="height:260px;"><canvas id="rptChartClients"></canvas></div></div></div></div>
-        <div class="col-lg-4"><div class="card h-100 shadow-sm border-0"><div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-hand-holding-dollar me-2 text-danger"></i>Créance par Client</h6></div><div class="card__body pt-2"><div style="height:260px;"><canvas id="rptChartDebt"></canvas></div></div></div></div>
-        <div class="col-lg-4"><div class="card h-100 shadow-sm border-0"><div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-credit-card me-2 text-info"></i>Mode de Paiement</h6></div><div class="card__body pt-2"><div style="height:260px;"><canvas id="rptChartPayment"></canvas></div></div></div></div>
+        <div class="col-lg-8">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-chart-bar me-2 text-primary"></i>CA par Mois</h6></div>
+                <div class="card__body pt-2"><div style="height:300px;"><canvas id="rptChartRevenue"></canvas></div></div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-chart-pie me-2 text-success"></i>Répartition par Type</h6></div>
+                <div class="card__body pt-2"><div style="height:300px;"><canvas id="rptChartTypeBreakdown"></canvas></div></div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-users me-2 text-warning"></i>CA par Client</h6></div>
+                <div class="card__body pt-2"><div style="height:260px;"><canvas id="rptChartClients"></canvas></div></div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-hand-holding-dollar me-2 text-danger"></i>Créance par Client</h6></div>
+                <div class="card__body pt-2"><div style="height:260px;"><canvas id="rptChartDebt"></canvas></div></div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card__header border-0 pt-3 px-4"><h6 class="fw-bold mb-0"><i class="fa fa-credit-card me-2 text-info"></i>Mode de Paiement</h6></div>
+                <div class="card__body pt-2"><div style="height:260px;"><canvas id="rptChartPayment"></canvas></div></div>
+            </div>
+        </div>
     </div>
 
-    <!-- DETAIL TABLE -->
+    <!-- DETAILED TABLE (ORIGINAL STYLE) -->
     <div class="card shadow-sm border-0">
-        <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between">
+        <div class="card__header border-0 pt-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h6 class="fw-bold mb-0"><i class="fa fa-table me-2"></i>Détail des Factures</h6>
-            <input type="text" id="rptTableSearch" class="form-control form-control-sm" placeholder="Recherche..." style="width:250px;" oninput="renderRptTable()">
+            <div class="d-flex gap-2">
+                <input type="text" id="rptTableSearch" class="form-control form-control-sm" placeholder="Recherche..." style="width:220px;" oninput="renderRptTable()">
+            </div>
         </div>
-        <div class="card__body p-0"><div class="table-responsive" style="max-height:60vh;"><table class="table table-hover align-middle mb-0"><thead class="table-light sticky-top"><tr class="text-uppercase small text-center" style="font-size:0.75rem;"><th>Date</th><th>N°</th><th style="text-align:left;">Client</th><th>Type</th><th>Montant HT</th><th>TTC</th><th>Statut</th></tr></thead><tbody id="rptTableBody"></tbody></table></div></div>
+        <div class="card__body p-0">
+            <div class="table-responsive" style="max-height:60vh;overflow-y:auto;">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light sticky-top shadow-sm">
+                        <tr class="text-uppercase small text-center" style="font-size:0.75rem;">
+                            <th>Date</th>
+                            <th>N° Facture</th>
+                            <th style="text-align:left;">Client</th>
+                            <th>Type</th>
+                            <th>Destination</th>
+                            <th>BL</th>
+                            <th>Montant HT</th>
+                            <th>TVA</th>
+                            <th>Montant TTC</th>
+                            <th>Statut</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rptTableBody"></tbody>
+                    <tfoot id="rptTableFoot"></tfoot>
+                </table>
+            </div>
+        </div>
     </div>
 </section>
 

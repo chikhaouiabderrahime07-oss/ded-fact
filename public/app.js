@@ -596,7 +596,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Filtre les options selon la recherche
-  searchInput.addEventListener('input', () => {
+  if (searchInput) searchInput.addEventListener('input', () => {
     const term = searchInput.value.toLowerCase();
     optionsContainer.querySelectorAll('.client-option').forEach(opt => {
       const name = opt.querySelector('.client-name').textContent.toLowerCase();
@@ -607,7 +607,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Ouvre/ferme le dropdown
   pickerTrigger.addEventListener('click', () => {
     dropdown.classList.toggle('show');
-    searchInput.focus();
+    if (searchInput) searchInput.focus();
   });
 
   // Fermer si clic en dehors
@@ -1228,25 +1228,32 @@ function renderStep1() {
             if (found) currentClientName = found.nom;
         }
 
-        const isImmo = currentInvoice.invoiceType === 'immobilisation' || 
-            (currentInvoice.articles && currentInvoice.articles.length > 0 && currentInvoice.articles[0].isImmobilisation);
+        const isImmo = currentInvoice.invoiceType === 'immobilisation';
+        const isLoc = currentInvoice.invoiceType === 'location';
+        const isTransport = !isImmo && !isLoc;
 
         container.innerHTML = `
             <h6>Étape 1/5 - Sélection client & Prestation</h6>
             
             <div class="mb-3 p-2 bg-light border rounded">
                 <label class="form-label fw-bold mb-2 small text-uppercase text-muted"><i class="fa fa-tag me-1 text-primary"></i>Nature principale de la facture :</label>
-                <div class="d-flex gap-4">
+                <div class="d-flex gap-3 flex-wrap">
                     <div class="form-check">
-                        <input class="form-check-input" type="radio" name="wizardInvoiceType" id="typeTransport" value="transport" ${!isImmo ? 'checked' : ''}>
+                        <input class="form-check-input" type="radio" name="wizardInvoiceType" id="typeTransport" value="transport" ${isTransport ? 'checked' : ''}>
                         <label class="form-check-label fw-semibold" for="typeTransport" style="cursor:pointer;">
-                            <i class="fa fa-truck text-primary me-1"></i> Prestation de Transport
+                            <i class="fa fa-truck text-primary me-1"></i> Transport
                         </label>
                     </div>
                     <div class="form-check">
                         <input class="form-check-input" type="radio" name="wizardInvoiceType" id="typeImmobilisation" value="immobilisation" ${isImmo ? 'checked' : ''}>
-                        <label class="form-check-label fw-semibold" for="typeImmobilisation" style="color: var(--immo-primary); cursor:pointer;">
-                            <i class="fa fa-stopwatch me-1" style="color: var(--immo-primary);"></i> Frais d'Immobilisation / Attente
+                        <label class="form-check-label fw-semibold" for="typeImmobilisation" style="color:#dc3545; cursor:pointer;">
+                            <i class="fa fa-stopwatch me-1" style="color:#dc3545;"></i> Immobilisation
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="wizardInvoiceType" id="typeLocation" value="location" ${isLoc ? 'checked' : ''}>
+                        <label class="form-check-label fw-semibold" for="typeLocation" style="color:#d97706; cursor:pointer;">
+                            <i class="fa fa-crane me-1" style="color:#f59e0b;"></i> Location / Engin
                         </label>
                     </div>
                 </div>
@@ -1287,6 +1294,8 @@ function renderStep1() {
                 if (currentInvoice.articles && currentInvoice.articles.length === 1) {
                     if (picked === 'immobilisation') {
                         if (typeof setArticleType === 'function') setArticleType(0, 'immobilisation');
+                    } else if (picked === 'location') {
+                        if (typeof setArticleType === 'function') setArticleType(0, 'location');
                     } else {
                         if (typeof setArticleType === 'function') setArticleType(0, 'transport');
                     }
@@ -1469,6 +1478,7 @@ function renderStep3() {
   container.innerHTML = `
     <h6>Étape 3/5 - Références et Palettes</h6>
     <div class="row g-3">
+      ${currentInvoice.invoiceType !== 'immobilisation' && currentInvoice.invoiceType !== 'location' ? `
       <div class="col-md-12">
         <label class="form-label">Nombre de palettes</label>
         <input id="inputPalettes" type="number" class="form-control" value="${currentInvoice.palettes}">
@@ -1477,6 +1487,7 @@ function renderStep3() {
         <label class="form-label">Références BL <small class="text-muted">(ex: BL001)</small></label>
         <input id="blReferences" class="form-control" list="datalistBL" value="${currentInvoice.blReferences||''}">
       </div>
+      ` : ''}
       <div class="col-md-6">
         <label class="form-label">Référence Contrat</label>
         <input id="contratRef" class="form-control" list="datalistContrat" value="${currentInvoice.contratRef||''}">
@@ -1485,6 +1496,7 @@ function renderStep3() {
         <label class="form-label">Référence Bon de commande</label>
         <input id="bdcRef" class="form-control" list="datalistBDC" value="${currentInvoice.bdcRef||''}">
       </div>
+      ${currentInvoice.invoiceType === 'transport' || (!currentInvoice.invoiceType) ? `
       <div class="col-md-6">
         <label class="form-label">Réf. Feuille de route</label>
         <input id="refFeuilleRoute" class="form-control" list="datalistFeuilleRoute" value="${currentInvoice.refFeuilleRoute||''}">
@@ -1493,6 +1505,7 @@ function renderStep3() {
         <label class="form-label">Réf. Bon de transfert</label>
         <input id="refBonTransfert" class="form-control" list="datalistBonTransfert" value="${currentInvoice.refBonTransfert||''}">
       </div>
+      ` : ''}
     </div>`;
   
   // Add event listeners
@@ -8895,6 +8908,7 @@ async function loadShareLinks() {
                     <div class="d-flex gap-1">
                         <button class="btn btn-outline-primary btn-sm" onclick="copyShareLink('${l.token}')" title="Copier"><i class="fa fa-copy"></i></button>
                         <button class="btn btn-outline-warning btn-sm" onclick="extendShareLink('${l.token}')" title="Prolonger"><i class="fa fa-calendar-plus"></i></button>
+                        <button class="btn btn-outline-info btn-sm" onclick="changeShareLinkPassword('${l.token}')" title="Changer mot de passe"><i class="fa fa-key"></i></button>
                         <button class="btn btn-outline-danger btn-sm" onclick="deleteShareLink('${l.token}')" title="Supprimer"><i class="fa fa-trash"></i></button>
                     </div>
                 </div>
@@ -9317,27 +9331,39 @@ function renderRptTable() {
     const data = getFilteredRptInvoices();
     const search = (document.getElementById('rptTableSearch')?.value || '').toLowerCase();
     const tbody = document.getElementById('rptTableBody');
+    const tfoot = document.getElementById('rptTableFoot');
     if (!tbody) return;
     const filtered = search ? data.filter(i => { const c = clients.find(cl=>cl.id===i.clientId); return ((c?c.nom:'')+i.number+(i.date||'')).toLowerCase().includes(search); }) : data;
-    if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Aucune facture trouvée.</td></tr>'; return; }
+    if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-4">Aucune facture trouv\u00e9e.</td></tr>'; if(tfoot) tfoot.innerHTML=''; return; }
+    let totalHT=0, totalTVA=0, totalTTC=0;
     tbody.innerHTML = filtered.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(inv => {
         const c = clients.find(cl=>cl.id===inv.clientId);
         const hasImmo = inv.articles && inv.articles.some(a=>a.isImmobilisation);
         const hasLoc = inv.articles && inv.articles.some(a=>a.isLocation);
-        let typeBadge = '<span class="badge bg-primary">Transport</span>';
-        if (hasImmo) typeBadge = '<span class="badge bg-danger">Immobilisation</span>';
-        if (hasLoc) typeBadge = '<span class="badge" style="background:#f59e0b;">Location</span>';
-        const status = inv.paid ? '<span class="badge bg-success">Payée</span>' : '<span class="badge bg-danger">Impayée</span>';
+        let typeBadge = '<span class="badge bg-primary"><i class="fa fa-truck me-1"></i>Transport</span>';
+        if (hasImmo) typeBadge = '<span class="badge bg-danger"><i class="fa fa-stopwatch me-1"></i>Immo</span>';
+        if (hasLoc) typeBadge = '<span class="badge" style="background:#f59e0b;"><i class="fa fa-crane me-1"></i>Location</span>';
+        const status = inv.paid ? '<span class="badge bg-success">Pay\u00e9e</span>' : '<span class="badge bg-danger">Impay\u00e9e</span>';
+        let dest = '';
+        if (inv.articles) inv.articles.forEach(a => { if(a.selectedDestination) dest = a.selectedDestination; if(a.wilayaDestination) dest = a.wilayaDestination; });
+        const bl = inv.blReferences || '-';
+        const ht = inv.totals?.ht || 0; const tva = inv.totals?.tva || 0; const ttc = inv.totals?.ttc || 0;
+        totalHT += ht; totalTVA += tva; totalTTC += ttc;
         return `<tr class="text-center small">
             <td>${new Date(inv.date).toLocaleDateString('fr-FR')}</td>
-            <td class="fw-bold">${inv.number}</td>
+            <td class="fw-bold text-primary">${inv.number}</td>
             <td style="text-align:left;" class="fw-semibold">${c?c.nom:'Inconnu'}</td>
             <td>${typeBadge}</td>
-            <td class="fw-bold">${formatCurrency(inv.totals?.ht||0)}</td>
-            <td class="fw-bold">${formatCurrency(inv.totals?.ttc||0)}</td>
+            <td class="small">${dest || '-'}</td>
+            <td class="small">${bl}</td>
+            <td class="fw-bold">${formatCurrency(ht)}</td>
+            <td>${formatCurrency(tva)}</td>
+            <td class="fw-bold">${formatCurrency(ttc)}</td>
             <td>${status}</td>
+            <td><button class="btn btn-outline-primary btn-sm" onclick="openViewInvoiceModal(invoices.find(i=>i.id===${inv.id}))"><i class="fa fa-eye"></i></button></td>
         </tr>`;
     }).join('');
+    if (tfoot) tfoot.innerHTML = `<tr class="fw-bold text-center bg-light"><td colspan="6">TOTAUX</td><td>${formatCurrency(totalHT)}</td><td>${formatCurrency(totalTVA)}</td><td>${formatCurrency(totalTTC)}</td><td colspan="2"></td></tr>`;
 }
 
 function resetRptFilters() {
@@ -9363,3 +9389,15 @@ function exportFullReportExcel() {
     XLSX.utils.book_append_sheet(wb, sheet, 'Rapport');
     XLSX.writeFile(wb, `Rapport_KPI_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
+
+window.changeShareLinkPassword = async function(token) {
+    const newPwd = prompt('Nouveau mot de passe :');
+    if (!newPwd) return;
+    try {
+        await fetch(API_URL + '/api/share-links/' + token + '/password', {
+            method: 'PUT', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({password: newPwd})
+        });
+        alert('\u2705 Mot de passe modifi\u00e9 !');
+    } catch(e) { alert('Erreur'); }
+};
