@@ -9520,7 +9520,7 @@ function renderRptKPIs(data) {
         if (inv.blReferences) {
             blCount += inv.blReferences.split(',').filter(s => s.trim().length > 0).length;
         } else if (inv.articles) {
-            blCount += inv.articles.reduce((s, a) => s + (parseInt(a.quantity) || 1), 0);
+            blCount += inv.articles.reduce((s, a) => s + (parseInt(a.qte) || 0), 0);
         }
         if (inv.articles) inv.articles.forEach(a => {
             if (a.isImmobilisation) caImmo += (a.montantHT || 0);
@@ -9749,7 +9749,7 @@ function renderRptCharts(activeTab) {
         if (inv.blReferences) {
             cnt = inv.blReferences.split(',').filter(s => s.trim().length > 0).length;
         } else if (inv.articles) {
-            cnt = inv.articles.reduce((s, a) => s + (parseInt(a.quantity) || 1), 0);
+            cnt = inv.articles.reduce((s, a) => s + (parseInt(a.qte) || 0), 0);
         }
         blByMonth[m] += cnt;
     });
