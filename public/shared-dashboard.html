@@ -612,6 +612,7 @@
         .chart-card:nth-child(7) { animation-delay: 0.36s; }
         .chart-card:nth-child(8) { animation-delay: 0.42s; }
         .chart-card:nth-child(9) { animation-delay: 0.48s; }
+        .chart-card:nth-child(10) { animation-delay: 0.54s; }
         .chart-card-header {
             display: flex;
             align-items: center;
@@ -1251,12 +1252,13 @@
                     </div>
                 </div>
 
-                <!-- ROW 4: LOGISTIQUE ET IMMOBILISATION -->
+                <!-- ROW 4: LOGISTIQUE ET ITINÉRAIRES -->
                 <!-- CHART 7: NOMBRE DE BL PAR MOIS (LINE) -->
                 <div class="chart-card col-6">
                     <div class="chart-card-header">
                         <h4 class="chart-card-title"><i class="fas fa-truck-fast text-warning"></i> 7. Nombre de BL réalisé par Mois</h4>
                         <div class="chart-toolbar">
+                            <button class="btn-chart-tool" onclick="toggleDataLabels('chart-nb-bl-mois')" title="Afficher/Masquer Chiffres"><i class="fas fa-tag"></i></button>
                             <button class="btn-chart-tool" onclick="openFullscreenModal('chart-nb-bl-mois', '7. Nombre de BL réalisé par Mois')" title="Plein Écran"><i class="fas fa-expand"></i></button>
                             <button class="btn-chart-tool" onclick="downloadChart('chart-nb-bl-mois', 'Nombre_de_BL_par_Mois')" title="Télécharger Image"><i class="fas fa-download"></i></button>
                         </div>
@@ -1270,12 +1272,34 @@
                     </div>
                 </div>
 
-                <!-- CHART 8: IMMOBILISATION PAR MOIS (BAR) -->
+                <!-- CHART 8: TOP TRAJETS & ITINÉRAIRES (HORIZONTAL BAR) -->
                 <div class="chart-card col-6">
                     <div class="chart-card-header">
-                        <h4 class="chart-card-title"><i class="fas fa-stopwatch text-danger"></i> 8. Immobilisation par Mois (Heures d'attente)</h4>
+                        <h4 class="chart-card-title"><i class="fas fa-route text-success"></i> 8. Top Trajets & Itinéraires (Nombre de BL)</h4>
                         <div class="chart-toolbar">
-                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-immo-mois', '8. Immobilisation par Mois (Heures d\'attente)')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="toggleDataLabels('chart-trajets-bl')" title="Afficher/Masquer Chiffres"><i class="fas fa-tag"></i></button>
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-trajets-bl', '8. Top Trajets & Itinéraires (Nombre de BL)')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="downloadChart('chart-trajets-bl', 'Top_Trajets_Itineraires_BL')" title="Télécharger Image"><i class="fas fa-download"></i></button>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-wrap">
+                        <canvas id="chart-trajets-bl"></canvas>
+                        <div id="empty-chart-trajets-bl" class="chart-empty-state">
+                            <i class="fas fa-route chart-empty-icon"></i>
+                            <div class="chart-empty-title">Aucun trajet trouvé</div>
+                            <div class="chart-empty-sub">Les itinéraires apparaîtront ici</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ROW 5: IMMOBILISATION ET LOCATION -->
+                <!-- CHART 9: IMMOBILISATION PAR MOIS (BAR) -->
+                <div class="chart-card col-6">
+                    <div class="chart-card-header">
+                        <h4 class="chart-card-title"><i class="fas fa-stopwatch text-danger"></i> 9. Immobilisation par Mois (Heures d'attente)</h4>
+                        <div class="chart-toolbar">
+                            <button class="btn-chart-tool" onclick="toggleDataLabels('chart-immo-mois')" title="Afficher/Masquer Chiffres"><i class="fas fa-tag"></i></button>
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-immo-mois', '9. Immobilisation par Mois (Heures d\'attente)')" title="Plein Écran"><i class="fas fa-expand"></i></button>
                             <button class="btn-chart-tool" onclick="downloadChart('chart-immo-mois', 'Immobilisation_par_Mois')" title="Télécharger Image"><i class="fas fa-download"></i></button>
                         </div>
                     </div>
@@ -1289,13 +1313,12 @@
                     </div>
                 </div>
 
-                <!-- ROW 5: LOCATION D'ENGINS -->
-                <!-- CHART 9: LOCATION PAR ENGIN (DOUGHNUT) -->
-                <div class="chart-card col-12">
+                <!-- CHART 10: LOCATION PAR ENGIN (DOUGHNUT) -->
+                <div class="chart-card col-6">
                     <div class="chart-card-header">
-                        <h4 class="chart-card-title"><i class="fa-solid fa-tractor text-warning"></i> 9. Location par Engin (Grues et Matériel)</h4>
+                        <h4 class="chart-card-title"><i class="fa-solid fa-tractor text-warning"></i> 10. Location par Engin (Grues et Matériel)</h4>
                         <div class="chart-toolbar">
-                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-loc-equip', '9. Location par Engin (Grues et Matériel)')" title="Plein Écran"><i class="fas fa-expand"></i></button>
+                            <button class="btn-chart-tool" onclick="openFullscreenModal('chart-loc-equip', '10. Location par Engin (Grues et Matériel)')" title="Plein Écran"><i class="fas fa-expand"></i></button>
                             <button class="btn-chart-tool" onclick="downloadChart('chart-loc-equip', 'Location_par_Engin')" title="Télécharger Image"><i class="fas fa-download"></i></button>
                         </div>
                     </div>
@@ -1410,6 +1433,32 @@
             if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M DA';
             if (n >= 1000) return (n / 1000).toFixed(0) + 'K DA';
             return (n || 0).toLocaleString('fr-DZ') + ' DA';
+        }
+
+        // Robust BL Counter: counts explicit BL references or articles quantity / rotations
+        function getInvoiceBLCount(inv) {
+            if (!inv) return 0;
+            if (inv.blReferences && typeof inv.blReferences === 'string' && inv.blReferences.trim()) {
+                const parts = inv.blReferences.split(/[,;\n\/\s]+/).filter(s => s.trim().length > 0);
+                if (parts.length > 0) return parts.length;
+            }
+            if (inv.bl && typeof inv.bl === 'string' && inv.bl.trim()) {
+                const parts = inv.bl.split(/[,;\n\/\s]+/).filter(s => s.trim().length > 0);
+                if (parts.length > 0) return parts.length;
+            }
+            if (inv.articles && Array.isArray(inv.articles) && inv.articles.length > 0) {
+                let artSum = 0;
+                inv.articles.forEach(art => {
+                    if (art.bl || art.blReference || art.refBL) {
+                        artSum++;
+                    } else if (!art.isImmobilisation && !art.isLocation) {
+                        artSum += (parseInt(art.qte || art.quantity) || 0);
+                    }
+                });
+                if (artSum > 0) return artSum;
+            }
+            // By default, every issued invoice represents at least 1 delivery rotation (BL)
+            return 1;
         }
 
         // Animated Counters
@@ -1875,9 +1924,7 @@
                 }
 
                 // BLs
-                if (inv.blReferences) {
-                    totalBL += inv.blReferences.split(',').filter(b => b.trim().length > 0).length;
-                }
+                totalBL += getInvoiceBLCount(inv);
 
                 // Articles (Immo & Location)
                 if (inv.articles && Array.isArray(inv.articles)) {
@@ -1940,6 +1987,7 @@
             const immoByMonth = Array(12).fill(0);
             const clientCA = {};
             const clientCreance = {};
+            const trajetsMap = {};
             let virAmount = 0, chqAmount = 0, unpaidAmount = 0;
             let caTransport = 0, caImmoTotal = 0, caLocTotal = 0;
             const equipCA = {};
@@ -1971,8 +2019,29 @@
                 }
 
                 // BLs
-                if (inv.blReferences && m >= 0 && m < 12) {
-                    blByMonth[m] += inv.blReferences.split(',').filter(b => b.trim().length > 0).length;
+                const invBL = getInvoiceBLCount(inv);
+                if (m >= 0 && m < 12) {
+                    blByMonth[m] += invBL;
+                }
+
+                // Trajets / Itinéraires (Départ ➝ Destination)
+                if (inv.articles && Array.isArray(inv.articles) && inv.articles.length > 0) {
+                    inv.articles.forEach(art => {
+                        let dest = (art.wilayaDestination || art.selectedDestination || art.destination || art.wilaya || '').trim();
+                        let dep = (art.wilayaDepart || art.depart || 'Guedila').trim();
+                        if (dest && dest !== 'Inconnu') {
+                            const key = `${dep} ➝ ${dest}`;
+                            const qty = parseInt(art.qte || art.quantity) || 1;
+                            trajetsMap[key] = (trajetsMap[key] || 0) + qty;
+                        } else if (art.designation && art.designation.includes('->')) {
+                            const key = art.designation.trim();
+                            const qty = parseInt(art.qte || art.quantity) || 1;
+                            trajetsMap[key] = (trajetsMap[key] || 0) + qty;
+                        }
+                    });
+                } else if (inv.destination) {
+                    const key = `Guedila ➝ ${inv.destination}`;
+                    trajetsMap[key] = (trajetsMap[key] || 0) + invBL;
                 }
 
                 // Articles
@@ -2011,16 +2080,27 @@
             
             buildDoughnutChart('chart-repart-type', typeLabels, typeData, typeColors, 'empty-chart-repart-type');
 
-            // 3. TOP CRÉANCES CLIENTS (HORIZONTAL BAR)
+            // 3. TOP CLIENTS (CA TTC) (HORIZONTAL BAR)
+            const sortedCA = Object.entries(clientCA).sort((a,b) => b[1] - a[1]).slice(0, 8);
+            buildHorizontalBarChart('chart-top-clients',
+                sortedCA.map(c => c[0].length > 25 ? c[0].substring(0, 23) + '…' : c[0]),
+                sortedCA.map(c => c[1]),
+                '#3b82f6',
+                'empty-chart-top-clients',
+                true
+            );
+
+            // 4. CRÉANCES PAR CLIENT (HORIZONTAL BAR)
             const sortedCreance = Object.entries(clientCreance).sort((a,b) => b[1] - a[1]).slice(0, 8);
             buildHorizontalBarChart('chart-creance-client', 
                 sortedCreance.map(c => c[0].length > 25 ? c[0].substring(0, 23) + '…' : c[0]),
                 sortedCreance.map(c => c[1]),
                 '#ef4444',
-                'empty-chart-creance-client'
+                'empty-chart-creance-client',
+                true
             );
 
-            // 4. CRÉANCES PAR MOIS (BAR)
+            // 5. CRÉANCES PAR MOIS (BAR)
             buildBarChart('chart-creance-mois', monthsFr, [{
                 label: 'Créances (DA)',
                 data: creanceByMonth,
@@ -2028,25 +2108,26 @@
                 borderRadius: 6
             }], 'empty-chart-creance-mois');
 
-            // 5. MODES DE PAIEMENT (DOUGHNUT)
+            // 6. MODES DE PAIEMENT (DOUGHNUT)
             const payLabels = ['Virement Bancaire', 'Chèque Bancaire', 'Créances Impayées'];
             const payData = [virAmount, chqAmount, unpaidAmount];
             const payColors = ['#10b981', '#3b82f6', '#ef4444'];
             buildDoughnutChart('chart-mode-paiement', payLabels, payData, payColors, 'empty-chart-mode-paiement');
 
-            // 6. VOLUME BL PAR MOIS (LINE)
+            // 7. VOLUME BL PAR MOIS (LINE)
             buildLineChart('chart-nb-bl-mois', monthsFr, blByMonth, '#f59e0b', 'empty-chart-nb-bl-mois');
 
-            // 7. TOP CLIENTS (CA TTC) (HORIZONTAL BAR)
-            const sortedCA = Object.entries(clientCA).sort((a,b) => b[1] - a[1]).slice(0, 8);
-            buildHorizontalBarChart('chart-top-clients',
-                sortedCA.map(c => c[0].length > 25 ? c[0].substring(0, 23) + '…' : c[0]),
-                sortedCA.map(c => c[1]),
-                '#3b82f6',
-                'empty-chart-top-clients'
+            // 8. TOP TRAJETS & ITINÉRAIRES (HORIZONTAL BAR)
+            const sortedTrajets = Object.entries(trajetsMap).sort((a,b) => b[1] - a[1]).slice(0, 8);
+            buildHorizontalBarChart('chart-trajets-bl',
+                sortedTrajets.map(t => t[0].length > 28 ? t[0].substring(0, 26) + '…' : t[0]),
+                sortedTrajets.map(t => t[1]),
+                '#10b981',
+                'empty-chart-trajets-bl',
+                false
             );
 
-            // 8. IMMOBILISATION PAR MOIS (BAR)
+            // 9. IMMOBILISATION PAR MOIS (BAR)
             buildBarChart('chart-immo-mois', monthsFr, [{
                 label: 'Heures Immobilisées',
                 data: immoByMonth,
@@ -2054,7 +2135,7 @@
                 borderRadius: 6
             }], 'empty-chart-immo-mois', false);
 
-            // 9. LOCATION D'ENGINS (DOUGHNUT)
+            // 10. LOCATION D'ENGINS (DOUGHNUT)
             const eqLabels = Object.keys(equipCA);
             const eqData = Object.values(equipCA);
             buildDoughnutChart('chart-loc-equip', eqLabels, eqData, palette, 'empty-chart-loc-equip');
@@ -2151,7 +2232,7 @@
             });
         }
 
-        function buildHorizontalBarChart(canvasId, labels, data, color, emptyElemId) {
+        function buildHorizontalBarChart(canvasId, labels, data, color, emptyElemId, isCurrency = true) {
             checkEmptyState(data, emptyElemId);
             const ctx = document.getElementById(canvasId);
             if (!ctx) return;
@@ -2191,7 +2272,7 @@
                             borderWidth: 1,
                             padding: 10,
                             callbacks: {
-                                label: (ctx) => ` Montant : ${formatCurrency(ctx.raw)}`
+                                label: (ctx) => isCurrency ? ` Montant : ${formatCurrency(ctx.raw)}` : ` ${ctx.raw} BLs livrés`
                             }
                         },
                         datalabels: {
@@ -2206,7 +2287,9 @@
                             borderRadius: 4,
                             padding: { top: 1.5, bottom: 1.5, left: 3.5, right: 3.5 },
                             font: { weight: '800', size: 9.5 },
-                            formatter: (val) => val > 0 ? (val >= 1e6 ? (val/1e6).toFixed(1)+'M' : (val/1e3).toFixed(0)+'K') : ''
+                            formatter: (val) => isCurrency 
+                                ? (val > 0 ? (val >= 1e6 ? (val/1e6).toFixed(1)+'M' : (val/1e3).toFixed(0)+'K') : '') 
+                                : (val > 0 ? `${val} BL` : '')
                         }
                     },
                     scales: {
@@ -2215,7 +2298,7 @@
                             ticks: {
                                 font: { size: 10 },
                                 color: isDark ? '#94a3b8' : '#64748b',
-                                callback: (v) => v >= 1e6 ? (v/1e6).toFixed(1)+'M' : (v>=1e3 ? (v/1e3).toFixed(0)+'K' : v)
+                                callback: (v) => isCurrency ? (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : (v>=1e3 ? (v/1e3).toFixed(0)+'K' : v)) : v
                             }
                         },
                         y: {
@@ -2559,7 +2642,8 @@
                     typeBadge = '<span class="badge bg-warning-subtle text-warning border rounded-pill">Location</span>';
                 }
 
-                const bls = inv.blReferences || '-';
+                const blCount = getInvoiceBLCount(inv);
+                const bls = (inv.blReferences && String(inv.blReferences).trim()) ? inv.blReferences : `${blCount} BL`;
                 const dateStr = inv.date ? new Date(inv.date).toLocaleDateString('fr-FR') : '-';
 
                 return `
