@@ -1435,13 +1435,14 @@
             return (n || 0).toLocaleString('fr-DZ') + ' DA';
         }
 
-        // BL Counter — exact same logic as main app (app.js line 9520-9523)
+        // BL Counter — qte = nombre de rotations/BL par ligne article (app.js line 6328)
         function getInvoiceBLCount(inv) {
             if (!inv) return 0;
+            if (inv.articles && Array.isArray(inv.articles)) {
+                return inv.articles.reduce((s, a) => s + (parseInt(a.qte) || 0), 0);
+            }
             if (inv.blReferences) {
                 return inv.blReferences.split(',').filter(s => s.trim().length > 0).length;
-            } else if (inv.articles) {
-                return inv.articles.reduce((s, a) => s + (parseInt(a.quantity) || 1), 0);
             }
             return 0;
         }
