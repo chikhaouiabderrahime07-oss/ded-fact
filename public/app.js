@@ -2145,25 +2145,21 @@ function renderArticles() {
                 `;
             } else if (isLoc) {
                 // Location article fields — hours-based (matching real invoice format)
-                const equipTypes = (settings.locationEquipmentTypes || 'Grue 25T, Grue 50T, Grue 75T').split(',').map(t => t.trim());
+                const equipTypes = (settings.locationEquipmentTypes || 'Grue Mobile-25 Tonnes, Grue Mobile-50 Tonnes, Grue Mobile-75 Tonnes, Grue Mobile-100 Tonnes').split(',').map(t => t.trim());
                 let eqHtml = '';
                 equipTypes.forEach(t => { eqHtml += `<option value="${t}" ${t===article.locEquipment?'selected':''}>${t}</option>`; });
                 
                 articleFieldsHtml = `
                     <div class="row g-2 mb-2">
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-cogs text-warning me-1"></i>Type d'équipement *</label>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-cogs text-warning me-1"></i>Engin / Équipement *</label>
                             <select class="form-select form-select-sm" data-field="locEquipment" data-index="${index}" required>${eqHtml}</select>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-weight-hanging text-info me-1"></i>Tonnage</label>
-                            <input type="text" class="form-control form-control-sm" data-field="locTonnage" data-index="${index}" placeholder="Ex: 75 Tonnes" value="${article.locTonnage || ''}">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-map-marker-alt text-warning me-1"></i>Site / Chantier</label>
                             <input type="text" class="form-control form-control-sm" data-field="locSite" data-index="${index}" placeholder="Ex: Base vie Sonatrach Hassi Messaoud..." value="${article.locSite || ''}">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <label class="form-label small fw-bold text-muted mb-1">Opérateur / Chauffeur / Réf</label>
                             <input type="text" class="form-control form-control-sm" data-field="locDriver" data-index="${index}" placeholder="Ex: Mr. Ali - Permis 12345" value="${article.locDriver || ''}">
                         </div>
@@ -2316,14 +2312,6 @@ function renderArticles() {
                     if (field === 'immoTitle') {
                         updateImmobilisationDesignation(index);
                     } else if (field === 'locEquipment') {
-                        // Auto-extract tonnage from equipment name (e.g. "Grue 75T" → "75 Tonnes")
-                        const article = currentInvoice.articles[index];
-                        const match = this.value.match(/(\d+)\s*T/i);
-                        if (match) {
-                            article.locTonnage = match[1] + ' Tonnes';
-                            const tonnageInput = document.querySelector(`[data-field="locTonnage"][data-index="${index}"]`);
-                            if (tonnageInput) tonnageInput.value = article.locTonnage;
-                        }
                         updateLocationDesignation(index);
                     } else if (['wilayaDepart', 'wilayaDestination', 'selectedDestination', 'pricingType'].includes(field)) {
                         updateArticleDesignation(index);
@@ -2388,7 +2376,7 @@ function renderArticles() {
                             updateImmobilisationDesignation(index);
                         }
                     } else if (article.isLocation) {
-                        if (['locSite', 'locPeriodStart', 'locPeriodEnd', 'locDriver', 'locHourStart', 'locHourEnd', 'locEquipment', 'locTonnage', 'locBillableHours', 'qte'].includes(field)) {
+                        if (['locSite', 'locPeriodStart', 'locPeriodEnd', 'locDriver', 'locHourStart', 'locHourEnd', 'locEquipment', 'locBillableHours', 'qte'].includes(field)) {
                             updateLocationDesignation(index);
                         }
                         if (['locPeriodStart','locPeriodEnd','locHourStart','locHourEnd'].includes(field)) {
@@ -8659,13 +8647,10 @@ window.addLocationArticle = function() {
         if (!currentInvoice.articles) currentInvoice.articles = [];
         const newNo = currentInvoice.articles.length + 1;
         const rate = settings.defaultLocationRate || 37500;
-        const defaultEquip = (settings.locationEquipmentTypes || 'Grue 25T, Grue 50T, Grue 75T, Grue Mobile').split(',')[0].trim();
-        // Auto-extract tonnage from equipment name (e.g. "Grue 75T" → "75 Tonnes")
-        const tonnageMatch = defaultEquip.match(/(\d+)\s*T/i);
-        const autoTonnage = tonnageMatch ? tonnageMatch[1] + ' Tonnes' : '';
+        const defaultEquip = (settings.locationEquipmentTypes || 'Grue Mobile-25 Tonnes, Grue Mobile-50 Tonnes, Grue Mobile-75 Tonnes, Grue Mobile-100 Tonnes').split(',')[0].trim();
         currentInvoice.articles.push({
             no: newNo, isLocation: true, isImmobilisation: false, pricingType: 'Location',
-            locEquipment: defaultEquip, locTonnage: autoTonnage, locPeriodStart: '', locPeriodEnd: '',
+            locEquipment: defaultEquip, locPeriodStart: '', locPeriodEnd: '',
             locHourStart: '08:00', locHourEnd: '17:00',
             locSite: '', locDriver: '', locBillableHours: '', locAutoHours: '',
             designation: '', qte: 1,
@@ -8685,9 +8670,8 @@ window.updateLocationDesignation = function(index) {
     const equip = art.locEquipment || 'Engin';
 
     // Title line: LOCATION DE GRUE MOBILE-75 Tonnes (BOLD)
-    let des = `<b>LOCATION DE ${equip.toUpperCase()}`;
-    if (art.locTonnage) des += `-${art.locTonnage}`;
-    des += `</b><br>`;
+    // Equipment name already includes tonnage (e.g. "Grue Mobile-75 Tonnes")
+    let des = `<b>LOCATION DE ${equip.toUpperCase()}</b><br>`;
 
     // Date et heure de départ
     if (art.locPeriodStart) {

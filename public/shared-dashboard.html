@@ -975,11 +975,23 @@
                             <optgroup label="Trimestres"><option value="Q1">T1 (Jan-Mar)</option><option value="Q2">T2 (Avr-Jun)</option><option value="Q3">T3 (Jul-Sep)</option><option value="Q4">T4 (Oct-Déc)</option></optgroup>
                         </select>
                     </div>
-                    <div class="filter-group">
-                        <label><i class="fas fa-user-tie"></i> Client</label>
-                        <select id="filter-client-adv" class="filter-ctrl" onchange="applyFilters()">
-                            <option value="all">Tous les clients</option>
-                        </select>
+                    <div class="filter-group" style="position:relative;min-width:200px;max-width:260px;">
+                        <label><i class="fas fa-user-tie"></i> Clients <span id="client-compare-badge" class="badge bg-primary ms-1" style="font-size:0.6rem;display:none;">0</span></label>
+                        <div class="filter-ctrl" id="filter-client-multi-btn" onclick="toggleClientDropdown()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                            <span id="filter-client-label">Tous les clients</span>
+                            <i class="fas fa-chevron-down" style="font-size:0.55rem;margin-left:4px;"></i>
+                        </div>
+                        <div id="filter-client-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:999;background:var(--bg-card);border:1px solid var(--border);border-radius:0.5rem;box-shadow:0 8px 24px rgba(0,0,0,0.15);max-height:280px;overflow-y:auto;margin-top:2px;">
+                            <div style="padding:4px 8px;border-bottom:1px solid var(--border);">
+                                <input type="text" id="filter-client-search" placeholder="🔍 Rechercher..." style="width:100%;border:none;outline:none;font-size:0.7rem;padding:4px 0;background:transparent;color:var(--text);" oninput="filterClientOptions()">
+                            </div>
+                            <div id="filter-client-options"></div>
+                            <div style="padding:4px 8px;border-top:1px solid var(--border);display:flex;gap:4px;">
+                                <button onclick="selectAllClients()" style="flex:1;font-size:0.62rem;padding:3px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);cursor:pointer;">✅ Tous</button>
+                                <button onclick="deselectAllClients()" style="flex:1;font-size:0.62rem;padding:3px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);cursor:pointer;">❌ Aucun</button>
+                                <button onclick="toggleClientDropdown();applyFilters()" style="flex:1;font-size:0.62rem;padding:3px;border:1px solid var(--accent);border-radius:4px;background:var(--accent);color:white;cursor:pointer;font-weight:700;">Appliquer</button>
+                            </div>
+                        </div>
                     </div>
                     <div class="filter-group">
                         <label><i class="fas fa-truck"></i> Prestation</label>
@@ -1729,7 +1741,6 @@
             const ySel = document.getElementById('filter-year');
             const cSel = document.getElementById('filter-client');
             const ySelAdv = document.getElementById('filter-year-adv');
-            const cSelAdv = document.getElementById('filter-client-adv');
             const dSel = document.getElementById('filter-destination');
             
             const invoices = (globalData.invoices || []).filter(i => i.documentType !== 'proforma');
@@ -1749,13 +1760,25 @@
             if (ySel) ySel.innerHTML = yearHtml.replace('Toutes', 'Toutes les années');
             if (ySelAdv) ySelAdv.innerHTML = yearHtml;
 
-            // Clients
+            // Clients — topbar single select
             const clients = globalData.clients || [];
             const clientHtml = '<option value="all">Tous les clients</option>' + clients.map(c => 
                 `<option value="${c.id || c._id}">${c.nom || c.name}</option>`
             ).join('');
             if (cSel) cSel.innerHTML = clientHtml;
-            if (cSelAdv) cSelAdv.innerHTML = clientHtml;
+
+            // Multi-client checkboxes
+            const optContainer = document.getElementById('filter-client-options');
+            if (optContainer) {
+                optContainer.innerHTML = clients.sort((a,b) => (a.nom||'').localeCompare(b.nom||'')).map(c => {
+                    const cid = c.id || c._id;
+                    const cname = c.nom || c.name || 'Client';
+                    return `<label class="client-chk-row" data-name="${cname.toLowerCase()}" style="display:flex;align-items:center;gap:6px;padding:5px 8px;cursor:pointer;font-size:0.7rem;border-bottom:1px solid var(--border-subtle,#eee);transition:background 0.15s;" onmouseover="this.style.background='rgba(37,99,235,0.06)'" onmouseout="this.style.background=''">
+                        <input type="checkbox" value="${cid}" class="client-multi-chk" onchange="updateClientLabel()" style="accent-color:var(--accent);">
+                        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${cname}</span>
+                    </label>`;
+                }).join('');
+            }
 
             // Destinations / Wilayas
             if (dSel) {
@@ -1775,6 +1798,56 @@
             }
         }
 
+        // ── Multi-client dropdown helpers ──
+        function toggleClientDropdown() {
+            const dd = document.getElementById('filter-client-dropdown');
+            if (dd) dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+        }
+        function filterClientOptions() {
+            const term = (document.getElementById('filter-client-search') || {}).value || '';
+            const lower = term.toLowerCase();
+            document.querySelectorAll('.client-chk-row').forEach(row => {
+                row.style.display = row.dataset.name.includes(lower) ? 'flex' : 'none';
+            });
+        }
+        function getSelectedClientIds() {
+            return Array.from(document.querySelectorAll('.client-multi-chk:checked')).map(c => c.value);
+        }
+        function updateClientLabel() {
+            const selected = getSelectedClientIds();
+            const label = document.getElementById('filter-client-label');
+            const badge = document.getElementById('client-compare-badge');
+            if (!selected.length) {
+                if (label) label.textContent = 'Tous les clients';
+                if (badge) badge.style.display = 'none';
+            } else if (selected.length === 1) {
+                const c = (globalData.clients || []).find(cl => String(cl.id || cl._id) === selected[0]);
+                if (label) label.textContent = c ? (c.nom || c.name) : '1 client';
+                if (badge) badge.style.display = 'none';
+            } else {
+                if (label) label.textContent = selected.length + ' clients';
+                if (badge) { badge.textContent = '⚡ Comparaison'; badge.style.display = 'inline'; }
+            }
+            const cSel = document.getElementById('filter-client');
+            if (cSel) cSel.value = selected.length === 1 ? selected[0] : 'all';
+        }
+        function selectAllClients() {
+            document.querySelectorAll('.client-chk-row[style*="flex"] .client-multi-chk, .client-chk-row:not([style*="none"]) .client-multi-chk').forEach(c => c.checked = true);
+            updateClientLabel();
+        }
+        function deselectAllClients() {
+            document.querySelectorAll('.client-multi-chk').forEach(c => c.checked = false);
+            updateClientLabel();
+        }
+        document.addEventListener('click', function(e) {
+            const dd = document.getElementById('filter-client-dropdown');
+            const btn = document.getElementById('filter-client-multi-btn');
+            if (dd && dd.style.display !== 'none' && btn && !dd.contains(e.target) && !btn.contains(e.target)) {
+                dd.style.display = 'none';
+                applyFilters();
+            }
+        });
+
         function applyFilters() {
             const yearVal = document.getElementById('filter-year').value;
             const clientVal = document.getElementById('filter-client').value;
@@ -1786,19 +1859,18 @@
             const dateStart = (document.getElementById('filter-date-start') || {}).value || '';
             const dateEnd = (document.getElementById('filter-date-end') || {}).value || '';
 
-            // Sync adv filters to topbar
+            // Sync year adv ↔ topbar
             const yAdv = document.getElementById('filter-year-adv');
-            const cAdv = document.getElementById('filter-client-adv');
             if (yAdv && yAdv.value !== yearVal && document.activeElement !== yAdv) yAdv.value = yearVal;
-            if (cAdv && cAdv.value !== clientVal && document.activeElement !== cAdv) cAdv.value = clientVal;
-            // Sync topbar from adv
             const yTop = document.getElementById('filter-year');
-            const cTop = document.getElementById('filter-client');
             if (yAdv && document.activeElement === yAdv && yTop) yTop.value = yAdv.value;
-            if (cAdv && document.activeElement === cAdv && cTop) cTop.value = cAdv.value;
 
             const finalYear = (yAdv && document.activeElement === yAdv) ? yAdv.value : yearVal;
-            const finalClient = (cAdv && document.activeElement === cAdv) ? cAdv.value : clientVal;
+
+            // Multi-client: get selected client IDs from checkboxes
+            const selectedClients = getSelectedClientIds();
+            // Also check topbar single select
+            const topbarClient = clientVal !== 'all' ? clientVal : null;
 
             // Period month ranges
             const periodMonths = {
@@ -1822,10 +1894,14 @@
                 if (periodVal !== 'all' && invDate && periodMonths[periodVal]) {
                     if (!periodMonths[periodVal].includes(invDate.getMonth())) return false;
                 }
-                // Client
-                if (finalClient !== 'all') {
-                    const idMatch = String(inv.clientId) === String(finalClient);
-                    const objMatch = inv.client && String(inv.client._id || inv.client.id) === String(finalClient);
+                // Client — multi-select or topbar single
+                if (selectedClients.length > 0) {
+                    const invCid = String(inv.clientId);
+                    const invObjCid = inv.client ? String(inv.client._id || inv.client.id) : '';
+                    if (!selectedClients.includes(invCid) && !selectedClients.includes(invObjCid)) return false;
+                } else if (topbarClient) {
+                    const idMatch = String(inv.clientId) === String(topbarClient);
+                    const objMatch = inv.client && String(inv.client._id || inv.client.id) === String(topbarClient);
                     if (!idMatch && !objMatch) return false;
                 }
                 // Service type
@@ -1867,7 +1943,7 @@
             if (finalYear !== 'all') activeCount++;
             if (monthVal !== 'all') activeCount++;
             if (periodVal !== 'all') activeCount++;
-            if (finalClient !== 'all') activeCount++;
+            if (selectedClients.length > 0 || topbarClient) activeCount++;
             if (serviceVal !== 'all') activeCount++;
             if (destVal !== 'all') activeCount++;
             if (statusVal !== 'all') activeCount++;
@@ -1886,7 +1962,7 @@
         }
 
         function resetAllFilters() {
-            ['filter-year','filter-client','filter-year-adv','filter-client-adv','filter-month','filter-period','filter-service','filter-destination','filter-status'].forEach(id => {
+            ['filter-year','filter-client','filter-year-adv','filter-month','filter-period','filter-service','filter-destination','filter-status'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.value = 'all';
             });
@@ -1894,6 +1970,9 @@
                 const el = document.getElementById(id);
                 if (el) el.value = '';
             });
+            // Reset multi-client checkboxes
+            deselectAllClients();
+            updateClientLabel();
             applyFilters();
         }
 
