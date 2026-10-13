@@ -9680,10 +9680,24 @@ function populateRptClientFilter() {
     if (!sel) return;
     const curVal = sel.value || 'all';
     let html = '<option value="all">👑 Tous les clients</option>';
-    clients.forEach(c => {
+    const sorted = [...clients].sort((a, b) => (a.nom || '').localeCompare(b.nom || ''));
+    sorted.forEach(c => {
         html += `<option value="${c.id}" ${String(c.id) === String(curVal) ? 'selected' : ''}>${c.nom}</option>`;
     });
     sel.innerHTML = html;
+
+    // Populate multi-client checkbox dropdown
+    const optionsContainer = document.getElementById('rptClientOptions');
+    if (optionsContainer && !optionsContainer.hasChildNodes()) {
+        sorted.forEach(c => {
+            const div = document.createElement('div');
+            div.style.cssText = 'padding:5px 10px;display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.75rem;border-bottom:1px solid #f1f5f9;';
+            div.classList.add('rpt-client-option');
+            div.innerHTML = `<input type="checkbox" class="rpt-client-chk" value="${c.id}" style="cursor:pointer;" onchange="updateRptClientLabel()"><span style="flex:1;">${c.nom || c.name || 'Client'}</span>`;
+            div.addEventListener('click', function(e) { if (e.target.tagName !== 'INPUT') { const cb = div.querySelector('input'); cb.checked = !cb.checked; updateRptClientLabel(); } });
+            optionsContainer.appendChild(div);
+        });
+    }
 }
 
 function populateRptFilters() {
@@ -9701,8 +9715,161 @@ function populateRptFilters() {
     }
 }
 
+// ─── MULTI-CLIENT SELECTOR (Reports/KPI) ───
+function toggleRptClientDropdown() {
+    const dd = document.getElementById('rptClientDropdown');
+    if (dd) dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+}
+function filterRptClientOptions() {
+    const search = (document.getElementById('rptClientSearch')?.value || '').toLowerCase();
+    document.querySelectorAll('.rpt-client-option').forEach(opt => {
+        const name = opt.querySelector('span')?.textContent?.toLowerCase() || '';
+        opt.style.display = name.includes(search) ? 'flex' : 'none';
+    });
+}
+function getSelectedRptClientIds() {
+    return Array.from(document.querySelectorAll('.rpt-client-chk:checked')).map(c => c.value);
+}
+function updateRptClientLabel() {
+    const selected = getSelectedRptClientIds();
+    const label = document.getElementById('rptClientLabel');
+    const badge = document.getElementById('rptClientCompareBadge');
+    if (!selected.length) {
+        if (label) label.textContent = '👑 Tous les clients';
+        if (badge) badge.style.display = 'none';
+    } else if (selected.length === 1) {
+        const c = (clients || []).find(cl => String(cl.id) === selected[0]);
+        if (label) label.textContent = c ? (c.nom || c.name) : '1 client';
+        if (badge) badge.style.display = 'none';
+    } else {
+        if (label) label.textContent = selected.length + ' clients';
+        if (badge) { badge.textContent = '⚡ Comparaison'; badge.style.display = 'inline'; }
+    }
+    const cSel = document.getElementById('rptFilterClient');
+    if (cSel) cSel.value = selected.length === 1 ? selected[0] : 'all';
+}
+function selectAllRptClients() {
+    document.querySelectorAll('.rpt-client-chk').forEach(cb => { if (cb.closest('.rpt-client-option').style.display !== 'none') cb.checked = true; });
+    updateRptClientLabel();
+}
+function deselectAllRptClients() {
+    document.querySelectorAll('.rpt-client-chk').forEach(cb => cb.checked = false);
+    updateRptClientLabel();
+}
+document.addEventListener('click', function(e) {
+    const dd = document.getElementById('rptClientDropdown');
+    const btn = document.getElementById('rptClientBtn');
+    if (dd && dd.style.display !== 'none' && !dd.contains(e.target) && btn && !btn.contains(e.target)) {
+        dd.style.display = 'none';
+    }
+});
+
+// ─── COMPARISON PANEL (Reports/KPI) ───
+const RPT_COMPARE_COLORS = ['#2563eb','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#d97706','#6366f1','#14b8a6'];
+
+function renderRptComparisonPanel(filtered) {
+    const panel = document.getElementById('rptComparisonPanel');
+    if (!panel) return;
+    const selectedClients = getSelectedRptClientIds();
+    if (selectedClients.length < 2) { panel.style.display = 'none'; return; }
+    panel.style.display = 'block';
+    const countEl = document.getElementById('rptCompareCount');
+    if (countEl) countEl.textContent = selectedClients.length + ' clients';
+
+    const clientMetrics = [];
+    selectedClients.forEach((cid, idx) => {
+        const clientObj = (clients || []).find(c => String(c.id) === cid);
+        const clientName = clientObj ? (clientObj.nom || clientObj.name || 'Client') : 'Client #' + (idx + 1);
+        const clientInvs = filtered.filter(inv => String(inv.clientId) === cid);
+        let caTTC = 0, caHT = 0, nbFact = clientInvs.length, nbBL = 0, creance = 0, encaisse = 0;
+        let caTransport = 0, caImmo = 0, caLoc = 0, paidCount = 0;
+        clientInvs.forEach(inv => {
+            const ttc = inv.totals?.ttc || 0; const ht = inv.totals?.ht || 0;
+            caTTC += ttc; caHT += ht;
+            if (inv.articles && Array.isArray(inv.articles)) nbBL += inv.articles.reduce((s, a) => s + (parseInt(a.qte) || 0), 0);
+            const isPaid = inv.paid || inv.paymentStatus === 'encaissee';
+            if (isPaid) { paidCount++; encaisse += ttc; } else { creance += ttc - (inv.amountPaid || 0); encaisse += (inv.amountPaid || 0); }
+            if (inv.articles && Array.isArray(inv.articles)) {
+                inv.articles.forEach(art => {
+                    const lineHT = art.montantHT || ((art.qte || 0) * (art.prixUHT || art.pu || 0));
+                    if (art.isImmobilisation) caImmo += lineHT; else if (art.isLocation) caLoc += lineHT; else caTransport += lineHT;
+                });
+            }
+        });
+        const tauxPaiement = caTTC > 0 ? (encaisse / caTTC * 100) : 0;
+        clientMetrics.push({ name: clientName, color: RPT_COMPARE_COLORS[idx % RPT_COMPARE_COLORS.length], caTTC, caHT, nbFact, nbBL, creance, encaisse, tauxPaiement, paidCount, caTransport, caImmo, caLoc });
+    });
+    clientMetrics.sort((a, b) => b.caTTC - a.caTTC);
+    const fmtN = n => (n || 0).toLocaleString('fr-DZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' DA';
+    const fmtK = n => { if (n >= 1000000) return (n/1000000).toFixed(1)+'M DA'; if (n >= 1000) return (n/1000).toFixed(0)+'K DA'; return (n||0).toLocaleString('fr-DZ')+' DA'; };
+    const maxCA = Math.max(...clientMetrics.map(c => c.caTTC), 1);
+
+    let tableHTML = `<table class="table table-sm table-hover mb-0" style="font-size:0.72rem;"><thead class="table-light"><tr>
+        <th style="min-width:120px;">Client</th><th>CA TTC</th><th>CA HT</th><th>Factures</th><th>BL</th>
+        <th>Créance</th><th>Encaissé</th><th>Taux Paiement</th><th>Transport HT</th><th>Immo. HT</th><th>Location HT</th>
+    </tr></thead><tbody>`;
+    clientMetrics.forEach(c => {
+        const isBest = c.caTTC === maxCA;
+        tableHTML += `<tr>
+            <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c.color};margin-right:6px;"></span><strong>${c.name}</strong></td>
+            <td class="${isBest ? 'text-success fw-bold' : ''}">${fmtN(c.caTTC)}</td>
+            <td>${fmtN(c.caHT)}</td><td>${c.nbFact}</td><td>${c.nbBL}</td>
+            <td class="text-danger fw-semibold">${fmtN(c.creance)}</td>
+            <td class="text-success fw-semibold">${fmtN(c.encaisse)}</td>
+            <td><span class="badge ${c.tauxPaiement >= 80 ? 'bg-success' : c.tauxPaiement >= 50 ? 'bg-warning text-dark' : 'bg-danger'}" style="font-size:0.65rem;">${c.tauxPaiement.toFixed(1)}%</span></td>
+            <td>${fmtK(c.caTransport)}</td><td>${fmtK(c.caImmo)}</td><td>${fmtK(c.caLoc)}</td>
+        </tr>`;
+    });
+    tableHTML += `<tr class="table-active fw-bold"><td>📊 TOTAL</td>
+        <td>${fmtN(clientMetrics.reduce((s,c)=>s+c.caTTC,0))}</td><td>${fmtN(clientMetrics.reduce((s,c)=>s+c.caHT,0))}</td>
+        <td>${clientMetrics.reduce((s,c)=>s+c.nbFact,0)}</td><td>${clientMetrics.reduce((s,c)=>s+c.nbBL,0)}</td>
+        <td class="text-danger">${fmtN(clientMetrics.reduce((s,c)=>s+c.creance,0))}</td>
+        <td class="text-success">${fmtN(clientMetrics.reduce((s,c)=>s+c.encaisse,0))}</td><td>—</td>
+        <td>${fmtK(clientMetrics.reduce((s,c)=>s+c.caTransport,0))}</td><td>${fmtK(clientMetrics.reduce((s,c)=>s+c.caImmo,0))}</td>
+        <td>${fmtK(clientMetrics.reduce((s,c)=>s+c.caLoc,0))}</td>
+    </tr></tbody></table>`;
+    document.getElementById('rptCompareTable').innerHTML = tableHTML;
+
+    const metrics = [
+        { key: 'caTTC', label: 'CA TTC', format: fmtN },
+        { key: 'nbFact', label: 'Factures', format: v => v },
+        { key: 'nbBL', label: 'Bons de Livraison', format: v => v },
+        { key: 'creance', label: 'Créance', format: fmtN },
+        { key: 'tauxPaiement', label: 'Taux de Paiement', format: v => v.toFixed(1) + '%' }
+    ];
+    let barsHTML = '';
+    metrics.forEach(m => {
+        const maxVal = Math.max(...clientMetrics.map(c => c[m.key]), 1);
+        barsHTML += `<div class="mb-3"><div class="fw-bold small mb-1">${m.label}</div>`;
+        clientMetrics.forEach(c => {
+            const pct = (c[m.key] / maxVal * 100).toFixed(1);
+            barsHTML += `<div class="mb-1">
+                <div class="d-flex justify-content-between small"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c.color};margin-right:5px;"></span>${c.name}</span><span class="fw-semibold">${m.format(c[m.key])}</span></div>
+                <div class="progress" style="height:18px;"><div class="progress-bar" style="width:${pct}%;background:${c.color};font-size:0.6rem;">${pct > 15 ? m.format(c[m.key]) : ''}</div></div>
+            </div>`;
+        });
+        barsHTML += '</div>';
+    });
+    document.getElementById('rptCompareBars').innerHTML = barsHTML;
+}
+
+function toggleRptCompareView(view) {
+    const tbl = document.getElementById('rptCompareTable');
+    const bars = document.getElementById('rptCompareBars');
+    const tblBtn = document.getElementById('rptCompareTableBtn');
+    const barsBtn = document.getElementById('rptCompareBarsBtn');
+    if (view === 'table') {
+        if (tbl) tbl.style.display = 'block'; if (bars) bars.style.display = 'none';
+        if (tblBtn) tblBtn.classList.add('active'); if (barsBtn) barsBtn.classList.remove('active');
+    } else {
+        if (bars) bars.style.display = 'block'; if (tbl) tbl.style.display = 'none';
+        if (barsBtn) barsBtn.classList.add('active'); if (tblBtn) tblBtn.classList.remove('active');
+    }
+}
+
 function getFilteredRptInvoices() {
-    const clientId = document.getElementById('rptFilterClient')?.value || 'all';
+    const selectedRptClients = getSelectedRptClientIds();
+    const clientId = selectedRptClients.length > 0 ? '__multi__' : (document.getElementById('rptFilterClient')?.value || 'all');
     const year = document.getElementById('rptFilterYear')?.value || '';
     const month = document.getElementById('rptFilterMonth')?.value || 'all';
     const period = document.getElementById('rptFilterPeriod')?.value || 'all';
@@ -9728,8 +9895,12 @@ function getFilteredRptInvoices() {
         if (startDate && inv.date < startDate) return false;
         if (endDate && inv.date > endDate) return false;
         
-        // Client
-        if (clientId !== 'all' && String(inv.clientId) !== String(clientId)) return false;
+        // Client — multi-select or single
+        if (clientId === '__multi__') {
+            if (!selectedRptClients.includes(String(inv.clientId))) return false;
+        } else if (clientId !== 'all' && String(inv.clientId) !== String(clientId)) {
+            return false;
+        }
 
         // Statut (Payée / Impayée)
         if (status === 'paid' && !inv.paid) return false;
@@ -9782,6 +9953,7 @@ function getFilteredRptInvoices() {
 function updateReportsView() {
     const filtered = getFilteredRptInvoices();
     renderRptKPIs(filtered);
+    renderRptComparisonPanel(filtered);
     renderRptCharts('all');
     renderRptTable();
 }
@@ -10208,6 +10380,7 @@ function resetRptFilters() {
     if (sDate) sDate.value = '';
     const eDate = document.getElementById('rptFilterEndDate');
     if (eDate) eDate.value = '';
+    deselectAllRptClients();
     updateReportsView();
 }
 

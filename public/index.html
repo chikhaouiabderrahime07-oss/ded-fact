@@ -959,9 +959,25 @@ th.sortable.sorted-desc .sort-icon::after {
       <div class="card mb-4 border-0 shadow-sm">
         <div class="card__body py-3">
           <div class="row g-2 align-items-center">
-            <div class="col-md-3">
-              <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-user me-1 text-primary"></i>Client</label>
-              <select id="rptFilterClient" class="form-select form-select-sm" onchange="updateReportsView()">
+            <div class="col-md-3" style="position:relative;">
+              <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-user me-1 text-primary"></i>Clients <span id="rptClientCompareBadge" class="badge bg-primary ms-1" style="font-size:0.55rem;display:none;">⚡</span></label>
+              <!-- Multi-client selector -->
+              <div id="rptClientBtn" onclick="toggleRptClientDropdown()" class="form-select form-select-sm" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                <span id="rptClientLabel">👑 Tous les clients</span>
+              </div>
+              <div id="rptClientDropdown" style="display:none;position:absolute;top:100%;left:0;z-index:999;background:white;border:1px solid #dee2e6;border-radius:0.5rem;box-shadow:0 8px 24px rgba(0,0,0,0.15);max-height:300px;width:280px;margin-top:2px;">
+                <div style="padding:6px 10px;border-bottom:1px solid #dee2e6;">
+                  <input type="text" id="rptClientSearch" placeholder="🔍 Rechercher..." style="width:100%;border:none;outline:none;font-size:0.75rem;padding:4px 0;" oninput="filterRptClientOptions()">
+                </div>
+                <div id="rptClientOptions" style="max-height:200px;overflow-y:auto;"></div>
+                <div style="padding:6px 10px;border-top:1px solid #dee2e6;display:flex;gap:4px;">
+                  <button onclick="selectAllRptClients()" class="btn btn-outline-secondary btn-sm" style="flex:1;font-size:0.65rem;padding:2px;">✅ Tous</button>
+                  <button onclick="deselectAllRptClients()" class="btn btn-outline-secondary btn-sm" style="flex:1;font-size:0.65rem;padding:2px;">❌ Aucun</button>
+                  <button onclick="toggleRptClientDropdown();updateReportsView()" class="btn btn-primary btn-sm" style="flex:1;font-size:0.65rem;padding:2px;font-weight:700;">Appliquer</button>
+                </div>
+              </div>
+              <!-- Hidden original for backward compat -->
+              <select id="rptFilterClient" style="display:none;" onchange="updateReportsView()">
                 <option value="all">👑 Tous les clients</option>
               </select>
             </div>
@@ -1063,6 +1079,27 @@ th.sortable.sorted-desc .sort-icon::after {
 
       <!-- KPI CARDS -->
       <div class="row g-3 mb-4" id="rptKpiContainer"></div>
+
+      <!-- COMPARISON PANEL (Reports/KPI) -->
+      <div id="rptComparisonPanel" class="mb-4" style="display:none;">
+        <div class="card shadow-sm border-0" style="overflow:hidden;">
+          <div class="card-header border-0 text-white d-flex align-items-center justify-content-between flex-wrap gap-2" style="background:linear-gradient(135deg,#2563eb,#7c3aed);">
+            <div class="d-flex align-items-center gap-2">
+              <i class="fas fa-scale-balanced"></i>
+              <span class="fw-bold">Comparaison Clients</span>
+              <span id="rptCompareCount" class="badge" style="background:rgba(255,255,255,0.25);font-size:0.65rem;">0</span>
+            </div>
+            <div class="btn-group btn-group-sm">
+              <button onclick="toggleRptCompareView('table')" id="rptCompareTableBtn" class="btn btn-outline-light btn-sm active" style="font-size:0.65rem;"><i class="fas fa-table"></i></button>
+              <button onclick="toggleRptCompareView('bars')" id="rptCompareBarsBtn" class="btn btn-outline-light btn-sm" style="font-size:0.65rem;"><i class="fas fa-chart-bar"></i></button>
+            </div>
+          </div>
+          <div class="card-body p-2" style="overflow-x:auto;">
+            <div id="rptCompareTable"></div>
+            <div id="rptCompareBars" style="display:none;"></div>
+          </div>
+        </div>
+      </div>
 
       <!-- 8 CHARTS SUITE -->
       <div class="row g-3 mb-4">
