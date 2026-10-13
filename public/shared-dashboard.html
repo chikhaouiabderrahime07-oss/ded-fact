@@ -558,6 +558,34 @@
             min-height: 0.8rem;
         }
 
+        /* COMPARISON PANEL */
+        .btn-compare-view {
+            background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white;
+            border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 0.7rem; transition: all 0.2s;
+        }
+        .btn-compare-view:hover, .btn-compare-view.active {
+            background: rgba(255,255,255,0.4); border-color: white;
+        }
+        .compare-table {
+            width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.72rem;
+        }
+        .compare-table th {
+            background: var(--bg); padding: 8px 10px; text-align: center; font-weight: 700;
+            border-bottom: 2px solid var(--border); white-space: nowrap; color: var(--text);
+        }
+        .compare-table th:first-child { text-align: left; position: sticky; left: 0; z-index: 2; background: var(--bg); }
+        .compare-table td {
+            padding: 7px 10px; text-align: center; border-bottom: 1px solid var(--border); color: var(--text);
+        }
+        .compare-table td:first-child { text-align: left; font-weight: 600; position: sticky; left: 0; z-index: 1; background: var(--bg-card); }
+        .compare-table tr:hover td { background: var(--bg); }
+        .compare-table .best-value { color: #10b981; font-weight: 800; }
+        .compare-table .worst-value { color: #ef4444; font-weight: 700; }
+        .compare-bar-wrap { margin-bottom: 12px; }
+        .compare-bar-label { font-size: 0.7rem; font-weight: 600; margin-bottom: 3px; color: var(--text); display: flex; justify-content: space-between; }
+        .compare-bar-track { height: 22px; background: var(--bg); border-radius: 6px; overflow: hidden; position: relative; }
+        .compare-bar-fill { height: 100%; border-radius: 6px; transition: width 0.6s ease; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; font-size: 0.6rem; color: white; font-weight: 700; }
+
         /* CHARTS GRID */
         .charts-grid {
             display: flex;
@@ -1141,6 +1169,29 @@
                         <span id="kpi-loc-sub">Grues 25T, 50T, 75T</span>
                         <span class="kpi-badge" id="kpi-loc-status">Actif</span>
                     </div>
+                </div>
+            </div>
+
+            <!-- SECTION 1B: COMPARISON PANEL (Visible when 2+ clients selected) -->
+            <div id="comparison-panel" style="display:none; margin-bottom:1.5rem;">
+                <div style="background:var(--bg-card); border-radius:1rem; border:1px solid var(--border); box-shadow:0 4px 16px rgba(0,0,0,0.06); overflow:hidden;">
+                    <div style="padding:1rem 1.5rem; background:linear-gradient(135deg,#2563eb,#7c3aed); color:white; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+                        <div style="display:flex; align-items:center; gap:0.5rem;">
+                            <i class="fas fa-scale-balanced" style="font-size:1.1rem;"></i>
+                            <span style="font-weight:800; font-size:1rem;">Comparaison Clients</span>
+                            <span id="compare-client-count" style="background:rgba(255,255,255,0.25); padding:2px 10px; border-radius:20px; font-size:0.7rem; font-weight:700;">0 clients</span>
+                        </div>
+                        <div style="display:flex; gap:0.5rem; align-items:center;">
+                            <button onclick="toggleCompareView('table')" id="compare-view-table" class="btn-compare-view active" title="Vue Tableau">
+                                <i class="fas fa-table"></i>
+                            </button>
+                            <button onclick="toggleCompareView('bars')" id="compare-view-bars" class="btn-compare-view" title="Vue Barres">
+                                <i class="fas fa-chart-bar"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="compare-content" style="padding:1rem; overflow-x:auto;"></div>
+                    <div id="compare-bars-content" style="padding:1rem; display:none;"></div>
                 </div>
             </div>
 
@@ -1957,6 +2008,7 @@
             }
 
             updateKPIs();
+            renderComparisonPanel();
             renderAllCharts();
             renderTable();
         }
@@ -2056,6 +2108,158 @@
             animateCounter(document.getElementById('kpi-ca-loc'), caLoc, true);
             document.getElementById('kpi-loc-sub').textContent = caLoc > 0 ? 'Grues & Engins' : 'Aucune location';
             document.getElementById('kpi-loc-status').textContent = caLoc > 0 ? `${((caLoc/caTotalTTC)*100).toFixed(1)}% du CA` : '0 prestation';
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        // ⚖️ COMPARISON PANEL — per-client side-by-side metrics
+        // ════════════════════════════════════════════════════════════════
+
+        const COMPARE_COLORS = ['#2563eb','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#d97706','#6366f1','#14b8a6'];
+
+        function renderComparisonPanel() {
+            const panel = document.getElementById('comparison-panel');
+            if (!panel) return;
+            const selectedClients = getSelectedClientIds();
+            if (selectedClients.length < 2) {
+                panel.style.display = 'none';
+                return;
+            }
+            panel.style.display = 'block';
+            document.getElementById('compare-client-count').textContent = selectedClients.length + ' clients';
+
+            // Build per-client metrics
+            const clientMetrics = [];
+            selectedClients.forEach((cid, idx) => {
+                const clientObj = (globalData.clients || []).find(c => String(c.id || c._id) === cid);
+                const clientName = clientObj ? (clientObj.nom || clientObj.name || 'Client') : 'Client #' + (idx + 1);
+                const clientInvs = filteredInvoices.filter(inv => {
+                    const invCid = String(inv.clientId);
+                    const invObjCid = inv.client ? String(inv.client._id || inv.client.id) : '';
+                    return invCid === cid || invObjCid === cid;
+                });
+
+                let caTTC = 0, caHT = 0, nbFact = clientInvs.length, nbBL = 0, creance = 0, encaisse = 0;
+                let caTransport = 0, caImmo = 0, caLoc = 0, paidCount = 0;
+                clientInvs.forEach(inv => {
+                    const ttc = inv.totals?.ttc || 0;
+                    const ht = inv.totals?.ht || 0;
+                    caTTC += ttc;
+                    caHT += ht;
+                    nbBL += getInvoiceBLCount(inv);
+                    const isPaid = inv.paid || inv.paymentStatus === 'encaissee';
+                    if (isPaid) { paidCount++; encaisse += ttc; }
+                    else { creance += ttc - (inv.amountPaid || 0); encaisse += (inv.amountPaid || 0); }
+                    if (inv.articles && Array.isArray(inv.articles)) {
+                        inv.articles.forEach(art => {
+                            const lineHT = art.montantHT || ((art.qte || 0) * (art.prixUHT || art.pu || 0));
+                            if (art.isImmobilisation) caImmo += lineHT;
+                            else if (art.isLocation) caLoc += lineHT;
+                            else caTransport += lineHT;
+                        });
+                    }
+                });
+                const tauxPaiement = caTTC > 0 ? (encaisse / caTTC * 100) : 0;
+                clientMetrics.push({
+                    name: clientName, color: COMPARE_COLORS[idx % COMPARE_COLORS.length],
+                    caTTC, caHT, nbFact, nbBL, creance, encaisse, tauxPaiement, paidCount,
+                    caTransport, caImmo, caLoc
+                });
+            });
+
+            // Sort by CA TTC descending
+            clientMetrics.sort((a, b) => b.caTTC - a.caTTC);
+            const maxCA = Math.max(...clientMetrics.map(c => c.caTTC), 1);
+
+            // TABLE VIEW
+            const tableHTML = `
+            <table class="compare-table">
+                <thead>
+                    <tr>
+                        <th style="min-width:120px;">Client</th>
+                        <th>CA TTC</th>
+                        <th>CA HT</th>
+                        <th>Factures</th>
+                        <th>BL</th>
+                        <th>Créance</th>
+                        <th>Encaissé</th>
+                        <th>Taux Paiement</th>
+                        <th>Transport HT</th>
+                        <th>Immo. HT</th>
+                        <th>Location HT</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${clientMetrics.map((c, i) => {
+                        const isBest = c.caTTC === maxCA;
+                        return `<tr>
+                            <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c.color};margin-right:6px;"></span>${c.name}</td>
+                            <td class="${isBest ? 'best-value' : ''}">${formatCurrency(c.caTTC)}</td>
+                            <td>${formatCurrency(c.caHT)}</td>
+                            <td>${c.nbFact}</td>
+                            <td>${c.nbBL}</td>
+                            <td style="color:#ef4444;font-weight:600;">${formatCurrency(c.creance)}</td>
+                            <td style="color:#10b981;font-weight:600;">${formatCurrency(c.encaisse)}</td>
+                            <td><span style="display:inline-block;min-width:50px;padding:2px 8px;border-radius:10px;font-size:0.65rem;font-weight:700;
+                                background:${c.tauxPaiement >= 80 ? '#dcfce7' : c.tauxPaiement >= 50 ? '#fef9c3' : '#fee2e2'};
+                                color:${c.tauxPaiement >= 80 ? '#166534' : c.tauxPaiement >= 50 ? '#854d0e' : '#991b1b'};">${c.tauxPaiement.toFixed(1)}%</span></td>
+                            <td>${formatCompactNumber(c.caTransport)}</td>
+                            <td>${formatCompactNumber(c.caImmo)}</td>
+                            <td>${formatCompactNumber(c.caLoc)}</td>
+                        </tr>`;
+                    }).join('')}
+                    <tr style="font-weight:800; background:var(--bg); border-top:2px solid var(--border);">
+                        <td>📊 TOTAL</td>
+                        <td>${formatCurrency(clientMetrics.reduce((s,c) => s+c.caTTC, 0))}</td>
+                        <td>${formatCurrency(clientMetrics.reduce((s,c) => s+c.caHT, 0))}</td>
+                        <td>${clientMetrics.reduce((s,c) => s+c.nbFact, 0)}</td>
+                        <td>${clientMetrics.reduce((s,c) => s+c.nbBL, 0)}</td>
+                        <td style="color:#ef4444;">${formatCurrency(clientMetrics.reduce((s,c) => s+c.creance, 0))}</td>
+                        <td style="color:#10b981;">${formatCurrency(clientMetrics.reduce((s,c) => s+c.encaisse, 0))}</td>
+                        <td>—</td>
+                        <td>${formatCompactNumber(clientMetrics.reduce((s,c) => s+c.caTransport, 0))}</td>
+                        <td>${formatCompactNumber(clientMetrics.reduce((s,c) => s+c.caImmo, 0))}</td>
+                        <td>${formatCompactNumber(clientMetrics.reduce((s,c) => s+c.caLoc, 0))}</td>
+                    </tr>
+                </tbody>
+            </table>`;
+            document.getElementById('compare-content').innerHTML = tableHTML;
+
+            // BARS VIEW
+            const metrics = [
+                { key: 'caTTC', label: 'CA TTC', format: formatCurrency },
+                { key: 'nbFact', label: 'Factures', format: v => v },
+                { key: 'nbBL', label: 'Bons de Livraison', format: v => v },
+                { key: 'creance', label: 'Créance', format: formatCurrency },
+                { key: 'tauxPaiement', label: 'Taux de Paiement', format: v => v.toFixed(1) + '%' }
+            ];
+            let barsHTML = '';
+            metrics.forEach(m => {
+                const maxVal = Math.max(...clientMetrics.map(c => c[m.key]), 1);
+                barsHTML += `<div style="margin-bottom:14px;"><div style="font-size:0.72rem;font-weight:700;margin-bottom:6px;color:var(--text);">${m.label}</div>`;
+                clientMetrics.forEach(c => {
+                    const pct = (c[m.key] / maxVal * 100).toFixed(1);
+                    barsHTML += `<div class="compare-bar-wrap">
+                        <div class="compare-bar-label"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c.color};margin-right:5px;"></span>${c.name}</span><span>${m.format(c[m.key])}</span></div>
+                        <div class="compare-bar-track"><div class="compare-bar-fill" style="width:${pct}%;background:${c.color};">${pct > 15 ? m.format(c[m.key]) : ''}</div></div>
+                    </div>`;
+                });
+                barsHTML += '</div>';
+            });
+            document.getElementById('compare-bars-content').innerHTML = barsHTML;
+        }
+
+        function toggleCompareView(view) {
+            const tableBtn = document.getElementById('compare-view-table');
+            const barsBtn = document.getElementById('compare-view-bars');
+            const tableContent = document.getElementById('compare-content');
+            const barsContent = document.getElementById('compare-bars-content');
+            if (view === 'table') {
+                tableBtn.classList.add('active'); barsBtn.classList.remove('active');
+                tableContent.style.display = 'block'; barsContent.style.display = 'none';
+            } else {
+                barsBtn.classList.add('active'); tableBtn.classList.remove('active');
+                barsContent.style.display = 'block'; tableContent.style.display = 'none';
+            }
         }
 
         // ════════════════════════════════════════════════════════════════

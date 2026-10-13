@@ -4118,7 +4118,10 @@ function generateInvoiceHTMLForPDF(invoice, options = {}) {
         .sig-space { height: 30px; width: 100%; } /* Squeezed even more */
 
         .page-number-only { text-align: center; font-size: 0.8rem; color: #666; border-top: 1px solid #eee; padding-top: 5px; padding-bottom: 30px; margin-top: 5px; } /* Added large bottom padding to lift text */		
-        @media print { .invoice-preview { height: 1123px; } }
+        @media print {
+            .invoice-preview { height: 1123px; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+        }
       </style>
 
       <div class="invoice-preview">
@@ -4550,6 +4553,19 @@ function populateDashboardClientSelect() {
         trajetSel.innerHTML = '<option value="">🌍 Vue Globale</option>';
         sorted.forEach(c => { trajetSel.innerHTML += `<option value="${c.id}">${c.nom}</option>`; });
     }
+
+    // Populate multi-client checkbox dropdown
+    const optionsContainer = document.getElementById('dashClientOptions');
+    if (optionsContainer && !optionsContainer.hasChildNodes()) {
+        sorted.forEach(c => {
+            const div = document.createElement('div');
+            div.style.cssText = 'padding:5px 10px;display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.75rem;border-bottom:1px solid #f1f5f9;';
+            div.classList.add('dash-client-option');
+            div.innerHTML = `<input type="checkbox" class="dash-client-chk" value="${c.id}" style="cursor:pointer;" onchange="updateDashClientLabel()"><span style="flex:1;">${c.nom || c.name || 'Client'}</span>`;
+            div.addEventListener('click', function(e) { if (e.target.tagName !== 'INPUT') { const cb = div.querySelector('input'); cb.checked = !cb.checked; updateDashClientLabel(); } });
+            optionsContainer.appendChild(div);
+        });
+    }
 }
 
 // ─── Reset all filters ───
@@ -4568,6 +4584,8 @@ function resetDashboardFilters() {
     if (dateFrom) dateFrom.value = '';
     if (dateTo) dateTo.value = '';
     if (customDates) customDates.style.display = 'none';
+    // Reset multi-client checkboxes
+    deselectAllDashClients();
     // Reset HT/TTC toggles
     chartSettings = { revenue: 'TTC', clients: 'TTC', debt: 'TTC', forecast: 'TTC' };
     ['revTTC', 'cliTTC', 'debtTTC', 'fcTTC'].forEach(id => {
@@ -4601,13 +4619,192 @@ function onDashboardPeriodChange() {
     updateDashboard();
 }
 
+// ─── MULTI-CLIENT SELECTOR (Dashboard) ───
+function toggleDashClientDropdown() {
+    const dd = document.getElementById('dashClientDropdown');
+    if (dd) dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+}
+function filterDashClientOptions() {
+    const search = (document.getElementById('dashClientSearch')?.value || '').toLowerCase();
+    document.querySelectorAll('.dash-client-option').forEach(opt => {
+        const name = opt.querySelector('span')?.textContent?.toLowerCase() || '';
+        opt.style.display = name.includes(search) ? 'flex' : 'none';
+    });
+}
+function getSelectedDashClientIds() {
+    return Array.from(document.querySelectorAll('.dash-client-chk:checked')).map(c => c.value);
+}
+function updateDashClientLabel() {
+    const selected = getSelectedDashClientIds();
+    const label = document.getElementById('dashClientLabel');
+    const badge = document.getElementById('dashClientCompareBadge');
+    if (!selected.length) {
+        if (label) label.textContent = '👑 Tous les clients';
+        if (badge) badge.style.display = 'none';
+    } else if (selected.length === 1) {
+        const c = (clients || []).find(cl => String(cl.id) === selected[0]);
+        if (label) label.textContent = c ? (c.nom || c.name) : '1 client';
+        if (badge) badge.style.display = 'none';
+    } else {
+        if (label) label.textContent = selected.length + ' clients';
+        if (badge) { badge.textContent = '⚡ Comparaison'; badge.style.display = 'inline'; }
+    }
+    // Also sync the hidden single select
+    const cSel = document.getElementById('dashboardClientSelect');
+    if (cSel) cSel.value = selected.length === 1 ? selected[0] : 'all';
+}
+function selectAllDashClients() {
+    document.querySelectorAll('.dash-client-chk').forEach(cb => { if (cb.closest('.dash-client-option').style.display !== 'none') cb.checked = true; });
+    updateDashClientLabel();
+}
+function deselectAllDashClients() {
+    document.querySelectorAll('.dash-client-chk').forEach(cb => cb.checked = false);
+    updateDashClientLabel();
+}
+// Click outside closes dropdown
+document.addEventListener('click', function(e) {
+    const dropdown = document.getElementById('dashClientDropdown');
+    const btn = document.getElementById('dashboardClientBtn');
+    if (dropdown && dropdown.style.display !== 'none' && !dropdown.contains(e.target) && btn && !btn.contains(e.target)) {
+        dropdown.style.display = 'none';
+    }
+});
+
+// ─── COMPARISON PANEL (Dashboard) ───
+const DASH_COMPARE_COLORS = ['#2563eb','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#d97706','#6366f1','#14b8a6'];
+
+function renderDashComparisonPanel(filtered) {
+    const panel = document.getElementById('dashComparisonPanel');
+    if (!panel) return;
+    const selectedClients = getSelectedDashClientIds();
+    if (selectedClients.length < 2) {
+        panel.style.display = 'none';
+        return;
+    }
+    panel.style.display = 'block';
+    const countEl = document.getElementById('dashCompareCount');
+    if (countEl) countEl.textContent = selectedClients.length + ' clients';
+
+    const clientMetrics = [];
+    selectedClients.forEach((cid, idx) => {
+        const clientObj = (clients || []).find(c => String(c.id) === cid);
+        const clientName = clientObj ? (clientObj.nom || clientObj.name || 'Client') : 'Client #' + (idx + 1);
+        const clientInvs = filtered.filter(inv => String(inv.clientId) === cid);
+
+        let caTTC = 0, caHT = 0, nbFact = clientInvs.length, nbBL = 0, creance = 0, encaisse = 0;
+        let caTransport = 0, caImmo = 0, caLoc = 0, paidCount = 0;
+        clientInvs.forEach(inv => {
+            const ttc = inv.totals?.ttc || 0;
+            const ht = inv.totals?.ht || 0;
+            caTTC += ttc; caHT += ht;
+            // BL count
+            if (inv.articles && Array.isArray(inv.articles)) {
+                nbBL += inv.articles.reduce((s, a) => s + (parseInt(a.qte) || 0), 0);
+            }
+            const isPaid = inv.paid || inv.paymentStatus === 'encaissee';
+            if (isPaid) { paidCount++; encaisse += ttc; }
+            else { creance += ttc - (inv.amountPaid || 0); encaisse += (inv.amountPaid || 0); }
+            if (inv.articles && Array.isArray(inv.articles)) {
+                inv.articles.forEach(art => {
+                    const lineHT = art.montantHT || ((art.qte || 0) * (art.prixUHT || art.pu || 0));
+                    if (art.isImmobilisation) caImmo += lineHT;
+                    else if (art.isLocation) caLoc += lineHT;
+                    else caTransport += lineHT;
+                });
+            }
+        });
+        const tauxPaiement = caTTC > 0 ? (encaisse / caTTC * 100) : 0;
+        clientMetrics.push({
+            name: clientName, color: DASH_COMPARE_COLORS[idx % DASH_COMPARE_COLORS.length],
+            caTTC, caHT, nbFact, nbBL, creance, encaisse, tauxPaiement, paidCount, caTransport, caImmo, caLoc
+        });
+    });
+
+    clientMetrics.sort((a, b) => b.caTTC - a.caTTC);
+    const fmtN = n => (n || 0).toLocaleString('fr-DZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' DA';
+    const fmtK = n => { if (n >= 1000000) return (n/1000000).toFixed(1)+'M DA'; if (n >= 1000) return (n/1000).toFixed(0)+'K DA'; return (n||0).toLocaleString('fr-DZ')+' DA'; };
+
+    // TABLE
+    let tableHTML = `<table class="table table-sm table-hover mb-0" style="font-size:0.72rem;">
+        <thead class="table-light"><tr>
+            <th style="min-width:120px;">Client</th><th>CA TTC</th><th>CA HT</th><th>Factures</th><th>BL</th>
+            <th>Créance</th><th>Encaissé</th><th>Taux Paiement</th><th>Transport HT</th><th>Immo. HT</th><th>Location HT</th>
+        </tr></thead><tbody>`;
+    const maxCA = Math.max(...clientMetrics.map(c => c.caTTC), 1);
+    clientMetrics.forEach(c => {
+        const isBest = c.caTTC === maxCA;
+        tableHTML += `<tr>
+            <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c.color};margin-right:6px;"></span><strong>${c.name}</strong></td>
+            <td class="${isBest ? 'text-success fw-bold' : ''}">${fmtN(c.caTTC)}</td>
+            <td>${fmtN(c.caHT)}</td><td>${c.nbFact}</td><td>${c.nbBL}</td>
+            <td class="text-danger fw-semibold">${fmtN(c.creance)}</td>
+            <td class="text-success fw-semibold">${fmtN(c.encaisse)}</td>
+            <td><span class="badge ${c.tauxPaiement >= 80 ? 'bg-success' : c.tauxPaiement >= 50 ? 'bg-warning text-dark' : 'bg-danger'}" style="font-size:0.65rem;">${c.tauxPaiement.toFixed(1)}%</span></td>
+            <td>${fmtK(c.caTransport)}</td><td>${fmtK(c.caImmo)}</td><td>${fmtK(c.caLoc)}</td>
+        </tr>`;
+    });
+    tableHTML += `<tr class="table-active fw-bold">
+        <td>📊 TOTAL</td>
+        <td>${fmtN(clientMetrics.reduce((s,c)=>s+c.caTTC,0))}</td>
+        <td>${fmtN(clientMetrics.reduce((s,c)=>s+c.caHT,0))}</td>
+        <td>${clientMetrics.reduce((s,c)=>s+c.nbFact,0)}</td>
+        <td>${clientMetrics.reduce((s,c)=>s+c.nbBL,0)}</td>
+        <td class="text-danger">${fmtN(clientMetrics.reduce((s,c)=>s+c.creance,0))}</td>
+        <td class="text-success">${fmtN(clientMetrics.reduce((s,c)=>s+c.encaisse,0))}</td>
+        <td>—</td>
+        <td>${fmtK(clientMetrics.reduce((s,c)=>s+c.caTransport,0))}</td>
+        <td>${fmtK(clientMetrics.reduce((s,c)=>s+c.caImmo,0))}</td>
+        <td>${fmtK(clientMetrics.reduce((s,c)=>s+c.caLoc,0))}</td>
+    </tr></tbody></table>`;
+    document.getElementById('dashCompareTable').innerHTML = tableHTML;
+
+    // BARS
+    const metrics = [
+        { key: 'caTTC', label: 'CA TTC', format: fmtN },
+        { key: 'nbFact', label: 'Factures', format: v => v },
+        { key: 'nbBL', label: 'Bons de Livraison', format: v => v },
+        { key: 'creance', label: 'Créance', format: fmtN },
+        { key: 'tauxPaiement', label: 'Taux de Paiement', format: v => v.toFixed(1) + '%' }
+    ];
+    let barsHTML = '';
+    metrics.forEach(m => {
+        const maxVal = Math.max(...clientMetrics.map(c => c[m.key]), 1);
+        barsHTML += `<div class="mb-3"><div class="fw-bold small mb-1">${m.label}</div>`;
+        clientMetrics.forEach(c => {
+            const pct = (c[m.key] / maxVal * 100).toFixed(1);
+            barsHTML += `<div class="mb-1">
+                <div class="d-flex justify-content-between small"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c.color};margin-right:5px;"></span>${c.name}</span><span class="fw-semibold">${m.format(c[m.key])}</span></div>
+                <div class="progress" style="height:18px;"><div class="progress-bar" style="width:${pct}%;background:${c.color};font-size:0.6rem;">${pct > 15 ? m.format(c[m.key]) : ''}</div></div>
+            </div>`;
+        });
+        barsHTML += '</div>';
+    });
+    document.getElementById('dashCompareBars').innerHTML = barsHTML;
+}
+
+function toggleDashCompareView(view) {
+    const tbl = document.getElementById('dashCompareTable');
+    const bars = document.getElementById('dashCompareBars');
+    const tblBtn = document.getElementById('dashCompareTableBtn');
+    const barsBtn = document.getElementById('dashCompareBarsBtn');
+    if (view === 'table') {
+        if (tbl) tbl.style.display = 'block'; if (bars) bars.style.display = 'none';
+        if (tblBtn) tblBtn.classList.add('active'); if (barsBtn) barsBtn.classList.remove('active');
+    } else {
+        if (bars) bars.style.display = 'block'; if (tbl) tbl.style.display = 'none';
+        if (barsBtn) barsBtn.classList.add('active'); if (tblBtn) tblBtn.classList.remove('active');
+    }
+}
+
 // ─── CORE: Filter invoices by Client + Year + Period (incl. Semesters & Custom) ───
 function getDashboardFilteredInvoices() {
     const clientSel = document.getElementById('dashboardClientSelect');
     const yearSel   = document.getElementById('dashboardYearSelect');
     const periodSel = document.getElementById('dashboardPeriodSelect');
 
-    const clientVal = clientSel ? clientSel.value : 'all';
+    // Multi-client: check checkboxes first
+    const selectedDashClients = getSelectedDashClientIds();
+    const clientVal = selectedDashClients.length > 0 ? '__multi__' : (clientSel ? clientSel.value : 'all');
     const yearVal   = yearSel ? yearSel.value : '';
     const periodVal = periodSel ? periodSel.value : 'all';
 
@@ -4621,8 +4818,12 @@ function getDashboardFilteredInvoices() {
     }
 
     return invoices.filter(inv => {
-        // Client filter
-        if (clientVal !== 'all' && String(inv.clientId) !== String(clientVal)) return false;
+        // Client filter — multi-select or single
+        if (clientVal === '__multi__') {
+            if (!selectedDashClients.includes(String(inv.clientId))) return false;
+        } else if (clientVal !== 'all' && String(inv.clientId) !== String(clientVal)) {
+            return false;
+        }
 
         // Date of invoice
         const d = new Date(inv.date || inv.createdAt);
@@ -4972,6 +5173,9 @@ function updateDashboard(targetChart, mode) {
 
         // 7. RECENT INVOICES TABLE
         updateRecentInvoicesTable();
+
+        // 8. COMPARISON PANEL (multi-client)
+        renderDashComparisonPanel(filtered);
 
     } catch (error) {
         console.error('Dashboard Error:', error);
