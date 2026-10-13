@@ -1068,9 +1068,13 @@ function openInvoiceWizard(initialType = 'transport') {
         locTonnage: '',
         locPeriodStart: '',
         locPeriodEnd: '',
+        locHourStart: '08:00',
+        locHourEnd: '17:00',
         locSite: '',
         locDriver: '',
-        designation: `<b>Location de ${defaultEquip}</b><br>-Site : <br>-Période : `,
+        locBillableHours: '',
+        locAutoHours: '',
+        designation: `LOCATION DE ${defaultEquip.toUpperCase()}\n`,
         qte: 1,
         prixUHT: locRate,
         montantHT: locRate,
@@ -2138,74 +2142,86 @@ function renderArticles() {
                     </div>
                 `;
             } else if (isLoc) {
-                // Location article fields
+                // Location article fields — hours-based (matching real invoice format)
                 const equipTypes = (settings.locationEquipmentTypes || 'Grue 25T, Grue 50T, Grue 75T').split(',').map(t => t.trim());
                 let eqHtml = '';
                 equipTypes.forEach(t => { eqHtml += `<option value="${t}" ${t===article.locEquipment?'selected':''}>${t}</option>`; });
                 
                 articleFieldsHtml = `
                     <div class="row g-2 mb-2">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-cogs text-warning me-1"></i>Type d'équipement *</label>
                             <select class="form-select form-select-sm" data-field="locEquipment" data-index="${index}" required>${eqHtml}</select>
                         </div>
-                        <div class="col-md-8">
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-weight-hanging text-info me-1"></i>Tonnage</label>
+                            <input type="text" class="form-control form-control-sm" data-field="locTonnage" data-index="${index}" placeholder="Ex: 75 Tonnes" value="${article.locTonnage || ''}">
+                        </div>
+                        <div class="col-md-4">
                             <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-map-marker-alt text-warning me-1"></i>Site / Chantier</label>
                             <input type="text" class="form-control form-control-sm" data-field="locSite" data-index="${index}" placeholder="Ex: Base vie Sonatrach Hassi Messaoud..." value="${article.locSite || ''}">
                         </div>
-                    </div>
-                    <div class="row g-2 mb-2">
                         <div class="col-md-3">
-                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calendar-check me-1 text-success"></i>Date Début</label>
-                            <input type="date" class="form-control form-control-sm" data-field="locPeriodStart" data-index="${index}" value="${article.locPeriodStart || ''}">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-clock me-1 text-success"></i>Heure</label>
-                            <input type="time" class="form-control form-control-sm" data-field="locHourStart" data-index="${index}" value="${article.locHourStart || '08:00'}">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calendar-times me-1 text-danger"></i>Date Fin</label>
-                            <input type="date" class="form-control form-control-sm" data-field="locPeriodEnd" data-index="${index}" value="${article.locPeriodEnd || ''}">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-clock me-1 text-danger"></i>Heure</label>
-                            <input type="time" class="form-control form-control-sm" data-field="locHourEnd" data-index="${index}" value="${article.locHourEnd || '17:00'}">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calculator me-1" style="color:#f59e0b;"></i>Jours (auto)</label>
-                            <input type="number" class="form-control form-control-sm fw-bold bg-light" data-field="locAutodays" data-index="${index}" value="${article.locAutodays || ''}" readonly style="border-color:#f59e0b;">
-                        </div>
-                    </div>
-                    <div class="row g-2 mb-2">
-                        <div class="col-12">
                             <label class="form-label small fw-bold text-muted mb-1">Opérateur / Chauffeur / Réf</label>
                             <input type="text" class="form-control form-control-sm" data-field="locDriver" data-index="${index}" placeholder="Ex: Mr. Ali - Permis 12345" value="${article.locDriver || ''}">
                         </div>
                     </div>
                     <div class="row g-2 mb-2">
-                        <div class="col-12">
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calendar-check me-1 text-success"></i>Date Départ</label>
+                            <input type="date" class="form-control form-control-sm" data-field="locPeriodStart" data-index="${index}" value="${article.locPeriodStart || ''}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-clock me-1 text-success"></i>Heure Départ</label>
+                            <input type="time" class="form-control form-control-sm" data-field="locHourStart" data-index="${index}" value="${article.locHourStart || '08:00'}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-calendar-times me-1 text-danger"></i>Date Retour</label>
+                            <input type="date" class="form-control form-control-sm" data-field="locPeriodEnd" data-index="${index}" value="${article.locPeriodEnd || ''}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-clock me-1 text-danger"></i>Heure Retour</label>
+                            <input type="time" class="form-control form-control-sm" data-field="locHourEnd" data-index="${index}" value="${article.locHourEnd || '17:00'}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold text-muted mb-1" title="Durée totale calculée"><i class="fa fa-calculator me-1" style="color:#f59e0b;"></i>Durée réelle</label>
+                            <input type="text" class="form-control form-control-sm fw-bold bg-light" data-field="locAutoHours" data-index="${index}" value="${article.locAutoHours || ''}" readonly style="border-color:#f59e0b;" placeholder="auto">
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2" style="background:rgba(245,158,11,0.06);border-radius:0.5rem;padding:0.5rem;">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold mb-1" style="color:#d97706;"><i class="fa fa-hourglass-half me-1"></i>Heures à facturer *</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" class="form-control fw-bold" data-field="locBillableHours" data-index="${index}" value="${article.locBillableHours || ''}" min="1" step="1" placeholder="Ex: 12" style="border-color:#f59e0b;">
+                                <span class="input-group-text fw-bold" style="background:#fef3c7;color:#92400e;">Heures</span>
+                            </div>
+                            <small class="text-muted" style="font-size:0.68rem;">Ex: 12 Heures = 4h × 3 rotations</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted mb-1">Quantité (QTE) *</label>
+                            <input type="number" class="form-control fw-bold form-control-sm" data-field="qte" data-index="${index}" value="${article.qte || 1}" min="1" step="1" required>
+                            <small class="text-muted" style="font-size:0.68rem;">Nombre de rotations/voyages</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted mb-1">Prix Unitaire HT *</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" class="form-control fw-bold" data-field="prixUHT" data-index="${index}" value="${article.prixUHT || settings.defaultLocationRate || 37500}" min="0" required>
+                                <span class="input-group-text">DA/u</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-8">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <label class="form-label small fw-bold text-muted mb-0">Désignation facturée *</label>
                                 <button type="button" class="btn btn-link btn-xs p-0 text-decoration-none fw-semibold text-warning" onclick="updateLocationDesignation(${index})"><i class="fa fa-sync-alt me-1"></i>Régénérer</button>
                             </div>
-                            <textarea class="form-control form-control-sm" rows="3" data-field="designation" data-index="${index}" required>${article.designation || ''}</textarea>
-                        </div>
-                    </div>
-                    <div class="row g-2 align-items-end">
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold text-muted mb-1">Jours facturés *</label>
-                            <input type="number" class="form-control fw-bold" data-field="qte" data-index="${index}" value="${article.qte || 1}" min="0.5" step="0.5" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold text-muted mb-1">Taux Journalier HT *</label>
-                            <div class="input-group">
-                                <input type="number" class="form-control fw-bold" data-field="prixUHT" data-index="${index}" value="${article.prixUHT || settings.defaultLocationRate || 150000}" min="0" required>
-                                <span class="input-group-text">DA/j</span>
-                            </div>
+                            <textarea class="form-control form-control-sm" rows="4" data-field="designation" data-index="${index}" required>${article.designation || ''}</textarea>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label small fw-bold text-muted mb-1">Montant Ligne HT</label>
                             <input type="number" class="form-control fw-bold bg-light" data-field="montantHT" data-index="${index}" value="${article.montantHT || 0}" readonly>
+                            <small class="text-muted" style="font-size:0.68rem;">= QTE × Prix U. HT</small>
                         </div>
                     </div>
                 `;
@@ -2362,28 +2378,30 @@ function renderArticles() {
                             updateImmobilisationDesignation(index);
                         }
                     } else if (article.isLocation) {
-                        if (['locSite', 'locPeriodStart', 'locPeriodEnd', 'locDriver', 'locHourStart', 'locHourEnd', 'qte'].includes(field)) {
+                        if (['locSite', 'locPeriodStart', 'locPeriodEnd', 'locDriver', 'locHourStart', 'locHourEnd', 'locEquipment', 'locTonnage', 'locBillableHours', 'qte'].includes(field)) {
                             updateLocationDesignation(index);
                         }
                         if (['locPeriodStart','locPeriodEnd','locHourStart','locHourEnd'].includes(field)) {
-                            // Auto-calculate days
+                            // Auto-calculate hours between departure and return
                             if (article.locPeriodStart && article.locPeriodEnd) {
                                 const start = new Date(article.locPeriodStart + 'T' + (article.locHourStart || '08:00'));
                                 const end = new Date(article.locPeriodEnd + 'T' + (article.locHourEnd || '17:00'));
                                 const diffMs = end - start;
-                                const diffDays = Math.max(0.5, Math.round((diffMs / (1000*60*60*24)) * 2) / 2);
-                                article.locAutodays = diffDays;
-                                article.qte = diffDays;
-                                // Update displayed fields
-                                const qteInput = container.querySelector(`[data-field="qte"][data-index="${index}"]`);
-                                if (qteInput) qteInput.value = diffDays;
-                                const autoInput = container.querySelector(`[data-field="locAutodays"][data-index="${index}"]`);
-                                if (autoInput) autoInput.value = diffDays;
-                                article.montantHT = diffDays * (parseFloat(article.prixUHT) || 0);
-                                const montantInput = container.querySelector(`[data-field="montantHT"][data-index="${index}"]`);
-                                if (montantInput) montantInput.value = article.montantHT;
+                                const diffHours = Math.max(0, diffMs / (1000 * 60 * 60));
+                                const h = Math.floor(diffHours);
+                                const m = Math.round((diffHours - h) * 60);
+                                article.locAutoHours = m > 0 ? `${h}h${String(m).padStart(2,'0')}` : `${h}h`;
+                                // Update the read-only auto hours display
+                                const autoInput = container.querySelector(`[data-field="locAutoHours"][data-index="${index}"]`);
+                                if (autoInput) autoInput.value = article.locAutoHours;
                             }
                             updateLocationDesignation(index);
+                        }
+                        // Recalc montantHT = qte × prixUHT
+                        if (['qte', 'prixUHT', 'locBillableHours'].includes(field)) {
+                            article.montantHT = (parseFloat(article.qte) || 0) * (parseFloat(article.prixUHT) || 0);
+                            const montantInput = container.querySelector(`[data-field="montantHT"][data-index="${index}"]`);
+                            if (montantInput) montantInput.value = article.montantHT;
                         }
                     }
                     
@@ -2907,7 +2925,7 @@ function generateInvoiceHTML(invoice, options = {}) {
                         ${invoice.articles.map(a => `
                             <tr>
                                 <td style="text-align: center !important;">${a.no}</td>
-                                <td class="text-left" style="text-align: left !important;">${a.designation}</td>
+                                <td class="text-left" style="text-align: left !important;">${(a.designation || '').replace(/\n/g, '<br>')}</td>
                                 <td style="text-align: center !important;">${a.qte}</td>
                                 <td style="text-align: center !important;">${formatCurrency(a.prixUHT).replace(/\s?DA\s?$/, '')}</td>
                                 <td style="text-align: center !important;">${formatCurrency(a.montantHT).replace(/\s?DA\s?$/, '')}</td>
@@ -3909,7 +3927,7 @@ function generateInvoiceHTMLForPDF(invoice, options = {}) {
     let rows = articlesForThisPage.map(a => `
       <tr class="article-row">
         <td style="text-align: center !important;">${a.no}</td>
-        <td class="text-left" style="text-align: left !important;">${a.designation}</td>
+        <td class="text-left" style="text-align: left !important;">${(a.designation || '').replace(/\n/g, '<br>')}</td>
         <td style="text-align: center !important;">${a.qte}</td>
         <td style="text-align: center !important;">${formatCurrency(a.prixUHT).replace(/\s?DA\s?$/, '')}</td>
         <td style="text-align: center !important;">${formatCurrency(a.montantHT).replace(/\s?DA\s?$/, '')}</td>
@@ -8609,12 +8627,14 @@ window.addLocationArticle = function() {
     try {
         if (!currentInvoice.articles) currentInvoice.articles = [];
         const newNo = currentInvoice.articles.length + 1;
-        const rate = settings.defaultLocationRate || 150000;
-        const defaultEquip = (settings.locationEquipmentTypes || 'Grue 25T').split(',')[0].trim();
+        const rate = settings.defaultLocationRate || 37500;
+        const defaultEquip = (settings.locationEquipmentTypes || 'Grue 25T, Grue 50T, Grue 75T, Grue Mobile').split(',')[0].trim();
         currentInvoice.articles.push({
             no: newNo, isLocation: true, isImmobilisation: false, pricingType: 'Location',
             locEquipment: defaultEquip, locTonnage: '', locPeriodStart: '', locPeriodEnd: '',
-            locSite: '', locDriver: '', designation: '', qte: 1,
+            locHourStart: '08:00', locHourEnd: '17:00',
+            locSite: '', locDriver: '', locBillableHours: '', locAutoHours: '',
+            designation: '', qte: 1,
             prixUHT: rate, montantHT: rate, wilayaDepart: '', wilayaDestination: '', selectedDestination: ''
         });
         updateLocationDesignation(currentInvoice.articles.length - 1);
@@ -8629,18 +8649,41 @@ window.updateLocationDesignation = function(index) {
     if (!currentInvoice.articles || !currentInvoice.articles[index]) return;
     const art = currentInvoice.articles[index];
     const equip = art.locEquipment || 'Engin';
-    let des = `<b>Location de ${equip}</b><br>`;
-    if (art.locSite && art.locSite.trim()) des += `-Site / Chantier : <b>${art.locSite.trim()}</b><br>`;
-    if (art.locPeriodStart || art.locPeriodEnd) {
-        const from = art.locPeriodStart ? new Date(art.locPeriodStart).toLocaleDateString('fr-FR') : '...';
-        const to = art.locPeriodEnd ? new Date(art.locPeriodEnd).toLocaleDateString('fr-FR') : '...';
+
+    // Title line: LOCATION DE GRUE MOBILE-75 Tonnes
+    let des = `LOCATION DE ${equip.toUpperCase()}`;
+    if (art.locTonnage) des += `-${art.locTonnage}`;
+    des += `\n`;
+
+    // Date et heure de départ
+    if (art.locPeriodStart) {
+        const dStart = new Date(art.locPeriodStart);
+        const dateStartStr = dStart.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
         const hStart = art.locHourStart || '';
-        const hEnd = art.locHourEnd || '';
-        des += `-Période : Du ${from}${hStart ? ' à '+hStart : ''} au ${to}${hEnd ? ' à '+hEnd : ''}<br>`;
+        des += `Date et heure de départ ${dateStartStr}${hStart ? ' ' + hStart : ''}\n`;
     }
-    if (art.locDriver && art.locDriver.trim()) des += `-Opérateur / Réf : ${art.locDriver.trim()}<br>`;
-    const qty = parseFloat(art.qte) || 0;
-    if (qty > 0) des += `-Durée : <b>${qty} Jour${qty > 1 ? 's' : ''}</b>`;
+
+    // Date et heure de retour
+    if (art.locPeriodEnd) {
+        const dEnd = new Date(art.locPeriodEnd);
+        const dateEndStr = dEnd.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const hEnd = art.locHourEnd || '';
+        des += `Date et heure de retour ${dateEndStr}${hEnd ? ' ' + hEnd : ''}\n`;
+    }
+
+    // Durée de location à facturer
+    const billableHours = parseInt(art.locBillableHours) || 0;
+    const qty = parseInt(art.qte) || 1;
+    if (billableHours > 0) {
+        const hPerUnit = qty > 0 ? Math.round(billableHours / qty) : billableHours;
+        des += `\n• Durée de location à facturer : ${billableHours} Heures (${hPerUnit}hx${qty})`;
+    }
+
+    // Site / Chantier
+    if (art.locSite && art.locSite.trim()) {
+        des += `\nSite : ${art.locSite.trim()}`;
+    }
+
     art.designation = des;
     const textarea = document.querySelector(`textarea[data-field="designation"][data-index="${index}"]`);
     if (textarea) textarea.value = des;
@@ -8894,10 +8937,17 @@ function exportLocationToExcel() {
 // ════════════════════════════════════════════════════════════════
 
 async function generateShareLink() {
-    const password = document.getElementById('shareLinkPassword')?.value;
+    let password = document.getElementById('shareLinkPassword')?.value;
     const expiresAt = document.getElementById('shareLinkExpiry')?.value;
     const label = document.getElementById('shareLinkLabel')?.value || 'Dashboard';
-    if (!password || !expiresAt) { alert('Veuillez remplir le mot de passe et la date d\'expiration.'); return; }
+
+    // Auto-generate password if user didn't type one
+    if (!password || !password.trim()) {
+        generateRandomPassword();
+        password = document.getElementById('shareLinkPassword')?.value;
+    }
+
+    if (!expiresAt) { alert('Veuillez choisir une date d\'expiration.'); return; }
     try {
         const resp = await fetch(API_URL + '/api/share-links', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -8906,8 +8956,12 @@ async function generateShareLink() {
         const result = await resp.json();
         if (result.success) {
             const fullLink = window.location.origin + '/shared/' + result.token;
-            prompt('\u2705 Lien créé ! Copiez-le :', fullLink);
+            const now = new Date().toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+            prompt(`✅ Lien créé le ${now}\n🔑 Mot de passe : ${password}\n\nCopiez le lien :`, fullLink);
             loadShareLinks();
+            // Reset form
+            document.getElementById('shareLinkPassword').value = '';
+            document.getElementById('shareLinkLabel').value = '';
         } else { alert('Erreur: ' + (result.message || 'Échec')); }
     } catch(e) { console.error(e); alert('Erreur réseau'); }
 }
@@ -8927,11 +8981,15 @@ async function loadShareLinks() {
             const lastIP = l.lastIP || '-';
             const lastDev = l.lastDevice || 'Appareil inconnu';
             const lastAccess = l.lastAccessedAt ? new Date(l.lastAccessedAt).toLocaleString('fr-FR') : 'Jamais';
+            const created = l.createdAt ? new Date(l.createdAt).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '-';
+            const linkPassword = l.password || '???';
             return `<div class="p-3 mb-2 rounded border ${isExp?'bg-light text-muted':'bg-white shadow-sm'}">
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div>
                         <div class="fw-bold small">${l.label||'Dashboard'} ${isExp?'<span class="badge bg-danger ms-1">Expiré</span>':'<span class="badge bg-success ms-1">Actif</span>'}</div>
-                        <div class="text-muted" style="font-size:0.72rem;">Expire le : <b>${exp.toLocaleDateString('fr-FR')}</b></div>
+                        <div class="text-muted" style="font-size:0.72rem;"><i class="fa fa-calendar-plus text-success me-1"></i>Créé le : <b>${created}</b></div>
+                        <div class="text-muted" style="font-size:0.72rem;"><i class="fa fa-calendar-xmark text-danger me-1"></i>Expire le : <b>${exp.toLocaleDateString('fr-FR')}</b></div>
+                        <div style="font-size:0.72rem;" class="mt-1"><i class="fa fa-key text-warning me-1"></i>Mot de passe : <code class="bg-light border px-2 py-1 rounded font-monospace fw-bold text-dark" style="font-size:0.8rem;letter-spacing:1px;">${linkPassword}</code></div>
                     </div>
                     <div class="d-flex gap-1">
                         <button class="btn btn-outline-primary btn-sm" onclick="copyShareLink('${l.token}')" title="Copier le lien"><i class="fa fa-copy"></i></button>
