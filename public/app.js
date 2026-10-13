@@ -680,6 +680,8 @@ function setupEventListeners() {
         if (filterYear) filterYear.addEventListener('change', filterInvoices);
         if (filterMonth) filterMonth.addEventListener('change', filterInvoices);
         if (filterStatus) filterStatus.addEventListener('change', filterInvoices);
+        const filterType = document.getElementById('filterType');
+        if (filterType) filterType.addEventListener('change', filterInvoices);
         if (btnClearFilters) btnClearFilters.addEventListener('click', clearFilters);
 
         // Global Search
@@ -1074,7 +1076,7 @@ function openInvoiceWizard(initialType = 'transport') {
         locDriver: '',
         locBillableHours: '',
         locAutoHours: '',
-        designation: `LOCATION DE ${defaultEquip.toUpperCase()}\n`,
+        designation: `<b>LOCATION DE ${defaultEquip.toUpperCase()}</b><br>`,
         qte: 1,
         prixUHT: locRate,
         montantHT: locRate,
@@ -2190,10 +2192,10 @@ function renderArticles() {
                     </div>
                     <div class="row g-2 mb-2" style="background:rgba(245,158,11,0.06);border-radius:0.5rem;padding:0.5rem;">
                         <div class="col-md-4">
-                            <label class="form-label small fw-bold mb-1" style="color:#d97706;"><i class="fa fa-hourglass-half me-1"></i>Heures à facturer *</label>
+                            <label class="form-label small fw-bold mb-1" style="color:#dc2626;"><i class="fa fa-hourglass-half me-1"></i>Heures à facturer *</label>
                             <div class="input-group input-group-sm">
-                                <input type="number" class="form-control fw-bold" data-field="locBillableHours" data-index="${index}" value="${article.locBillableHours || ''}" min="1" step="1" placeholder="Ex: 12" style="border-color:#f59e0b;">
-                                <span class="input-group-text fw-bold" style="background:#fef3c7;color:#92400e;">Heures</span>
+                                <input type="number" class="form-control fw-bold" data-field="locBillableHours" data-index="${index}" value="${article.locBillableHours || ''}" min="1" step="1" placeholder="Ex: 12" style="border-color:#dc2626;color:#dc2626;">
+                                <span class="input-group-text fw-bold" style="background:#fef2f2;color:#dc2626;border-color:#dc2626;">Heures</span>
                             </div>
                             <small class="text-muted" style="font-size:0.68rem;">Ex: 12 Heures = 4h × 3 rotations</small>
                         </div>
@@ -2314,6 +2316,14 @@ function renderArticles() {
                     if (field === 'immoTitle') {
                         updateImmobilisationDesignation(index);
                     } else if (field === 'locEquipment') {
+                        // Auto-extract tonnage from equipment name (e.g. "Grue 75T" → "75 Tonnes")
+                        const article = currentInvoice.articles[index];
+                        const match = this.value.match(/(\d+)\s*T/i);
+                        if (match) {
+                            article.locTonnage = match[1] + ' Tonnes';
+                            const tonnageInput = document.querySelector(`[data-field="locTonnage"][data-index="${index}"]`);
+                            if (tonnageInput) tonnageInput.value = article.locTonnage;
+                        }
                         updateLocationDesignation(index);
                     } else if (['wilayaDepart', 'wilayaDestination', 'selectedDestination', 'pricingType'].includes(field)) {
                         updateArticleDesignation(index);
@@ -3391,6 +3401,7 @@ function getFilteredInvoices() {
         const filterYear = document.getElementById('filterYear');
         const filterMonth = document.getElementById('filterMonth');
         const filterStatus = document.getElementById('filterStatus');
+        const filterType = document.getElementById('filterType');
         
         // Get Values
         const clientFilter = filterClient ? filterClient.value : '';
@@ -3398,6 +3409,7 @@ function getFilteredInvoices() {
         const yearFilter = filterYear ? filterYear.value : '';
         const monthFilter = filterMonth ? filterMonth.value : '';
         const statusFilter = filterStatus ? filterStatus.value : '';
+        const typeFilter = filterType ? filterType.value : '';
         
         // 1. Filter by Client
         if (clientFilter) filtered = filtered.filter(inv => inv.clientId === parseInt(clientFilter));
@@ -3431,6 +3443,23 @@ function getFilteredInvoices() {
 
         // 5. Filter by Status
         if (statusFilter) filtered = filtered.filter(inv => getInvoiceStatus(inv).class === statusFilter);
+
+        // 5b. Filter by Type (Transport / Immobilisation / Location / Proforma)
+        if (typeFilter) {
+            filtered = filtered.filter(inv => {
+                if (typeFilter === 'proforma') return inv.documentType === 'proforma';
+                if (typeFilter === 'transport') {
+                    return (inv.articles || []).some(a => !a.isImmobilisation && !a.isLocation);
+                }
+                if (typeFilter === 'immobilisation') {
+                    return inv.invoiceType === 'immobilisation' || (inv.articles || []).some(a => a.isImmobilisation);
+                }
+                if (typeFilter === 'location') {
+                    return inv.invoiceType === 'location' || (inv.articles || []).some(a => a.isLocation);
+                }
+                return true;
+            });
+        }
 
         // 6. Global Search
         const globalSearchInput = document.getElementById('globalSearchInput');
@@ -4486,6 +4515,8 @@ function clearFilters() {
         
         if (filterMonth) filterMonth.value = '';
         if (filterStatus) filterStatus.value = '';
+        const filterType = document.getElementById('filterType');
+        if (filterType) filterType.value = '';
         if (globalSearchInput) globalSearchInput.value = '';
         
         renderInvoices();
@@ -8629,9 +8660,12 @@ window.addLocationArticle = function() {
         const newNo = currentInvoice.articles.length + 1;
         const rate = settings.defaultLocationRate || 37500;
         const defaultEquip = (settings.locationEquipmentTypes || 'Grue 25T, Grue 50T, Grue 75T, Grue Mobile').split(',')[0].trim();
+        // Auto-extract tonnage from equipment name (e.g. "Grue 75T" → "75 Tonnes")
+        const tonnageMatch = defaultEquip.match(/(\d+)\s*T/i);
+        const autoTonnage = tonnageMatch ? tonnageMatch[1] + ' Tonnes' : '';
         currentInvoice.articles.push({
             no: newNo, isLocation: true, isImmobilisation: false, pricingType: 'Location',
-            locEquipment: defaultEquip, locTonnage: '', locPeriodStart: '', locPeriodEnd: '',
+            locEquipment: defaultEquip, locTonnage: autoTonnage, locPeriodStart: '', locPeriodEnd: '',
             locHourStart: '08:00', locHourEnd: '17:00',
             locSite: '', locDriver: '', locBillableHours: '', locAutoHours: '',
             designation: '', qte: 1,
@@ -8650,17 +8684,17 @@ window.updateLocationDesignation = function(index) {
     const art = currentInvoice.articles[index];
     const equip = art.locEquipment || 'Engin';
 
-    // Title line: LOCATION DE GRUE MOBILE-75 Tonnes
-    let des = `LOCATION DE ${equip.toUpperCase()}`;
+    // Title line: LOCATION DE GRUE MOBILE-75 Tonnes (BOLD)
+    let des = `<b>LOCATION DE ${equip.toUpperCase()}`;
     if (art.locTonnage) des += `-${art.locTonnage}`;
-    des += `\n`;
+    des += `</b><br>`;
 
     // Date et heure de départ
     if (art.locPeriodStart) {
         const dStart = new Date(art.locPeriodStart);
         const dateStartStr = dStart.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
         const hStart = art.locHourStart || '';
-        des += `Date et heure de départ ${dateStartStr}${hStart ? ' ' + hStart : ''}\n`;
+        des += `Date et heure de départ ${dateStartStr}${hStart ? ' ' + hStart : ''}<br>`;
     }
 
     // Date et heure de retour
@@ -8668,20 +8702,20 @@ window.updateLocationDesignation = function(index) {
         const dEnd = new Date(art.locPeriodEnd);
         const dateEndStr = dEnd.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
         const hEnd = art.locHourEnd || '';
-        des += `Date et heure de retour ${dateEndStr}${hEnd ? ' ' + hEnd : ''}\n`;
+        des += `Date et heure de retour ${dateEndStr}${hEnd ? ' ' + hEnd : ''}<br>`;
     }
 
-    // Durée de location à facturer
+    // Durée de location à facturer (RED + BOLD)
     const billableHours = parseInt(art.locBillableHours) || 0;
     const qty = parseInt(art.qte) || 1;
     if (billableHours > 0) {
         const hPerUnit = qty > 0 ? Math.round(billableHours / qty) : billableHours;
-        des += `\n• Durée de location à facturer : ${billableHours} Heures (${hPerUnit}hx${qty})`;
+        des += `<br>• Durée de location à facturer : <span style="color:#dc2626;font-weight:bold;">${billableHours} Heures (${hPerUnit}hx${qty})</span>`;
     }
 
     // Site / Chantier
     if (art.locSite && art.locSite.trim()) {
-        des += `\nSite : ${art.locSite.trim()}`;
+        des += `<br>Site : ${art.locSite.trim()}`;
     }
 
     art.designation = des;

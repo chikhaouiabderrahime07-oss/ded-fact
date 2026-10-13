@@ -1341,9 +1341,31 @@
                         <h4 class="chart-card-title"><i class="fas fa-table-list text-primary"></i> Tableau des Factures</h4>
                         <div class="text-muted small" id="table-summary-count">Chargement des données...</div>
                     </div>
-                    <div class="d-flex gap-2">
-                        <input type="text" id="table-search" class="table-search-input" placeholder="Filtrer (N°, Client, Date...)" oninput="filterTableRows()">
-                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2 align-items-center mb-2 p-2" style="background:var(--bg);border-radius:0.5rem;border:1px solid var(--border);">
+                    <input type="text" id="tableSearchInput" class="form-control form-control-sm" style="max-width:200px;font-size:0.72rem;" placeholder="🔍 Rechercher..." oninput="renderTable()">
+                    <select id="tableFilterStatus" class="form-select form-select-sm" style="max-width:140px;font-size:0.72rem;" onchange="renderTable()">
+                        <option value="all">Tous statuts</option>
+                        <option value="paid">✅ Payée</option>
+                        <option value="unpaid">⚠️ Impayée</option>
+                    </select>
+                    <select id="tableFilterType" class="form-select form-select-sm" style="max-width:150px;font-size:0.72rem;" onchange="renderTable()">
+                        <option value="all">Tous types</option>
+                        <option value="transport">🚛 Transport</option>
+                        <option value="immobilisation">⏱️ Immobilisation</option>
+                        <option value="location">🏗️ Location</option>
+                    </select>
+                    <select id="tableSortOrder" class="form-select form-select-sm" style="max-width:160px;font-size:0.72rem;" onchange="renderTable()">
+                        <option value="date-desc">📅 Date ↓ (récent)</option>
+                        <option value="date-asc">📅 Date ↑ (ancien)</option>
+                        <option value="amount-desc">💰 Montant ↓</option>
+                        <option value="amount-asc">💰 Montant ↑</option>
+                        <option value="number-desc">🔢 N° ↓</option>
+                        <option value="number-asc">🔢 N° ↑</option>
+                        <option value="client-asc">👤 Client A→Z</option>
+                        <option value="client-desc">👤 Client Z→A</option>
+                    </select>
+                    <span id="tableResultCount" class="small text-muted ms-auto" style="font-size:0.68rem;"></span>
                 </div>
                 <div class="table-scroll">
                     <table class="table-custom">
@@ -2605,16 +2627,74 @@
             const summary = document.getElementById('table-summary-count');
             if (!tbody) return;
 
-            if (summary) {
-                summary.textContent = `Affichage de ${filteredInvoices.length} facture(s) enregistrée(s)`;
+            // Clone filtered data for table-level filtering
+            let tableData = [...filteredInvoices];
+
+            // Table-level filters
+            const searchVal = (document.getElementById('tableSearchInput') || {}).value || '';
+            const statusVal = (document.getElementById('tableFilterStatus') || {}).value || 'all';
+            const typeVal = (document.getElementById('tableFilterType') || {}).value || 'all';
+            const sortVal = (document.getElementById('tableSortOrder') || {}).value || 'date-desc';
+
+            // Search filter
+            if (searchVal.trim()) {
+                const term = searchVal.toLowerCase();
+                tableData = tableData.filter(inv => {
+                    const num = (inv.number || '').toLowerCase();
+                    const clientObj = (globalData.clients || []).find(c => (c.id || c._id) == inv.clientId);
+                    const clientName = clientObj ? (clientObj.nom || clientObj.name || '').toLowerCase() : '';
+                    return num.includes(term) || clientName.includes(term);
+                });
+            }
+            // Status filter
+            if (statusVal !== 'all') {
+                tableData = tableData.filter(inv => {
+                    const isPaid = inv.paid || inv.paymentStatus === 'encaissee';
+                    return statusVal === 'paid' ? isPaid : !isPaid;
+                });
+            }
+            // Type filter
+            if (typeVal !== 'all') {
+                tableData = tableData.filter(inv => {
+                    if (typeVal === 'transport') return (inv.articles || []).some(a => !a.isImmobilisation && !a.isLocation);
+                    if (typeVal === 'immobilisation') return (inv.articles || []).some(a => a.isImmobilisation);
+                    if (typeVal === 'location') return (inv.articles || []).some(a => a.isLocation);
+                    return true;
+                });
             }
 
-            if (filteredInvoices.length === 0) {
+            // Sort
+            const [sortKey, sortDir] = sortVal.split('-');
+            const dir = sortDir === 'asc' ? 1 : -1;
+            tableData.sort((a, b) => {
+                if (sortKey === 'date') return dir * ((new Date(a.date || 0)) - (new Date(b.date || 0)));
+                if (sortKey === 'amount') return dir * ((a.totals?.netAPayer || a.totals?.ttc || 0) - (b.totals?.netAPayer || b.totals?.ttc || 0));
+                if (sortKey === 'number') {
+                    const na = parseInt((a.number || '0').split('/')[0]) || 0;
+                    const nb = parseInt((b.number || '0').split('/')[0]) || 0;
+                    return dir * (na - nb);
+                }
+                if (sortKey === 'client') {
+                    const ca = getClientName(a);
+                    const cb = getClientName(b);
+                    return dir * ca.localeCompare(cb);
+                }
+                return 0;
+            });
+
+            // Update counts
+            const countEl = document.getElementById('tableResultCount');
+            if (countEl) countEl.textContent = `${tableData.length} / ${filteredInvoices.length} facture(s)`;
+            if (summary) {
+                summary.textContent = `Affichage de ${tableData.length} facture(s) sur ${filteredInvoices.length}`;
+            }
+
+            if (tableData.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Aucune facture ne correspond aux filtres.</td></tr>';
                 return;
             }
 
-            tbody.innerHTML = filteredInvoices.map(inv => {
+            tbody.innerHTML = tableData.map(inv => {
                 const clientName = getClientName(inv);
                 const isPaid = inv.paid || inv.paymentStatus === 'encaissee';
                 const statusBadge = isPaid 

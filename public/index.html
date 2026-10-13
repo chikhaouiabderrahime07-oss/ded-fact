@@ -633,7 +633,7 @@ th.sortable.sorted-desc .sort-icon::after {
             <div class="card mb-3">
                 <div class="card__body py-3">
 <div class="row g-2 align-items-center">
-    <div class="col-md-3">
+    <div class="col-md-2">
         <select class="form-control form-select-sm" id="filterClient">
             <option value="">Tous les clients</option>
         </select>
@@ -649,7 +649,7 @@ th.sortable.sorted-desc .sort-icon::after {
             </select>
     </div>
 
-    <div class="col-md-3">
+    <div class="col-md-2">
         <select class="form-select form-select-sm" id="filterMonth">
             <option value="">Tous les mois</option>
         </select>
@@ -662,6 +662,16 @@ th.sortable.sorted-desc .sort-icon::after {
             <option value="due">À échéance</option>
             <option value="overdue">En retard</option>
             <option value="pending">En attente</option>
+        </select>
+    </div>
+
+    <div class="col-md-2">
+        <select id="filterType" class="form-select form-select-sm">
+            <option value="">Tous types</option>
+            <option value="transport">🚛 Transport</option>
+            <option value="immobilisation">⏱️ Immobilisation</option>
+            <option value="location">🏗️ Location</option>
+            <option value="proforma">📋 Proforma</option>
         </select>
     </div>
 </div>
