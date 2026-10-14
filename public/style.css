@@ -913,3 +913,24 @@ input[type="month"]:valid::before {
     align-items: center;
     gap: 4px;
 }
+
+/* --- High Z-Index for Dropdowns & Red Hours Styling --- */
+#dashClientDropdown, #rptClientDropdown, #filter-client-dropdown {
+    z-index: 2000 !important;
+}
+
+.red-hours, span.red-hours, span[style*="color:#dc2626"], span[style*="color: #dc2626"] {
+    color: #dc2626 !important;
+    font-weight: bold !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+}
+
+@media print {
+    .red-hours, span.red-hours, span[style*="color:#dc2626"], span[style*="color: #dc2626"] {
+        color: #dc2626 !important;
+        font-weight: bold !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+}

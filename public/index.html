@@ -349,20 +349,24 @@ th.sortable.sorted-desc .sort-icon::after {
             <div class="text-muted small" id="currentDate"></div>
         </div>
         <!-- GLOBAL DASHBOARD FILTER PANEL -->
-        <div class="d-flex align-items-center gap-2 flex-wrap bg-white p-2 rounded shadow-sm border">
-            <div class="d-flex align-items-center gap-1" style="position:relative;">
+        <div class="d-flex align-items-center gap-2 flex-wrap bg-white p-2 rounded shadow-sm border" style="position:relative; z-index:1050; overflow:visible;">
+            <div class="d-flex align-items-center gap-1" style="position:relative; z-index:1100;">
                 <i class="fa fa-user text-primary small"></i>
                 <!-- Multi-client selector dropdown -->
                 <div id="dashboardClientBtn" onclick="toggleDashClientDropdown()" class="form-select form-select-sm shadow-sm" style="min-width:200px; font-weight:bold; border: 2px solid var(--color-primary); cursor:pointer; display:flex; align-items:center; justify-content:space-between; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                     <span id="dashClientLabel">👑 Tous les clients</span>
                 </div>
                 <span id="dashClientCompareBadge" class="badge bg-primary" style="font-size:0.6rem;display:none;position:absolute;top:-6px;right:-6px;">⚡</span>
-                <div id="dashClientDropdown" style="display:none; position:absolute; top:100%; left:0; z-index:999; background:white; border:1px solid #dee2e6; border-radius:0.5rem; box-shadow:0 8px 24px rgba(0,0,0,0.15); max-height:300px; width:280px; margin-top:2px;">
+                <div id="dashClientDropdown" style="display:none; position:absolute; top:100%; left:0; z-index:2000; background:white; border:1px solid #dee2e6; border-radius:0.5rem; box-shadow:0 12px 36px rgba(0,0,0,0.22); max-height:360px; width:290px; margin-top:4px;">
                     <div style="padding:6px 10px; border-bottom:1px solid #dee2e6;">
                         <input type="text" id="dashClientSearch" placeholder="🔍 Rechercher..." style="width:100%;border:none;outline:none;font-size:0.75rem;padding:4px 0;" oninput="filterDashClientOptions()">
                     </div>
-                    <div id="dashClientOptions" style="max-height:200px; overflow-y:auto;"></div>
-                    <div style="padding:6px 10px; border-top:1px solid #dee2e6; display:flex; gap:4px;">
+                    <div style="padding:6px 10px; background:#f8fafc; border-bottom:1px solid #dee2e6; display:flex; align-items:center; gap:6px;">
+                        <input type="checkbox" id="dashCompareMode" style="cursor:pointer;" onchange="onDashCompareModeToggle()">
+                        <label for="dashCompareMode" style="cursor:pointer; font-size:0.75rem; font-weight:700; color:#2563eb; margin-bottom:0;">⚡ Activer la comparaison</label>
+                    </div>
+                    <div id="dashClientOptions" style="max-height:190px; overflow-y:auto;"></div>
+                    <div style="padding:6px 10px; border-top:1px solid #dee2e6; display:flex; gap:4px; background:#fff;">
                         <button onclick="selectAllDashClients()" class="btn btn-outline-secondary btn-sm" style="flex:1;font-size:0.65rem;padding:2px;">✅ Tous</button>
                         <button onclick="deselectAllDashClients()" class="btn btn-outline-secondary btn-sm" style="flex:1;font-size:0.65rem;padding:2px;">❌ Aucun</button>
                         <button onclick="toggleDashClientDropdown();updateDashboard()" class="btn btn-primary btn-sm" style="flex:1;font-size:0.65rem;padding:2px;font-weight:700;">Appliquer</button>
@@ -956,21 +960,25 @@ th.sortable.sorted-desc .sort-icon::after {
     <!-- TAB 2: GRAPHIQUES & KPI -->
     <div class="tab-pane fade" id="tab-report-kpi">
       <!-- EXTENDED FILTER PANEL -->
-      <div class="card mb-4 border-0 shadow-sm">
+      <div class="card mb-4 border-0 shadow-sm" style="position:relative; z-index:1050; overflow:visible;">
         <div class="card__body py-3">
           <div class="row g-2 align-items-center">
-            <div class="col-md-3" style="position:relative;">
+            <div class="col-md-3" style="position:relative; z-index:1100;">
               <label class="form-label small fw-bold text-muted mb-1"><i class="fa fa-user me-1 text-primary"></i>Clients <span id="rptClientCompareBadge" class="badge bg-primary ms-1" style="font-size:0.55rem;display:none;">⚡</span></label>
               <!-- Multi-client selector -->
               <div id="rptClientBtn" onclick="toggleRptClientDropdown()" class="form-select form-select-sm" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                 <span id="rptClientLabel">👑 Tous les clients</span>
               </div>
-              <div id="rptClientDropdown" style="display:none;position:absolute;top:100%;left:0;z-index:999;background:white;border:1px solid #dee2e6;border-radius:0.5rem;box-shadow:0 8px 24px rgba(0,0,0,0.15);max-height:300px;width:280px;margin-top:2px;">
+              <div id="rptClientDropdown" style="display:none;position:absolute;top:100%;left:0;z-index:2000;background:white;border:1px solid #dee2e6;border-radius:0.5rem;box-shadow:0 12px 36px rgba(0,0,0,0.22);max-height:360px;width:290px;margin-top:4px;">
                 <div style="padding:6px 10px;border-bottom:1px solid #dee2e6;">
                   <input type="text" id="rptClientSearch" placeholder="🔍 Rechercher..." style="width:100%;border:none;outline:none;font-size:0.75rem;padding:4px 0;" oninput="filterRptClientOptions()">
                 </div>
-                <div id="rptClientOptions" style="max-height:200px;overflow-y:auto;"></div>
-                <div style="padding:6px 10px;border-top:1px solid #dee2e6;display:flex;gap:4px;">
+                <div style="padding:6px 10px;background:#f8fafc;border-bottom:1px solid #dee2e6;display:flex;align-items:center;gap:6px;">
+                  <input type="checkbox" id="rptCompareMode" style="cursor:pointer;" onchange="onRptCompareModeToggle()">
+                  <label for="rptCompareMode" style="cursor:pointer;font-size:0.75rem;font-weight:700;color:#2563eb;margin-bottom:0;">⚡ Activer la comparaison</label>
+                </div>
+                <div id="rptClientOptions" style="max-height:190px;overflow-y:auto;"></div>
+                <div style="padding:6px 10px;border-top:1px solid #dee2e6;display:flex;gap:4px;background:#fff;">
                   <button onclick="selectAllRptClients()" class="btn btn-outline-secondary btn-sm" style="flex:1;font-size:0.65rem;padding:2px;">✅ Tous</button>
                   <button onclick="deselectAllRptClients()" class="btn btn-outline-secondary btn-sm" style="flex:1;font-size:0.65rem;padding:2px;">❌ Aucun</button>
                   <button onclick="toggleRptClientDropdown();updateReportsView()" class="btn btn-primary btn-sm" style="flex:1;font-size:0.65rem;padding:2px;font-weight:700;">Appliquer</button>

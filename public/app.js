@@ -2214,7 +2214,14 @@ function renderArticles() {
                                 <label class="form-label small fw-bold text-muted mb-0">Désignation facturée *</label>
                                 <button type="button" class="btn btn-link btn-xs p-0 text-decoration-none fw-semibold text-warning" onclick="updateLocationDesignation(${index})"><i class="fa fa-sync-alt me-1"></i>Régénérer</button>
                             </div>
-                            <textarea class="form-control form-control-sm" rows="4" data-field="designation" data-index="${index}" required>${article.designation || ''}</textarea>
+                            <textarea class="form-control form-control-sm" rows="3" data-field="designation" data-index="${index}" required>${article.designation || ''}</textarea>
+                            <div class="mt-2 p-2 rounded border bg-light" style="font-size:0.82rem; line-height:1.4;">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <small class="text-muted fw-bold"><i class="fa fa-eye me-1 text-primary"></i>Aperçu de la désignation (rendu facture) :</small>
+                                    <span class="badge" style="background:#fee2e2;color:#dc2626;font-size:0.65rem;border:1px solid #fca5a5;">Heures en rouge</span>
+                                </div>
+                                <div id="liveDesig_${index}" class="p-2 bg-white rounded border" style="min-height:36px;">${typeof formatDesignationHTML === 'function' ? formatDesignationHTML(article.designation || '') : (article.designation || '')}</div>
+                            </div>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label small fw-bold text-muted mb-1">Montant Ligne HT</label>
@@ -2347,6 +2354,11 @@ function renderArticles() {
                     const article = currentInvoice.articles[index];
                     article[field] = value;
                     
+                    if (field === 'designation') {
+                        const liveDiv = document.getElementById(`liveDesig_${index}`);
+                        if (liveDiv) liveDiv.innerHTML = typeof formatDesignationHTML === 'function' ? formatDesignationHTML(value) : value;
+                    }
+
                     if (field === 'qte' || field === 'prixUHT') {
                         article.montantHT = (parseFloat(article.qte) || 0) * (parseFloat(article.prixUHT) || 0);
                         const montantInput = container.querySelector(`[data-field="montantHT"][data-index="${index}"]`);
@@ -2708,6 +2720,15 @@ case 3:
     }
 }
 
+window.formatDesignationHTML = function(des) {
+    if (!des) return '';
+    let html = String(des).replace(/\r?\n/g, '<br>');
+    html = html.replace(/(•?\s*Durée de location à facturer\s*:\s*)(?:<span[^>]*>)?([^<]+?)(?:<\/span>)?(?=<br>|$)/gi, (match, prefix, content) => {
+        return `${prefix}<span class="red-hours" style="color: #dc2626 !important; font-weight: bold !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;">${content.trim()}</span>`;
+    });
+    return html;
+};
+
 function updateInvoicePreview() {
     try {
         calculateTotals();
@@ -2861,6 +2882,21 @@ function generateInvoiceHTML(invoice, options = {}) {
                 .references-list { font-size: 0.85rem; line-height: 1.5; color: #333; margin-top: 10px; text-align: left; }
                 .references-list div { margin-bottom: 4px; }
                 .references-list strong { color: ${accent}; margin-right: 4px; display: inline; }
+
+                .red-hours, span.red-hours, span[style*="color:#dc2626"], span[style*="color: #dc2626"] {
+                    color: #dc2626 !important;
+                    font-weight: bold !important;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                }
+                @media print {
+                    .red-hours, span.red-hours, span[style*="color:#dc2626"], span[style*="color: #dc2626"] {
+                        color: #dc2626 !important;
+                        font-weight: bold !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                }
             </style>
 
             <div class="invoice-preview">
@@ -2923,7 +2959,7 @@ function generateInvoiceHTML(invoice, options = {}) {
                         ${invoice.articles.map(a => `
                             <tr>
                                 <td style="text-align: center !important;">${a.no}</td>
-                                <td class="text-left" style="text-align: left !important;">${(a.designation || '').replace(/\n/g, '<br>')}</td>
+                                <td class="text-left" style="text-align: left !important;">${formatDesignationHTML(a.designation)}</td>
                                 <td style="text-align: center !important;">${a.qte}</td>
                                 <td style="text-align: center !important;">${formatCurrency(a.prixUHT).replace(/\s?DA\s?$/, '')}</td>
                                 <td style="text-align: center !important;">${formatCurrency(a.montantHT).replace(/\s?DA\s?$/, '')}</td>
@@ -3944,7 +3980,7 @@ function generateInvoiceHTMLForPDF(invoice, options = {}) {
     let rows = articlesForThisPage.map(a => `
       <tr class="article-row">
         <td style="text-align: center !important;">${a.no}</td>
-        <td class="text-left" style="text-align: left !important;">${(a.designation || '').replace(/\n/g, '<br>')}</td>
+        <td class="text-left" style="text-align: left !important;">${formatDesignationHTML(a.designation)}</td>
         <td style="text-align: center !important;">${a.qte}</td>
         <td style="text-align: center !important;">${formatCurrency(a.prixUHT).replace(/\s?DA\s?$/, '')}</td>
         <td style="text-align: center !important;">${formatCurrency(a.montantHT).replace(/\s?DA\s?$/, '')}</td>
@@ -4118,9 +4154,23 @@ function generateInvoiceHTMLForPDF(invoice, options = {}) {
         .sig-space { height: 30px; width: 100%; } /* Squeezed even more */
 
         .page-number-only { text-align: center; font-size: 0.8rem; color: #666; border-top: 1px solid #eee; padding-top: 5px; padding-bottom: 30px; margin-top: 5px; } /* Added large bottom padding to lift text */		
+        
+        .red-hours, span.red-hours, span[style*="color:#dc2626"], span[style*="color: #dc2626"] {
+            color: #dc2626 !important;
+            font-weight: bold !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
         @media print {
             .invoice-preview { height: 1123px; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+            .red-hours, span.red-hours, span[style*="color:#dc2626"], span[style*="color: #dc2626"] {
+                color: #dc2626 !important;
+                font-weight: bold !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
         }
       </style>
 
@@ -4561,8 +4611,8 @@ function populateDashboardClientSelect() {
             const div = document.createElement('div');
             div.style.cssText = 'padding:5px 10px;display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.75rem;border-bottom:1px solid #f1f5f9;';
             div.classList.add('dash-client-option');
-            div.innerHTML = `<input type="checkbox" class="dash-client-chk" value="${c.id}" style="cursor:pointer;" onchange="updateDashClientLabel()"><span style="flex:1;">${c.nom || c.name || 'Client'}</span>`;
-            div.addEventListener('click', function(e) { if (e.target.tagName !== 'INPUT') { const cb = div.querySelector('input'); cb.checked = !cb.checked; updateDashClientLabel(); } });
+            div.innerHTML = `<input type="checkbox" class="dash-client-chk" value="${c.id}" style="cursor:pointer;" onchange="updateDashClientLabel();updateDashboard();"><span style="flex:1;">${c.nom || c.name || 'Client'}</span>`;
+            div.addEventListener('click', function(e) { if (e.target.tagName !== 'INPUT') { const cb = div.querySelector('input'); cb.checked = !cb.checked; updateDashClientLabel(); updateDashboard(); } });
             optionsContainer.appendChild(div);
         });
     }
@@ -4584,6 +4634,8 @@ function resetDashboardFilters() {
     if (dateFrom) dateFrom.value = '';
     if (dateTo) dateTo.value = '';
     if (customDates) customDates.style.display = 'none';
+    const cmpBox = document.getElementById('dashCompareMode');
+    if (cmpBox) cmpBox.checked = false;
     // Reset multi-client checkboxes
     deselectAllDashClients();
     // Reset HT/TTC toggles
@@ -4638,6 +4690,7 @@ function updateDashClientLabel() {
     const selected = getSelectedDashClientIds();
     const label = document.getElementById('dashClientLabel');
     const badge = document.getElementById('dashClientCompareBadge');
+    const isCompare = document.getElementById('dashCompareMode')?.checked;
     if (!selected.length) {
         if (label) label.textContent = '👑 Tous les clients';
         if (badge) badge.style.display = 'none';
@@ -4647,19 +4700,28 @@ function updateDashClientLabel() {
         if (badge) badge.style.display = 'none';
     } else {
         if (label) label.textContent = selected.length + ' clients';
-        if (badge) { badge.textContent = '⚡ Comparaison'; badge.style.display = 'inline'; }
+        if (badge) {
+            badge.textContent = isCompare ? '⚡ Comparaison (' + selected.length + ')' : selected.length + ' clients';
+            badge.style.display = 'inline';
+        }
     }
     // Also sync the hidden single select
     const cSel = document.getElementById('dashboardClientSelect');
     if (cSel) cSel.value = selected.length === 1 ? selected[0] : 'all';
 }
+function onDashCompareModeToggle() {
+    updateDashClientLabel();
+    updateDashboard();
+}
 function selectAllDashClients() {
     document.querySelectorAll('.dash-client-chk').forEach(cb => { if (cb.closest('.dash-client-option').style.display !== 'none') cb.checked = true; });
     updateDashClientLabel();
+    updateDashboard();
 }
 function deselectAllDashClients() {
     document.querySelectorAll('.dash-client-chk').forEach(cb => cb.checked = false);
     updateDashClientLabel();
+    updateDashboard();
 }
 // Click outside closes dropdown
 document.addEventListener('click', function(e) {
@@ -4677,7 +4739,8 @@ function renderDashComparisonPanel(filtered) {
     const panel = document.getElementById('dashComparisonPanel');
     if (!panel) return;
     const selectedClients = getSelectedDashClientIds();
-    if (selectedClients.length < 2) {
+    const isCompare = document.getElementById('dashCompareMode')?.checked;
+    if (!isCompare || selectedClients.length < 2) {
         panel.style.display = 'none';
         return;
     }
@@ -4689,7 +4752,7 @@ function renderDashComparisonPanel(filtered) {
     selectedClients.forEach((cid, idx) => {
         const clientObj = (clients || []).find(c => String(c.id) === cid);
         const clientName = clientObj ? (clientObj.nom || clientObj.name || 'Client') : 'Client #' + (idx + 1);
-        const clientInvs = filtered.filter(inv => String(inv.clientId) === cid);
+        const clientInvs = filtered.filter(inv => String(inv.clientId) === cid || (inv.client && String(inv.client.id || inv.client._id) === cid));
 
         let caTTC = 0, caHT = 0, nbFact = clientInvs.length, nbBL = 0, creance = 0, encaisse = 0;
         let caTransport = 0, caImmo = 0, caLoc = 0, paidCount = 0;
@@ -4820,9 +4883,13 @@ function getDashboardFilteredInvoices() {
     return invoices.filter(inv => {
         // Client filter — multi-select or single
         if (clientVal === '__multi__') {
-            if (!selectedDashClients.includes(String(inv.clientId))) return false;
-        } else if (clientVal !== 'all' && String(inv.clientId) !== String(clientVal)) {
-            return false;
+            const invCid = String(inv.clientId);
+            const invObjCid = inv.client ? String(inv.client._id || inv.client.id) : '';
+            if (!selectedDashClients.includes(invCid) && !selectedDashClients.includes(invObjCid)) return false;
+        } else if (clientVal !== 'all') {
+            const invCid = String(inv.clientId);
+            const invObjCid = inv.client ? String(inv.client._id || inv.client.id) : '';
+            if (invCid !== String(clientVal) && invObjCid !== String(clientVal)) return false;
         }
 
         // Date of invoice
@@ -8898,7 +8965,7 @@ window.updateLocationDesignation = function(index) {
     const qty = parseInt(art.qte) || 1;
     if (billableHours > 0) {
         const hPerUnit = qty > 0 ? Math.round(billableHours / qty) : billableHours;
-        des += `<br>• Durée de location à facturer : <span style="color:#dc2626;font-weight:bold;">${billableHours} Heures (${hPerUnit}hx${qty})</span>`;
+        des += `<br>• Durée de location à facturer : <span class="red-hours" style="color:#dc2626 !important;font-weight:bold !important;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;">${billableHours} Heures (${hPerUnit}hx${qty})</span>`;
     }
 
     // Site / Chantier
@@ -8909,6 +8976,13 @@ window.updateLocationDesignation = function(index) {
     art.designation = des;
     const textarea = document.querySelector(`textarea[data-field="designation"][data-index="${index}"]`);
     if (textarea) textarea.value = des;
+
+    // Update live formatted preview div in the form
+    const liveDiv = document.getElementById(`liveDesig_${index}`);
+    if (liveDiv) liveDiv.innerHTML = typeof formatDesignationHTML === 'function' ? formatDesignationHTML(des) : des;
+
+    // Immediately refresh invoice preview
+    if (typeof updateInvoicePreview === 'function') updateInvoicePreview();
 };
 
 function isLocationArticle(art) {
@@ -9693,8 +9767,8 @@ function populateRptClientFilter() {
             const div = document.createElement('div');
             div.style.cssText = 'padding:5px 10px;display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.75rem;border-bottom:1px solid #f1f5f9;';
             div.classList.add('rpt-client-option');
-            div.innerHTML = `<input type="checkbox" class="rpt-client-chk" value="${c.id}" style="cursor:pointer;" onchange="updateRptClientLabel()"><span style="flex:1;">${c.nom || c.name || 'Client'}</span>`;
-            div.addEventListener('click', function(e) { if (e.target.tagName !== 'INPUT') { const cb = div.querySelector('input'); cb.checked = !cb.checked; updateRptClientLabel(); } });
+            div.innerHTML = `<input type="checkbox" class="rpt-client-chk" value="${c.id}" style="cursor:pointer;" onchange="updateRptClientLabel();updateReportsView();"><span style="flex:1;">${c.nom || c.name || 'Client'}</span>`;
+            div.addEventListener('click', function(e) { if (e.target.tagName !== 'INPUT') { const cb = div.querySelector('input'); cb.checked = !cb.checked; updateRptClientLabel(); updateReportsView(); } });
             optionsContainer.appendChild(div);
         });
     }
@@ -9734,6 +9808,7 @@ function updateRptClientLabel() {
     const selected = getSelectedRptClientIds();
     const label = document.getElementById('rptClientLabel');
     const badge = document.getElementById('rptClientCompareBadge');
+    const isCompare = document.getElementById('rptCompareMode')?.checked;
     if (!selected.length) {
         if (label) label.textContent = '👑 Tous les clients';
         if (badge) badge.style.display = 'none';
@@ -9743,18 +9818,27 @@ function updateRptClientLabel() {
         if (badge) badge.style.display = 'none';
     } else {
         if (label) label.textContent = selected.length + ' clients';
-        if (badge) { badge.textContent = '⚡ Comparaison'; badge.style.display = 'inline'; }
+        if (badge) {
+            badge.textContent = isCompare ? '⚡ Comparaison (' + selected.length + ')' : selected.length + ' clients';
+            badge.style.display = 'inline';
+        }
     }
     const cSel = document.getElementById('rptFilterClient');
     if (cSel) cSel.value = selected.length === 1 ? selected[0] : 'all';
 }
+function onRptCompareModeToggle() {
+    updateRptClientLabel();
+    updateReportsView();
+}
 function selectAllRptClients() {
     document.querySelectorAll('.rpt-client-chk').forEach(cb => { if (cb.closest('.rpt-client-option').style.display !== 'none') cb.checked = true; });
     updateRptClientLabel();
+    updateReportsView();
 }
 function deselectAllRptClients() {
     document.querySelectorAll('.rpt-client-chk').forEach(cb => cb.checked = false);
     updateRptClientLabel();
+    updateReportsView();
 }
 document.addEventListener('click', function(e) {
     const dd = document.getElementById('rptClientDropdown');
@@ -9771,7 +9855,8 @@ function renderRptComparisonPanel(filtered) {
     const panel = document.getElementById('rptComparisonPanel');
     if (!panel) return;
     const selectedClients = getSelectedRptClientIds();
-    if (selectedClients.length < 2) { panel.style.display = 'none'; return; }
+    const isCompare = document.getElementById('rptCompareMode')?.checked;
+    if (!isCompare || selectedClients.length < 2) { panel.style.display = 'none'; return; }
     panel.style.display = 'block';
     const countEl = document.getElementById('rptCompareCount');
     if (countEl) countEl.textContent = selectedClients.length + ' clients';
@@ -9780,7 +9865,7 @@ function renderRptComparisonPanel(filtered) {
     selectedClients.forEach((cid, idx) => {
         const clientObj = (clients || []).find(c => String(c.id) === cid);
         const clientName = clientObj ? (clientObj.nom || clientObj.name || 'Client') : 'Client #' + (idx + 1);
-        const clientInvs = filtered.filter(inv => String(inv.clientId) === cid);
+        const clientInvs = filtered.filter(inv => String(inv.clientId) === cid || (inv.client && String(inv.client.id || inv.client._id) === cid));
         let caTTC = 0, caHT = 0, nbFact = clientInvs.length, nbBL = 0, creance = 0, encaisse = 0;
         let caTransport = 0, caImmo = 0, caLoc = 0, paidCount = 0;
         clientInvs.forEach(inv => {
@@ -9897,9 +9982,13 @@ function getFilteredRptInvoices() {
         
         // Client — multi-select or single
         if (clientId === '__multi__') {
-            if (!selectedRptClients.includes(String(inv.clientId))) return false;
-        } else if (clientId !== 'all' && String(inv.clientId) !== String(clientId)) {
-            return false;
+            const invCid = String(inv.clientId);
+            const invObjCid = inv.client ? String(inv.client._id || inv.client.id) : '';
+            if (!selectedRptClients.includes(invCid) && !selectedRptClients.includes(invObjCid)) return false;
+        } else if (clientId !== 'all') {
+            const invCid = String(inv.clientId);
+            const invObjCid = inv.client ? String(inv.client._id || inv.client.id) : '';
+            if (invCid !== String(clientId) && invObjCid !== String(clientId)) return false;
         }
 
         // Statut (Payée / Impayée)
@@ -10380,6 +10469,8 @@ function resetRptFilters() {
     if (sDate) sDate.value = '';
     const eDate = document.getElementById('rptFilterEndDate');
     if (eDate) eDate.value = '';
+    const cmpBox = document.getElementById('rptCompareMode');
+    if (cmpBox) cmpBox.checked = false;
     deselectAllRptClients();
     updateReportsView();
 }
