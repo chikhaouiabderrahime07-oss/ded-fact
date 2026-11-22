@@ -3322,6 +3322,8 @@ function renderInvoices() {
             <button class="btn btn-sm btn-outline-danger ms-1" onclick="revertPayment(${inv.id}); event.stopPropagation();" title="Annuler le paiement"><i class="fa fa-undo"></i></button>`;
       }
       const commonButtons = `
+        <button class="btn btn-sm btn-outline-secondary" onclick="viewInvoiceById(${inv.id}); event.stopPropagation();" title="Aperçu"><i class="fa fa-eye"></i></button>
+        <button class="btn btn-sm btn-outline-danger" style="border-color:#dc2626;color:#dc2626;" onclick="exportInvoicePDFById(${inv.id}); event.stopPropagation();" title="Télécharger PDF"><i class="fa fa-file-pdf"></i></button>
         <button class="btn btn-sm btn-outline-primary" onclick="editInvoice(${inv.id}); event.stopPropagation();" title="Modifier Facture"><i class="fa fa-edit"></i></button>
         ${actionButtons}
         ${convertBtn}
