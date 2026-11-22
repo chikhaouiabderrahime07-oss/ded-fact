@@ -3306,7 +3306,13 @@ function renderInvoices() {
       // Check for proforma
       const isProforma = inv.documentType === 'proforma';
       const proformaBadgeHtml = isProforma ? `<span class="badge bg-warning text-dark me-1"><i class="fa fa-file-alt me-1"></i>PROFORMA</span>` : '';
-      const convertBtn = isProforma ? `<button class="btn btn-sm btn-success ms-1" onclick="convertProformaToFacture(${inv.id}); event.stopPropagation();" title="Convertir en Facture"><i class="fa fa-exchange-alt"></i></button>` : '';
+      const linkedFacture = isProforma ? getFactureOfProforma(inv.id) : null;
+      const convertBtn = isProforma
+        ? (linkedFacture
+            ? `<button class="btn btn-sm btn-outline-success ms-1" onclick="viewInvoiceById(${linkedFacture.id}); event.stopPropagation();" title="Voir la facture générée ${linkedFacture.number}"><i class="fa fa-file-invoice"></i> ${linkedFacture.number}</button>`
+            : `<button class="btn btn-sm btn-success ms-1" onclick="convertProformaToFacture(${inv.id}); event.stopPropagation();" title="Convertir en Facture"><i class="fa fa-exchange-alt"></i></button>`)
+        : '';
+      const fromProformaBadge = (!isProforma && inv.convertedFromProforma) ? `<span class="badge bg-light text-dark border me-1" title="Générée depuis la proforma ${inv.proformaNumber || ''}"><i class="fa fa-link me-1"></i>${inv.proformaNumber || 'Proforma'}</span>` : '';
 
       // BUTTONS
       let actionButtons = '';
@@ -3325,7 +3331,7 @@ function renderInvoices() {
       const row = document.createElement('tr');
       row.innerHTML = `
         <td class="text-center"><input type="checkbox" class="invoice-checkbox" data-id="${inv.id}"></td>
-        <td class="fw-bold text-primary">${proformaBadgeHtml}${inv.number}</td>
+        <td class="fw-bold text-primary">${proformaBadgeHtml}${inv.number}${fromProformaBadge ? '<br>' + fromProformaBadge : ''}</td>
         <td>${dateDisplay}</td>
         <td class="fw-semibold">${client.nom || 'Inconnu'}</td>
         
@@ -4040,6 +4046,14 @@ function generateInvoiceHTMLForPDF(invoice, options = {}) {
             <div class="references-wrapper">
                 <div class="references-section">${refsHTML}</div>
             </div>` : ''}
+          ${invoice.documentType === 'proforma' && invoice.proformaConditions ? `
+            <div style="margin-top:8px; padding:6px 10px; border:1px solid #d97706; border-radius:6px; font-size:0.72rem; line-height:1.3;">
+              <div style="font-weight:bold; text-decoration:underline; margin-bottom:4px;">Conditions Générales :</div>
+              <div><b>Durée et Tarification :</b> ${invoice.proformaConditions.duree || ''}</div>
+              <div><b>Modalités de Paiement :</b> ${invoice.proformaConditions.paiement || ''}</div>
+              <div><b>Délai de paiement :</b> ${invoice.proformaConditions.delai || ''}</div>
+              <div><b>Validité de l'Offre :</b> ${invoice.proformaConditions.validite || ''}</div>
+            </div>` : ''}
         </div>`;
     }
 
@@ -4316,7 +4330,8 @@ async function exportSmartInvoicePDF(invoice, options = {}) {
         }
 
         const headerSuffix = duplicateHeaderAllPages ? '_with_headers' : '';
-        pdf.save(`Facture_${invoice.number.replace(/\//g, '_')}${headerSuffix}.pdf`);
+        const docPrefix = invoice.documentType === 'proforma' ? 'Proforma' : 'Facture';
+        pdf.save(`${docPrefix}_${invoice.number.replace(/\//g, '_')}${headerSuffix}.pdf`);
 
     } catch (error) {
         console.error('PDF generation error:', error);
@@ -8997,27 +9012,57 @@ function isLocationInvoice(inv) {
     return inv.articles && inv.articles.some(a => isLocationArticle(a));
 }
 
+// Returns the facture already generated from a proforma (or undefined)
+window.getFactureOfProforma = function(proformaId) {
+    return invoices.find(i => i.documentType !== 'proforma' && String(i.convertedFromProforma) === String(proformaId));
+};
+
 window.convertProformaToFacture = function(invoiceId) {
     const inv = invoices.find(i => i.id === invoiceId);
     if (!inv || inv.documentType !== 'proforma') return;
-    if (!confirm('Convertir cette proforma en facture définitive ?')) return;
-    
-    // Create a new facture from the proforma
+
+    // ONE proforma → ONE facture only
+    const existing = getFactureOfProforma(invoiceId);
+    if (existing) {
+        alert('⚠️ Cette proforma a déjà généré la facture N° ' + existing.number + '.\nUne proforma ne peut générer qu\'une seule facture.');
+        openViewInvoiceModal(existing);
+        return;
+    }
+    if (!confirm('Convertir la proforma ' + inv.number + ' en facture définitive ?\n(Une seule facture peut être générée par proforma)')) return;
+
     const year = new Date().getFullYear();
     const newFacture = JSON.parse(JSON.stringify(inv));
     newFacture.id = Date.now();
     newFacture.documentType = 'facture';
     newFacture.number = `${String(invoiceCounter).padStart(3, '0')}/${year}`;
     newFacture.convertedFromProforma = invoiceId;
+    newFacture.proformaNumber = inv.number;
+    newFacture.paid = false;
+    newFacture.paymentStatus = 'pending';
+    delete newFacture.proformaConditions;
     newFacture.createdAt = new Date().toISOString();
     invoiceCounter++;
     invoices.push(newFacture);
-    
+
+    // Link back on the proforma
+    inv.convertedToFacture = newFacture.id;
+    inv.convertedToFactureNumber = newFacture.number;
+
     saveDataToLocalStorage();
     renderInvoices();
     if (typeof renderProformasView === 'function') renderProformasView();
     updateDashboard();
-    alert('\u2705 Facture N° ' + newFacture.number + ' créée à partir de la Proforma ' + inv.number);
+    alert('✅ Facture N° ' + newFacture.number + ' créée à partir de la Proforma ' + inv.number);
+    openViewInvoiceModal(newFacture);
+};
+
+window.exportInvoicePDFById = function(id) {
+    const inv = invoices.find(i => i.id === id);
+    if (inv) exportInvoiceToPDF(inv);
+};
+window.viewInvoiceById = function(id) {
+    const inv = invoices.find(i => i.id === id);
+    if (inv) openViewInvoiceModal(inv);
 };
 
 // --- Location Analytics ---
@@ -9645,7 +9690,7 @@ function saveProformaConditions() {
 // Proforma view functions
 function renderProformasView() {
     const proformas = invoices.filter(i => i.documentType === 'proforma');
-    const converted = invoices.filter(i => i.convertedFromProforma);
+    const converted = invoices.filter(i => i.documentType !== 'proforma' && i.convertedFromProforma);
     const pending = proformas.filter(i => !converted.some(c => c.convertedFromProforma === i.id));
     
     // KPIs
@@ -9671,7 +9716,8 @@ function renderProformasView() {
         const isConverted = converted.some(c => c.convertedFromProforma === fp.id);
         const typeIcon = fp.invoiceType === 'location' ? '<i class="fa-solid fa-tractor" style="color:#f59e0b;"></i> Location' : fp.invoiceType === 'immobilisation' ? '<i class="fa fa-stopwatch text-danger"></i> Immo' : '<i class="fa fa-truck text-primary"></i> Transport';
         const statusBadge = isConverted ? '<span class="badge bg-success"><i class="fa fa-check me-1"></i>Convertie</span>' : '<span class="badge bg-warning text-dark"><i class="fa fa-hourglass-half me-1"></i>En attente</span>';
-        const actions = isConverted ? `<button class="btn btn-sm btn-outline-secondary" disabled><i class="fa fa-check"></i></button>` : `<button class="btn btn-sm btn-success" onclick="convertProformaToFacture(${fp.id})" title="Convertir en Facture"><i class="fa fa-exchange-alt me-1"></i>Facture</button>`;
+        const linked = getFactureOfProforma(fp.id);
+        const actions = linked ? `<button class="btn btn-sm btn-outline-success" onclick="viewInvoiceById(${linked.id})" title="Voir la facture générée"><i class="fa fa-file-invoice me-1"></i>${linked.number}</button><button class="btn btn-sm btn-outline-success" onclick="exportInvoicePDFById(${linked.id})" title="PDF de la facture ${linked.number}"><i class="fa fa-file-pdf"></i></button>` : `<button class="btn btn-sm btn-success" onclick="convertProformaToFacture(${fp.id})" title="Convertir en Facture (une seule fois)"><i class="fa fa-exchange-alt me-1"></i>Facture</button>`;
         return `<tr class="text-center small">
             <td class="fw-bold" style="color:#d97706;">${fp.number}</td>
             <td>${new Date(fp.date).toLocaleDateString('fr-FR')}</td>
@@ -9680,7 +9726,9 @@ function renderProformasView() {
             <td class="fw-bold">${formatCurrency(fp.totals?.netAPayer || 0)}</td>
             <td>${statusBadge}</td>
             <td><div class="btn-group">
-                <button class="btn btn-sm btn-outline-primary" onclick="editInvoice(${fp.id})" title="Modifier"><i class="fa fa-edit"></i></button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="viewInvoiceById(${fp.id})" title="Aperçu"><i class="fa fa-eye"></i></button>
+                <button class="btn btn-sm btn-outline-danger" style="border-color:#dc2626;color:#dc2626;" onclick="exportInvoicePDFById(${fp.id})" title="Télécharger PDF proforma"><i class="fa fa-file-pdf"></i></button>
+                ${linked ? "" : `<button class="btn btn-sm btn-outline-primary" onclick="editInvoice(${fp.id})" title="Modifier"><i class="fa fa-edit"></i></button>`}
                 ${actions}
                 <button class="btn btn-sm btn-outline-danger" onclick="deleteInvoice(${fp.id})" title="Supprimer"><i class="fa fa-trash"></i></button>
             </div></td>
