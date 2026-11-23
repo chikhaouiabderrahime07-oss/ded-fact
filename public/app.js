@@ -10191,7 +10191,7 @@ function renderRptCharts(activeTab) {
     filtered.forEach(inv => {
         if (inv.articles) inv.articles.forEach(a => {
             if (a.isImmobilisation) caI += (a.montantHT || 0);
-            else if (a.isLocation) caLoc += (a.montantHT || 0);
+            else if (a.isLocation) caL += (a.montantHT || 0);
             else caT += (a.montantHT || 0);
         });
     });
