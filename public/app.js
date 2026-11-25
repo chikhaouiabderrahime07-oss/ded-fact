@@ -2816,6 +2816,8 @@ function generateInvoiceHTML(invoice, options = {}) {
         if (invoice.blReferences) refs.push(`<div><strong>Références BL :</strong> ${invoice.blReferences}</div>`);
         if (invoice.refFeuilleRoute) refs.push(`<div><strong>Réf. Feuille de route :</strong> ${invoice.refFeuilleRoute}</div>`);
         if (invoice.refBonTransfert) refs.push(`<div><strong>Réf. Bon de transfert :</strong> ${invoice.refBonTransfert}</div>`);
+        if (invoice._showProformaRef && invoice.documentType !== 'proforma' && invoice.convertedFromProforma) { const _fpNum = invoice.proformaNumber || ((invoices.find(i => i.id === invoice.convertedFromProforma) || {}).number) || ''; if (_fpNum) refs.push(`<div><strong>Réf. Proforma :</strong> ${_fpNum}</div>`); }
+        if (invoice._showProformaRef && invoice.documentType === 'proforma') { const _lf = (typeof getFactureOfProforma === 'function') ? getFactureOfProforma(invoice.id) : null; if (_lf) refs.push(`<div><strong>Facture générée :</strong> ${_lf.number}</div>`); }
         
         const refsHTML = refs.length > 0 ? `<div class="references-list">${refs.join('')}</div>` : '';
 
@@ -3675,6 +3677,7 @@ function exportSelectedInvoicePDF() {
             for (let i = 0; i < selectedInvoices.length; i++) {
                 const inv = selectedInvoices[i];
                 inv._duplicata = isDuplicata;
+                inv._showProformaRef = document.getElementById('exportProformaRef')?.checked || false;
 
                 try {
                     await exportSmartInvoicePDF(inv, {
@@ -4030,6 +4033,8 @@ function generateInvoiceHTMLForPDF(invoice, options = {}) {
       if (invoice.blReferences) refs.push(`<div><strong>Références BL :</strong> ${invoice.blReferences}</div>`);
       if (invoice.refFeuilleRoute) refs.push(`<div><strong>Réf. Feuille de route :</strong> ${invoice.refFeuilleRoute}</div>`);
       if (invoice.refBonTransfert) refs.push(`<div><strong>Réf. Bon de transfert :</strong> ${invoice.refBonTransfert}</div>`);
+        if (invoice._showProformaRef && invoice.documentType !== 'proforma' && invoice.convertedFromProforma) { const _fpNum = invoice.proformaNumber || ((invoices.find(i => i.id === invoice.convertedFromProforma) || {}).number) || ''; if (_fpNum) refs.push(`<div><strong>Réf. Proforma :</strong> ${_fpNum}</div>`); }
+        if (invoice._showProformaRef && invoice.documentType === 'proforma') { const _lf = (typeof getFactureOfProforma === 'function') ? getFactureOfProforma(invoice.id) : null; if (_lf) refs.push(`<div><strong>Facture générée :</strong> ${_lf.number}</div>`); }
       
       const refsHTML = refs.length > 0 ? `<div class="references-list">${refs.join('')}</div>` : '';
       let amountText = nombreEnLettresDA(totalTTC);
@@ -4430,6 +4435,7 @@ function exportInvoiceToPDF(invoice) {
             
             // Set duplicata flag on invoice
             window.currentExportInvoice._duplicata = isDuplicata;
+            window.currentExportInvoice._showProformaRef = document.getElementById('exportProformaRef')?.checked || false;
             
             // Run Export
             exportSmartInvoicePDF(window.currentExportInvoice, {
