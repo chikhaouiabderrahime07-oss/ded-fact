@@ -3147,6 +3147,7 @@ function saveInvoice() {
             }
         }
 
+        const wasProformaDoc = currentInvoice.documentType === 'proforma';
         if (currentInvoice.id) {
             // Editing existing invoice
             const idx = invoices.findIndex(i => i.id === currentInvoice.id);
@@ -3156,16 +3157,15 @@ function saveInvoice() {
             }
         } else {
             // ✅ NEW INVOICE - preserve all article data as-is
-            const newInv = {
+            // Handle proforma conditions (must be read before copying the invoice)
+            if (typeof saveProformaConditions === 'function') saveProformaConditions();
+            const newInv = JSON.parse(JSON.stringify({
                 ...currentInvoice,
                 id: Date.now(),
                 paid: false,
                 paymentStatus: 'pending',
                 createdAt: new Date().toISOString()
-            };
-            
-            // Handle proforma conditions
-            if (typeof saveProformaConditions === 'function') saveProformaConditions();
+            }));
 
             if (currentInvoice.documentType === 'proforma') {
                 const year = new Date().getFullYear();
@@ -3193,10 +3193,12 @@ function saveInvoice() {
         currentInvoice = {};
         currentStep = 1;
         
-        // Refresh the invoices view
+        // Refresh views and go to the right section
+        const savedWasProforma = wasProformaDoc;
         renderInvoices();
+        if (typeof renderProformasView === 'function') renderProformasView();
         updateDashboard();
-        showView('invoices');
+        showView(savedWasProforma ? 'proformas' : 'invoices');
         
         alert('Facture sauvegardée avec succès !');
     } catch (error) {
@@ -3425,7 +3427,8 @@ function exportOpenedInvoicePDF() {
 
 function getFilteredInvoices() {
     try {
-        let filtered = [...invoices];
+        // Factures list = real invoices only (proformas live in their own section)
+        let filtered = invoices.filter(inv => inv.documentType !== 'proforma');
         
         // Get Elements
         const filterClient = document.getElementById('filterClient');
@@ -4898,6 +4901,7 @@ function getDashboardFilteredInvoices() {
     }
 
     return invoices.filter(inv => {
+        if (inv.documentType === 'proforma') return false;
         // Client filter — multi-select or single
         if (clientVal === '__multi__') {
             const invCid = String(inv.clientId);
